@@ -1,0 +1,640 @@
+GUIA COMPLETA DE ESTILOS Y BACKEND - SIGIRL
+============================================================
+
+OBJETIVO
+------------------------------------------------------------
+Este archivo reúne:
+1. Los archivos principales de estilos del frontend
+2. Dónde va cada uno dentro del proyecto
+3. Código explicado y comentado
+4. La parte del backend relacionada con autenticación, roles, modelos y rutas
+
+
+ESTRUCTURA GENERAL DEL PROYECTO
+------------------------------------------------------------
+FRONTEND
+- frontend/src/index.css
+- frontend/src/App.css
+- frontend/src/styles/theme.js
+- frontend/src/components/Layout.jsx
+- frontend/src/components/Sidebar.jsx
+- frontend/tailwind.config.js
+
+BACKEND
+- sigirl/sigirl/urls.py
+- sigirl/inventario/views.py
+- sigirl/inventario/models.py
+- sigirl/inventario/serializers.py
+- sigirl/sigirl/settings.py
+
+
+============================================================
+PARTE 1 - ARCHIVOS DE ESTILOS DEL FRONTEND
+============================================================
+
+1) ARCHIVO: frontend/src/index.css
+------------------------------------------------------------
+DONDE VA:
+Este archivo va en la carpeta src del frontend y se carga desde main.jsx.
+Su función es definir los estilos globales de toda la aplicación.
+
+CODIGO COMENTADO:
+
+@import "tailwindcss";
+// Importa Tailwind para poder usar clases utilitarias en toda la app.
+
+:root {
+  color-scheme: light;
+  // Define que el diseño principal será claro.
+
+  --bg-page: linear-gradient(135deg, #ecfdf5 0%, #f0fdfa 45%, #ecfeff 100%);
+  // Fondo degradado global para todo SIGIRL.
+
+  --text-primary: #0f172a;
+  --text-secondary: #475569;
+  // Variables para texto principal y secundario.
+
+  --glass-border: rgba(255, 255, 255, 0.45);
+  --glass-shadow: 0 12px 35px rgba(16, 185, 129, 0.08);
+  --accent-ring: rgba(16, 185, 129, 0.35);
+  // Variables para los efectos glassmorphism.
+}
+
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+// Reinicia márgenes y padding por defecto.
+
+html {
+  scroll-behavior: smooth;
+}
+// Hace que el scroll de la página sea suave.
+
+body {
+  font-family: 'Segoe UI', 'Inter', 'Roboto', 'Helvetica Neue', sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  min-height: 100vh;
+  background: var(--bg-page);
+  color: var(--text-primary);
+}
+// Configuración base del body: tipografía, color y fondo general.
+
+button,
+input,
+select,
+textarea {
+  font: inherit;
+}
+// Hace que botones y formularios hereden la fuente global.
+
+#root {
+  min-height: 100vh;
+  isolation: isolate;
+}
+// El contenedor principal ocupa toda la pantalla.
+
+.glass-panel {
+  background: linear-gradient(to bottom right, rgba(255,255,255,0.72), rgba(255,255,255,0.48));
+  backdrop-filter: blur(18px);
+  -webkit-backdrop-filter: blur(18px);
+  border: 1px solid var(--glass-border);
+  box-shadow: var(--glass-shadow);
+}
+// Clase reutilizable para paneles transparentes con blur.
+
+.gradient-title {
+  background: linear-gradient(90deg, #059669 0%, #0d9488 50%, #0891b2 100%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+// Se usa para títulos con texto degradado.
+
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+// Personaliza la barra de desplazamiento.
+
+
+2) ARCHIVO: frontend/src/App.css
+------------------------------------------------------------
+DONDE VA:
+Este archivo también vive en src y se carga globalmente desde main.jsx.
+Sirve para clases reutilizables visuales.
+
+CODIGO COMENTADO:
+
+.app-shell {
+  min-height: 100vh;
+}
+// Garantiza que la aplicación siempre llene la pantalla.
+
+.glass-card {
+  background: linear-gradient(to bottom right, rgba(255, 255, 255, 0.88), rgba(255, 255, 255, 0.72));
+  backdrop-filter: blur(18px);
+  -webkit-backdrop-filter: blur(18px);
+  border: 1px solid rgba(255, 255, 255, 0.45);
+  box-shadow: 0 14px 40px rgba(15, 23, 42, 0.08);
+  border-radius: 1rem;
+}
+// Tarjeta visual tipo cristal para formularios y secciones.
+
+.glass-card:hover {
+  box-shadow: 0 18px 45px rgba(16, 185, 129, 0.12);
+}
+// Efecto hover para hacer la UI más moderna.
+
+.panel-title {
+  background: linear-gradient(90deg, #059669, #0d9488, #0891b2);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  font-weight: 700;
+}
+// Clase para títulos de paneles con degradado.
+
+.soft-divider {
+  height: 1px;
+  background: linear-gradient(to right, transparent, rgba(16, 185, 129, 0.35), transparent);
+}
+// Línea separadora suave entre bloques visuales.
+
+.status-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0.35rem 0.7rem;
+  border-radius: 9999px;
+  font-size: 0.75rem;
+  font-weight: 700;
+}
+// Etiquetas para estado: pendiente, aprobado, rechazado, etc.
+
+
+3) ARCHIVO: frontend/src/styles/theme.js
+------------------------------------------------------------
+DONDE VA:
+Va dentro de la carpeta styles.
+Este archivo concentra colores reutilizables y objetos de estilo en JavaScript.
+
+CODIGO COMENTADO:
+
+export const colors = {
+  primary: "#0f172a",
+  secondary: "#1e293b",
+  accent: "#10b981",
+  accent2: "#14b8a6",
+  accent3: "#06b6d4",
+  admin: "#7c3aed",
+  jefe: "#ef4444",
+  danger: "#ef4444",
+  warning: "#f59e0b",
+  light: "#f8fafc",
+  text: "#ffffff",
+};
+// Este objeto agrupa todos los colores de la identidad visual.
+// Accent = verde principal del sistema
+// Admin = púrpura
+// Jefe = rojo
+
+export const styles = {
+  container: {
+    display: "flex",
+    flexDirection: "column",
+    gap: "20px",
+    padding: "20px",
+  },
+  // Estructura base vertical para pantallas
+
+  row: {
+    display: "flex",
+    gap: "20px",
+    flexWrap: "wrap",
+  },
+  // Fila flexible y responsiva
+
+  card: {
+    backgroundColor: colors.light,
+    padding: "20px",
+    borderRadius: "8px",
+    boxShadow: "0 2px 8px rgba(0,0,0,0.1)",
+    color: "#1e293b",
+  },
+  // Tarjeta estándar
+
+  buttonPrimary: {
+    backgroundColor: colors.accent,
+    color: colors.text,
+  },
+  // Botón principal del sistema
+
+  buttonDanger: {
+    backgroundColor: colors.danger,
+    color: colors.text,
+  },
+  // Botón de acciones peligrosas como eliminar
+};
+
+export const combineStyles = (...styleArr) => {
+  return styleArr.reduce((acc, style) => ({ ...acc, ...style }), {});
+};
+// Función útil para combinar varios estilos JS en un solo objeto.
+
+
+4) ARCHIVO: frontend/tailwind.config.js
+------------------------------------------------------------
+DONDE VA:
+Este archivo va en la raíz del frontend.
+Sirve para extender Tailwind con colores y configuración personalizada.
+
+CODIGO COMENTADO:
+
+export default {
+  content: [
+    "./index.html",
+    "./src/**/*.{js,ts,jsx,tsx}",
+  ],
+  // Le dice a Tailwind en qué archivos debe buscar clases CSS.
+
+  theme: {
+    extend: {
+      colors: {
+        primary: {
+          50: '#eff6ff',
+          100: '#dbeafe',
+          500: '#3b82f6',
+          600: '#2563eb',
+          700: '#1d4ed8',
+        }
+      }
+    },
+  },
+  plugins: [],
+}
+// Aquí se pueden agregar más colores, sombras, fuentes y tamaños personalizados.
+
+
+5) ARCHIVO: frontend/src/components/Layout.jsx
+------------------------------------------------------------
+DONDE VA:
+Va dentro de components.
+Se usa como envoltura principal de todas las vistas privadas.
+
+CODIGO COMENTADO:
+
+import { useState } from 'react';
+import Sidebar from './Sidebar';
+// Importa React y el menú lateral.
+
+const Layout = ({ children }) => {
+  const [isOpen, setIsOpen] = useState(false);
+  // Controla si el sidebar está abierto o cerrado en móviles.
+
+  return (
+    <div className="flex min-h-screen bg-gradient-to-br from-emerald-50 via-teal-50 to-cyan-50">
+      <Sidebar isOpen={isOpen} setIsOpen={setIsOpen} />
+      // Inserta el sidebar con su estado.
+
+      <main className="flex-1 md:ml-72 p-4 md:p-8 pt-20 md:pt-8 min-h-screen relative overflow-hidden">
+        // Empuja el contenido para no quedar debajo del sidebar.
+
+        <div className="absolute -top-40 -right-40 w-80 h-80 bg-emerald-200/20 rounded-full blur-3xl"></div>
+        <div className="absolute -bottom-40 -left-40 w-80 h-80 bg-teal-200/20 rounded-full blur-3xl"></div>
+        <div className="absolute top-1/2 right-1/4 w-96 h-96 bg-cyan-200/10 rounded-full blur-3xl"></div>
+        // Círculos decorativos del fondo.
+
+        <div className="relative z-10">
+          {children}
+        </div>
+        // Aquí aparece la vista real: admin, usuario o jefe.
+      </main>
+    </div>
+  );
+};
+
+
+6) ARCHIVO: frontend/src/components/Sidebar.jsx
+------------------------------------------------------------
+DONDE VA:
+Va en components y controla el menú lateral según el rol del usuario.
+
+PARTES IMPORTANTES COMENTADAS:
+
+const { role, logout, user } = useContext(UserContext);
+// Toma del contexto el rol, el usuario logueado y la función de cerrar sesión.
+
+const getMenuItems = () => {
+  switch (role) {
+    case 'usuario':
+      return [{ path: '/usuario', label: 'Mis Pedidos', icon: FileText, description: 'Mis solicitudes' }];
+    case 'admin':
+      return [{ path: '/admin', label: 'Panel Admin', icon: Home, description: 'Inicio' }];
+    case 'jefe':
+      return [{ path: '/jefe', label: 'Panel Jefe', icon: BarChart3, description: 'Estadísticas' }];
+    default:
+      return [];
+  }
+};
+// Esto hace que cada rol vea solo su menú correspondiente.
+
+const handleLogout = () => {
+  logout();
+  navigate('/login');
+};
+// Cierra sesión y regresa al login.
+
+<aside className="fixed left-0 top-0 h-screen w-72 ...">
+// Este es el contenedor visual del menú lateral.
+// Usa glassmorphism oscuro con verde/teal para mantener la identidad visual.
+
+
+============================================================
+PARTE 2 - COMO SE CONECTAN LOS ESTILOS
+============================================================
+
+1. main.jsx carga index.css y App.css
+2. Layout.jsx pinta el fondo general y mete el Sidebar
+3. Sidebar.jsx dibuja el menú lateral
+4. Cada Dashboard usa clases de Tailwind con su color por rol:
+   - Usuario = cyan/azul
+   - Admin = purple/indigo
+   - Jefe = red/orange
+5. theme.js sirve como ayuda para reutilizar colores si se usan estilos JS
+
+
+============================================================
+PARTE 3 - BACKEND EXPLICADO Y COMENTADO
+============================================================
+
+1) ARCHIVO: sigirl/sigirl/urls.py
+------------------------------------------------------------
+DONDE VA:
+Es el archivo principal de rutas del backend Django.
+Aquí se decide qué URL apunta a qué vista.
+
+CODIGO COMENTADO:
+
+from django.contrib import admin
+from django.urls import path, include
+from rest_framework.permissions import AllowAny
+from rest_framework.decorators import api_view, permission_classes
+from rest_framework.response import Response
+from inventario.views import register, get_current_user, PublicTokenObtainPairView, PublicTokenRefreshView
+// Importa las vistas necesarias para autenticación y registro.
+
+@api_view(['GET'])
+@permission_classes([AllowAny])
+def home(request):
+    return Response({"mensaje": "SIGIRL API funcionando"})
+// Ruta de prueba para verificar que la API está viva.
+
+urlpatterns = [
+    path('', home),
+    path('admin/', admin.site.urls),
+    // Panel administrativo de Django
+
+    path('api/token/', PublicTokenObtainPairView.as_view(), name='token_obtain_pair'),
+    path('api/token/refresh/', PublicTokenRefreshView.as_view(), name='token_refresh'),
+    // Rutas JWT para iniciar sesión y refrescar token
+
+    path('api/register/', register, name='register'),
+    path('api/auth/user/', get_current_user, name='get_current_user'),
+    // Registro público y consulta del usuario actual
+
+    path('api/', include('inventario.urls')),
+    // Incluye todas las rutas del módulo inventario
+]
+
+
+2) ARCHIVO: sigirl/inventario/views.py
+------------------------------------------------------------
+DONDE VA:
+Va dentro de la app inventario.
+Contiene la lógica del backend para pedidos, productos, login y registro.
+
+PARTES IMPORTANTES COMENTADAS:
+
+class PublicTokenObtainPairView(TokenObtainPairView):
+    permission_classes = [AllowAny]
+
+    def post(self, request, *args, **kwargs):
+        response = super().post(request, *args, **kwargs)
+
+        if response.status_code == 200:
+            username = request.data.get("username")
+            user = User.objects.get(username=username)
+
+            if user.is_superuser:
+                role = "jefe"
+            elif user.is_staff:
+                role = "admin"
+            else:
+                role = "usuario"
+
+            response.data["role"] = role
+        return response
+
+// Esta parte hace el login y además devuelve el rol del usuario.
+// Gracias a esto el frontend sabe si debe mandar a /usuario, /admin o /jefe.
+
+
+def register(request):
+    username = request.data.get("username")
+    email = request.data.get("email")
+    password = request.data.get("password")
+    first_name = request.data.get("first_name", "")
+    last_name = request.data.get("last_name", "")
+    requested_role = request.data.get("role", "usuario")
+
+    if not username or not password:
+        return Response({"error": "Faltan datos"}, status=400)
+
+    if User.objects.filter(username=username).exists():
+        return Response({"error": "El usuario ya existe"}, status=400)
+
+    user = User.objects.create_user(
+        username=username,
+        email=email,
+        password=password,
+        first_name=first_name,
+        last_name=last_name,
+    )
+
+    if requested_role == "admin":
+        user.is_staff = True
+    elif requested_role in ["jefe", "jefe_superior"]:
+        user.is_staff = True
+        user.is_superuser = True
+
+    user.save()
+
+    role = "jefe" if user.is_superuser else "admin" if user.is_staff else "usuario"
+
+    return Response({
+        "mensaje": "Usuario creado correctamente",
+        "role": role,
+        "username": user.username,
+    }, status=201)
+
+// Esta función crea usuarios nuevos y marca si serán admin o jefe.
+
+
+def get_current_user(request):
+    user = request.user
+    role = "jefe" if user.is_superuser else "admin" if user.is_staff else "usuario"
+
+    return Response({
+        "id": user.id,
+        "username": user.username,
+        "email": user.email,
+        "role": role,
+    })
+
+// Devuelve la información del usuario autenticado.
+
+
+class PedidoViewSet(viewsets.ModelViewSet):
+    queryset = Pedido.objects.all()
+    serializer_class = PedidoSerializer
+    permission_classes = [IsAuthenticated]
+
+    def perform_create(self, serializer):
+        serializer.save(usuario=self.request.user)
+
+// Cuando un usuario crea un pedido, el backend lo relaciona automáticamente con él.
+
+
+3) ARCHIVO: sigirl/inventario/models.py
+------------------------------------------------------------
+DONDE VA:
+Este archivo define las tablas del sistema en la base de datos.
+
+CODIGO COMENTADO:
+
+class Categoria(models.Model):
+    nombre = models.CharField(max_length=100)
+// Guarda categorías como solventes, ácidos, EPP, etc.
+
+class Producto(models.Model):
+    nombre = models.CharField(max_length=150)
+    tipo = models.CharField(max_length=20, choices=TIPOS)
+    categoria = models.ForeignKey(Categoria, on_delete=models.CASCADE)
+    cantidad = models.IntegerField()
+    minimo = models.IntegerField()
+    ubicacion = models.CharField(max_length=100, blank=True, null=True)
+    fecha_vencimiento = models.DateField(blank=True, null=True)
+// Modelo principal para reactivos, insumos y equipos.
+
+    def bajo_stock(self):
+        return self.cantidad <= self.minimo
+// Devuelve True si el producto está por debajo del mínimo.
+
+    def por_vencer(self):
+        if self.fecha_vencimiento:
+            return (self.fecha_vencimiento - date.today()).days <= 7
+        return False
+// Devuelve True si está por vencer pronto.
+
+class Movimiento(models.Model):
+    producto = models.ForeignKey(Producto, on_delete=models.CASCADE)
+    tipo = models.CharField(max_length=10, choices=TIPOS)
+    cantidad = models.IntegerField()
+    fecha = models.DateTimeField(auto_now_add=True)
+    observacion = models.TextField(blank=True, null=True)
+// Registra entradas y salidas de inventario.
+
+class Pedido(models.Model):
+    usuario = models.ForeignKey(User, on_delete=models.CASCADE)
+    producto = models.ForeignKey('Producto', on_delete=models.CASCADE)
+    cantidad = models.IntegerField()
+    estado = models.CharField(max_length=20, default="pendiente")
+// Guarda las solicitudes hechas por los usuarios.
+
+
+4) ARCHIVO: sigirl/inventario/serializers.py
+------------------------------------------------------------
+DONDE VA:
+Convierte los modelos de Django a JSON para que el frontend los pueda usar.
+
+CODIGO COMENTADO:
+
+class CategoriaSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Categoria
+        fields = '__all__'
+// Convierte categorías a JSON automáticamente.
+
+class ProductoSerializer(serializers.ModelSerializer):
+    bajo_stock = serializers.ReadOnlyField()
+    por_vencer = serializers.ReadOnlyField()
+// Agrega campos calculados al JSON del producto.
+
+class PedidoSerializer(serializers.ModelSerializer):
+    producto_nombre = serializers.CharField(source="producto.nombre", read_only=True)
+    stock_actual = serializers.IntegerField(source="producto.cantidad", read_only=True)
+// Devuelve además el nombre del producto y el stock actual para mostrarlo en React.
+
+
+5) ARCHIVO: sigirl/sigirl/settings.py
+------------------------------------------------------------
+DONDE VA:
+Configuración general del proyecto Django.
+
+PARTES IMPORTANTES COMENTADAS:
+
+REST_FRAMEWORK = {
+    'DEFAULT_AUTHENTICATION_CLASSES': (
+        'rest_framework_simplejwt.authentication.JWTAuthentication',
+    ),
+    'DEFAULT_PERMISSION_CLASSES': (
+        'rest_framework.permissions.IsAuthenticated',
+    ),
+}
+// Define que la API usa autenticación JWT.
+
+SIMPLE_JWT = {
+    'ACCESS_TOKEN_LIFETIME': timedelta(hours=1),
+}
+// El token dura una hora.
+
+CORS_ALLOW_ALL_ORIGINS = True
+// Permite que el frontend React pueda conectarse al backend.
+
+
+============================================================
+PARTE 4 - RESUMEN SIMPLE DE COMO FUNCIONA TODO
+============================================================
+
+FLUJO FRONTEND
+- Login y Register están en React
+- El usuario se autentica o se registra
+- El backend responde con token y rol
+- El frontend guarda el rol en localStorage
+- Según el rol redirige a:
+  * /usuario
+  * /admin
+  * /jefe
+
+FLUJO BACKEND
+- urls.py recibe la petición
+- views.py ejecuta la lógica
+- models.py guarda o consulta datos
+- serializers.py convierte los datos en JSON
+- React muestra la información con estilos globales de index.css, App.css y Tailwind
+
+
+============================================================
+PARTE 5 - RECOMENDACION FINAL
+============================================================
+
+Si después quieres, el siguiente paso que te puedo hacer es:
+1. Comentar también archivo por archivo dentro del proyecto real
+2. Limpiar código duplicado del backend
+3. Ordenar serializers.py y models.py
+4. Hacer una guía igual pero solo para autenticación y roles
+
+FIN DE LA GUIA

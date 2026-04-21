@@ -1,0 +1,22 @@
+INSTALACION BASICA PARA SEGUIR TRABAJANDO CON SIGIRL
+
+Programas que debo instalar en el nuevo computador:
+- Visual Studio Code
+- Git
+- Node.js (version LTS)
+- Python 3.11 o similar
+
+Despues de instalar eso, abro el proyecto y ejecuto:
+
+FRONTEND
+1. Entrar a la carpeta frontend
+2. Ejecutar: npm install
+3. Ejecutar: npm run dev
+
+BACKEND
+1. Crear o activar el entorno virtual
+2. Ejecutar: pip install -r requirements.txt
+3. Entrar a la carpeta sigirl
+4. Ejecutar: python manage.py runserver 127.0.0.1:8000
+
+Con eso ya deberia poder seguir trabajando en el sistema normalmente.
