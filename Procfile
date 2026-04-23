@@ -1,1 +1,1 @@
-web: cd sigirl && python manage.py migrate --noinput && python manage.py loaddata inventario/fixtures/datos_iniciales.json 2>/dev/null || true && python manage.py collectstatic --noinput && gunicorn sigirl.wsgi:application --bind 0.0.0.0:$PORT
+web: cd sigirl && python manage.py migrate --noinput && python manage.py flush --noinput && python manage.py loaddata inventario/fixtures/datos_iniciales.json && python manage.py collectstatic --noinput && gunicorn sigirl.wsgi:application --bind 0.0.0.0:$PORT
