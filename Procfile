@@ -1,1 +1,1 @@
-web: cd sigirl && python manage.py migrate --noinput && python manage.py collectstatic --noinput && gunicorn sigirl.wsgi:application --bind 0.0.0.0:$PORT
+web: cd sigirl && python manage.py migrate --noinput && python manage.py createsuperuser --no-input --username $DJANGO_SUPERUSER_USERNAME --email $DJANGO_SUPERUSER_EMAIL 2>/dev/null || true && python manage.py collectstatic --noinput && gunicorn sigirl.wsgi:application --bind 0.0.0.0:$PORT
