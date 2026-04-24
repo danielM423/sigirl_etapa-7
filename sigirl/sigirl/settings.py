@@ -4,6 +4,7 @@ Django settings for sigirl project.
 
 import os
 from pathlib import Path
+import dj_database_url
 
 try:
     from dotenv import load_dotenv
@@ -97,6 +98,11 @@ DATABASES = {
         'NAME': BASE_DIR / 'db.sqlite3',
     }
 }
+
+# En producción (Render), usar DATABASE_URL para persistir datos en PostgreSQL.
+database_url = os.environ.get('DATABASE_URL')
+if database_url:
+    DATABASES['default'] = dj_database_url.parse(database_url, conn_max_age=600, ssl_require=True)
 
 
 # Password validation
