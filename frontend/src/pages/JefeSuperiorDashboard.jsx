@@ -411,12 +411,12 @@ const JefeSuperiorDashboard = () => {
                 <div className="px-5 py-3 border-b border-[#E0E0E0]">
                   <span className="text-xs font-mono font-bold text-[#1FA971] uppercase tracking-wider">DISTRIBUCIÓN DE ESTADOS</span>
                 </div>
-                <div className="p-5 flex items-center justify-center gap-6 h-64">
+                <div className="p-5 flex flex-col sm:flex-row items-center justify-center gap-4 h-64">
                   <div className="relative w-44 h-44">
                     {chartsReady && (
                     <ResponsiveContainer width={176} height={176}>
                       <PieChart>
-                        <Pie data={donutData} dataKey="value" nameKey="name" innerRadius={50} outerRadius={75} paddingAngle={3} stroke="none">
+                        <Pie data={donutData} dataKey="value" nameKey="name" innerRadius={50} outerRadius={75} paddingAngle={3} stroke="none" label={false} labelLine={false}>
                           {donutData.map((d,i) => <Cell key={i} fill={d.fill} />)}
                         </Pie>
                         <Tooltip content={<CustomTooltip />} />
@@ -430,12 +430,14 @@ const JefeSuperiorDashboard = () => {
                       </div>
                     </div>
                   </div>
-                  <div className="space-y-2">
+                  <div className="space-y-2 w-full sm:w-auto">
                     {barData.map(d => (
-                      <div key={d.name} className="flex items-center gap-2">
-                        <div className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: d.fill }} />
-                        <span className="text-[10px] font-mono text-stone-500">{d.name}:</span>
-                        <span className="text-[10px] font-mono font-bold text-stone-600">{d.value}</span>
+                      <div key={d.name} className="flex items-center justify-between gap-2 rounded border border-stone-200 bg-stone-50 px-2 py-1">
+                        <div className="flex items-center gap-2 min-w-0">
+                          <div className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: d.fill }} />
+                          <span className="text-[10px] font-mono text-stone-500 truncate">{d.name}</span>
+                        </div>
+                        <span className="text-[10px] font-mono font-bold text-stone-600">{d.value} ({Math.round((d.value / (stats.totalPedidos || 1)) * 100)}%)</span>
                       </div>
                     ))}
                   </div>

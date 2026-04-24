@@ -11,7 +11,6 @@ import {
   PieChart,
   Pie,
   Cell,
-  Legend,
 } from 'recharts';
 import { Download, FileText, Activity } from 'lucide-react';
 
@@ -63,6 +62,29 @@ const ReportPanel = ({ title, subtitle, primaryData = [], secondaryData = [], ac
   const safeSecondaryData = useMemo(
     () => (secondaryData?.length ? secondaryData : [{ name: 'Sin datos', value: 1 }]),
     [secondaryData]
+  );
+
+  const compactSecondaryData = useMemo(() => {
+    const normalized = [...safeSecondaryData]
+      .map((item) => ({
+        name: String(item.name || 'General'),
+        value: Number(item.value || 0),
+      }))
+      .filter((item) => item.value > 0)
+      .sort((a, b) => b.value - a.value);
+
+    if (normalized.length <= 8) {
+      return normalized;
+    }
+
+    const top = normalized.slice(0, 7);
+    const restValue = normalized.slice(7).reduce((acc, item) => acc + item.value, 0);
+    return [...top, { name: 'Otros', value: restValue }];
+  }, [safeSecondaryData]);
+
+  const secondaryTotal = useMemo(
+    () => compactSecondaryData.reduce((acc, item) => acc + item.value, 0),
+    [compactSecondaryData]
   );
 
   return (
@@ -118,26 +140,44 @@ const ReportPanel = ({ title, subtitle, primaryData = [], secondaryData = [], ac
           {/* Pie chart */}
           <div className="h-[280px] w-full bg-stone-50 border border-[#E0E0E0] rounded-lg p-3">
             {chartsReady && (
-              <ResponsiveContainer width="99%" height={256} debounce={120}>
-                <PieChart>
-                  <Pie
-                    data={safeSecondaryData}
-                    dataKey="value"
-                    nameKey="name"
-                    outerRadius={85}
-                    innerRadius={40}
-                    paddingAngle={3}
-                  >
-                    {safeSecondaryData.map((entry, index) => (
-                      <Cell key={`pie-${index}`} fill={COLORS[index % COLORS.length]} />
-                    ))}
-                  </Pie>
-                  <Tooltip content={<LightTooltip />} />
-                  <Legend
-                    wrapperStyle={{ fontSize: '10px', fontFamily: 'monospace', color: '#78716c' }}
-                  />
-                </PieChart>
-              </ResponsiveContainer>
+              <div className="h-full flex flex-col sm:flex-row gap-3">
+                <div className="h-[160px] sm:h-full flex-1">
+                  <ResponsiveContainer width="99%" height="100%" debounce={120}>
+                    <PieChart>
+                      <Pie
+                        data={compactSecondaryData}
+                        dataKey="value"
+                        nameKey="name"
+                        outerRadius={85}
+                        innerRadius={40}
+                        paddingAngle={3}
+                        label={false}
+                        labelLine={false}
+                      >
+                        {compactSecondaryData.map((entry, index) => (
+                          <Cell key={`pie-${index}`} fill={COLORS[index % COLORS.length]} />
+                        ))}
+                      </Pie>
+                      <Tooltip content={<LightTooltip />} />
+                    </PieChart>
+                  </ResponsiveContainer>
+                </div>
+
+                <div className="sm:w-[45%] max-h-[92px] sm:max-h-full overflow-y-auto pr-1 space-y-1">
+                  {compactSecondaryData.map((item, index) => {
+                    const pct = secondaryTotal > 0 ? Math.round((item.value * 100) / secondaryTotal) : 0;
+                    return (
+                      <div key={`legend-${item.name}-${index}`} className="flex items-center justify-between gap-2 rounded border border-stone-200 bg-white px-2 py-1">
+                        <div className="min-w-0 flex items-center gap-2">
+                          <span className="w-2.5 h-2.5 rounded-full shrink-0" style={{ backgroundColor: COLORS[index % COLORS.length] }} />
+                          <span className="truncate text-[10px] font-mono text-stone-600">{item.name}</span>
+                        </div>
+                        <span className="text-[10px] font-mono font-bold text-stone-700">{item.value} ({pct}%)</span>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
             )}
           </div>
         </div>
