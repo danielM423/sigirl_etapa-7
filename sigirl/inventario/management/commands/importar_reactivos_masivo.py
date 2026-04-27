@@ -214,7 +214,8 @@ class Command(BaseCommand):
     def handle(self, *args, **options):
         source_dir = Path(options["dir"]).expanduser().resolve()
         if not source_dir.exists() or not source_dir.is_dir():
-            raise CommandError(f"Carpeta invalida: {source_dir}")
+            self.stdout.write(self.style.WARNING(f"Carpeta invalida o no encontrada: {source_dir}. Se omite importacion."))
+            return
 
         supported_files = sorted(
             [
@@ -227,7 +228,8 @@ class Command(BaseCommand):
         )
 
         if not supported_files:
-            raise CommandError("No se encontraron archivos .xlsx, .xls o .csv validos en la carpeta")
+            self.stdout.write(self.style.WARNING("No se encontraron archivos .xlsx, .xls o .csv validos. Se omite importacion."))
+            return
 
         created_count = 0
         updated_count = 0
