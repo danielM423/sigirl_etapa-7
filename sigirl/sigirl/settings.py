@@ -170,7 +170,8 @@ DEFAULT_FROM_EMAIL = os.environ.get('DEFAULT_FROM_EMAIL', EMAIL_HOST_USER or 'no
 FRONTEND_APP_URL = os.environ.get('FRONTEND_APP_URL', '').strip()
 
 # Permite desactivar verificación de correo en despliegues de recuperación.
-EMAIL_VERIFICATION_REQUIRED = os.environ.get('EMAIL_VERIFICATION_REQUIRED', 'True') == 'True'
+# En producción inicial, False para permitir acceso inmediato
+EMAIL_VERIFICATION_REQUIRED = os.environ.get('EMAIL_VERIFICATION_REQUIRED', 'False') == 'True'
 
 
 # Static files (CSS, JavaScript, Images)
