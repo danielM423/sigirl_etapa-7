@@ -46,17 +46,27 @@ for usuario in usuarios:
     db_user.set_password(usuario['password'])
     db_user.save()
 
-    # Use explicit defaults to avoid NULL inserts when the profile schema evolves.
-    UserProfile.objects.update_or_create(
-        user=db_user,
-        defaults={
-            'email_verified': True,
-            'email_verified_at': timezone.now(),
-            'email_verification_code_hash': '',
-            'email_verification_code_expires_at': None,
-            'email_verification_attempts': 0,
-        },
-    )
+    # Keep compatibility with both old and new UserProfile schemas.
+    profile_defaults = {}
+    existing_fields = {
+        field.name
+        for field in UserProfile._meta.get_fields()
+        if getattr(field, 'concrete', False)
+    }
+
+    candidate_defaults = {
+        'email_verified': True,
+        'email_verified_at': timezone.now(),
+        'email_verification_code_hash': '',
+        'email_verification_code_expires_at': None,
+        'email_verification_attempts': 0,
+    }
+
+    for field_name, field_value in candidate_defaults.items():
+        if field_name in existing_fields:
+            profile_defaults[field_name] = field_value
+
+    UserProfile.objects.update_or_create(user=db_user, defaults=profile_defaults)
 
     if created:
         print(f"✅ Usuario '{usuario['username']}' creado")
