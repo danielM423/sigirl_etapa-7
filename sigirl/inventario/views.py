@@ -643,10 +643,11 @@ def download_inventory_template_excel(request):
 @permission_classes([AllowAny])
 def download_inventory_excel(request):
     workbook = Workbook()
+    workbook.encoding = 'utf-8'
     sheet = workbook.active
     sheet.title = 'Inventario'
 
-    headers = ['Nombre', 'Tipo', 'Categoria', 'Cantidad', 'Umbral minimo', 'Ubicacion', 'Estado']
+    headers = ['Nombre', 'Tipo', 'Categoría', 'Cantidad', 'Umbral Mínimo', 'Ubicación', 'Estado']
     sheet.append(headers)
 
     productos = Producto.objects.select_related('categoria').order_by('nombre')
