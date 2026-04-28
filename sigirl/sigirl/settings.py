@@ -113,7 +113,9 @@ DATABASES = {
 }
 
 # En producción (Render), usar DATABASE_URL para persistir datos en PostgreSQL.
-database_url = os.environ.get('DATABASE_URL')
+# Tolerar valores vacíos, con espacios o con comillas (ej. ""), comunes en paneles de entorno.
+raw_database_url = os.environ.get('DATABASE_URL', '')
+database_url = raw_database_url.strip().strip('"').strip("'")
 if database_url:
     DATABASES['default'] = dj_database_url.parse(database_url, conn_max_age=600, ssl_require=True)
 
@@ -153,7 +155,12 @@ DEFAULT_CHARSET = 'utf-8'
 FILE_CHARSET = 'utf-8'
 
 # Configuración de correo para verificación de cuentas.
-EMAIL_BACKEND = os.environ.get('EMAIL_BACKEND', 'django.core.mail.backends.smtp.EmailBackend')
+# En desarrollo local, si no hay credenciales SMTP, usa consola para evitar errores 503 al registrar.
+default_email_backend = 'django.core.mail.backends.smtp.EmailBackend'
+if DEBUG and not os.environ.get('EMAIL_HOST_USER') and not os.environ.get('EMAIL_HOST_PASSWORD'):
+    default_email_backend = 'django.core.mail.backends.console.EmailBackend'
+
+EMAIL_BACKEND = os.environ.get('EMAIL_BACKEND', default_email_backend)
 EMAIL_HOST = os.environ.get('EMAIL_HOST', 'smtp.gmail.com')
 EMAIL_PORT = int(os.environ.get('EMAIL_PORT', 587))
 EMAIL_USE_TLS = os.environ.get('EMAIL_USE_TLS', 'True') == 'True'
@@ -161,6 +168,9 @@ EMAIL_HOST_USER = os.environ.get('EMAIL_HOST_USER', '')
 EMAIL_HOST_PASSWORD = os.environ.get('EMAIL_HOST_PASSWORD', '')
 DEFAULT_FROM_EMAIL = os.environ.get('DEFAULT_FROM_EMAIL', EMAIL_HOST_USER or 'no-reply@sigirl.local')
 FRONTEND_APP_URL = os.environ.get('FRONTEND_APP_URL', '').strip()
+
+# Permite desactivar verificación de correo en despliegues de recuperación.
+EMAIL_VERIFICATION_REQUIRED = os.environ.get('EMAIL_VERIFICATION_REQUIRED', 'True') == 'True'
 
 
 # Static files (CSS, JavaScript, Images)

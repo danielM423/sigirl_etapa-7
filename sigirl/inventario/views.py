@@ -1,9 +1,11 @@
-from datetime import date
+from datetime import date, timedelta
 from io import BytesIO
+import secrets
 
 from django.conf import settings
 from django.contrib.auth.models import User
 from django.contrib.auth.tokens import default_token_generator
+from django.contrib.auth.hashers import make_password, check_password
 from django.core.exceptions import ValidationError
 from django.core.mail import send_mail
 from django.core.validators import validate_email
@@ -84,6 +86,53 @@ def _get_role_from_user(user: User) -> str:
     return 'jefe' if user.is_superuser else 'admin' if user.is_staff else 'usuario'
 
 
+def _profile_existing_fields():
+    return {
+        field.name
+        for field in UserProfile._meta.get_fields()
+        if getattr(field, 'concrete', False)
+    }
+
+
+def _safe_update_profile(profile: UserProfile, values: dict):
+    existing = _profile_existing_fields()
+    update_fields = []
+    for key, value in values.items():
+        if key in existing:
+            setattr(profile, key, value)
+            update_fields.append(key)
+
+    if update_fields:
+        profile.save(update_fields=update_fields)
+    else:
+        profile.save()
+
+
+def _generate_email_verification_code() -> str:
+    return ''.join(secrets.choice('0123456789') for _ in range(6))
+
+
+def _issue_email_verification_code(user: User):
+    code = _generate_email_verification_code()
+    profile, _ = UserProfile.objects.get_or_create(user=user)
+    expires_at = timezone.now() + timedelta(minutes=15)
+
+    _safe_update_profile(
+        profile,
+        {
+            'email_verification_code_hash': make_password(code),
+            'email_verification_code_expires_at': expires_at,
+            'email_verification_attempts': 0,
+            'email_verification_sent_at': timezone.now(),
+        },
+    )
+
+    if 'email_verification_code_hash' not in _profile_existing_fields():
+        return '', None
+
+    return code, expires_at
+
+
 def _build_verification_link(request, user: User) -> str:
     uid = urlsafe_base64_encode(force_bytes(user.pk))
     token = default_token_generator.make_token(user)
@@ -95,13 +144,23 @@ def _build_verification_link(request, user: User) -> str:
     return f'{origin}/verify-email/{uid}/{token}'
 
 
-def _send_verification_email(request, user: User) -> None:
+def _send_verification_email(request, user: User):
     verification_link = _build_verification_link(request, user)
+    verification_code, expires_at = _issue_email_verification_code(user)
+    code_line = ''
+    expiry_line = ''
+    if verification_code:
+        code_line = f'Codigo de verificacion (expira en 15 minutos): {verification_code}\n\n'
+    if expires_at:
+        expiry_line = f'Expira el: {expires_at.strftime("%Y-%m-%d %H:%M:%S")}\n\n'
+
     subject = 'SIGIRL - Verificación de correo'
     message = (
         'Hola,\n\n'
-        'Para activar tu cuenta en SIGIRL debes verificar tu correo.\n'
-        f'Enlace de verificación: {verification_link}\n\n'
+        'Para activar tu cuenta en SIGIRL debes verificar tu correo.\n\n'
+        f'{code_line}'
+        f'Enlace de verificacion: {verification_link}\n\n'
+        f'{expiry_line}'
         'Si no solicitaste este registro, ignora este mensaje.'
     )
 
@@ -113,9 +172,10 @@ def _send_verification_email(request, user: User) -> None:
         fail_silently=False,
     )
 
-    profile, _ = UserProfile.objects.get_or_create(user=user)
-    profile.email_verification_sent_at = timezone.now()
-    profile.save(update_fields=['email_verification_sent_at'])
+    return {
+        'verification_link': verification_link,
+        'verification_code': verification_code,
+    }
 
 
 # =====================
@@ -132,7 +192,9 @@ class PublicTokenObtainPairView(TokenObtainPairView):
 
         if user and user.check_password(password):
             profile, _ = UserProfile.objects.get_or_create(user=user)
-            if not profile.email_verified:
+            email_verification_required = getattr(settings, 'EMAIL_VERIFICATION_REQUIRED', True)
+            profile_email_verified = getattr(profile, 'email_verified', True)
+            if email_verification_required and not profile_email_verified:
                 return Response(
                     {
                         'error': 'Tu correo no está verificado. Revisa tu bandeja y confirma tu cuenta.',
@@ -289,31 +351,51 @@ def register(request):
     user.save()
 
     profile, _ = UserProfile.objects.get_or_create(user=user)
-    profile.institution = institution
-    profile.department = department
-    profile.email_verified = False
-    profile.email_verified_at = None
-    profile.save()
-
-    try:
-        _send_verification_email(request, user)
-    except Exception:
-        user.delete()
-        return Response(
-            {'error': 'No se pudo enviar el correo de verificación. Intenta de nuevo en unos minutos.'},
-            status=status.HTTP_503_SERVICE_UNAVAILABLE,
-        )
-
-    return Response(
+    _safe_update_profile(
+        profile,
         {
-            'mensaje': 'Usuario creado. Revisa tu correo para activar la cuenta.',
-            'requires_verification': True,
-            'username': user.username,
-            'email': user.email,
-            'role': _get_role_from_user(user),
+            'institution': institution,
+            'department': department,
+            'email_verified': False,
+            'email_verified_at': None,
         },
-        status=status.HTTP_201_CREATED,
     )
+
+    email_verification_required = getattr(settings, 'EMAIL_VERIFICATION_REQUIRED', True)
+    verification_meta = {'verification_link': '', 'verification_code': ''}
+
+    if not email_verification_required:
+        _safe_update_profile(
+            profile,
+            {
+                'email_verified': True,
+                'email_verified_at': timezone.now(),
+            },
+        )
+    else:
+        try:
+            verification_meta = _send_verification_email(request, user)
+        except Exception:
+            # En producción puede no haber SMTP listo aún; no bloqueamos creación de cuenta.
+            verification_meta = {'verification_link': '', 'verification_code': ''}
+
+    response_payload = {
+        'mensaje': 'Usuario creado correctamente.',
+        'requires_verification': email_verification_required,
+        'username': user.username,
+        'email': user.email,
+        'role': _get_role_from_user(user),
+    }
+
+    if email_verification_required:
+        response_payload['mensaje'] = 'Usuario creado. Revisa tu correo para activar la cuenta.'
+
+    if settings.DEBUG:
+        response_payload['verification_link'] = verification_meta.get('verification_link', '')
+        response_payload['verification_code'] = verification_meta.get('verification_code', '')
+        response_payload['verification_code_hint'] = 'En produccion solo se enviara al correo.'
+
+    return Response(response_payload, status=status.HTTP_201_CREATED)
 
 
 @api_view(['GET'])
@@ -329,11 +411,74 @@ def verify_email(request, uidb64, token):
         return Response({'error': 'El enlace de verificación expiró o ya no es válido.'}, status=status.HTTP_400_BAD_REQUEST)
 
     profile, _ = UserProfile.objects.get_or_create(user=user)
-    profile.email_verified = True
-    profile.email_verified_at = timezone.now()
-    profile.save(update_fields=['email_verified', 'email_verified_at'])
+    _safe_update_profile(
+        profile,
+        {
+            'email_verified': True,
+            'email_verified_at': timezone.now(),
+            'email_verification_code_hash': '',
+            'email_verification_code_expires_at': None,
+            'email_verification_attempts': 0,
+        },
+    )
 
     return Response({'mensaje': 'Correo verificado correctamente. Ya puedes iniciar sesión.'}, status=status.HTTP_200_OK)
+
+
+@api_view(['POST'])
+@permission_classes([AllowAny])
+def verify_email_code(request):
+    username = (request.data.get('username') or '').strip()
+    email = (request.data.get('email') or '').strip().lower()
+    code = ''.join(ch for ch in str(request.data.get('code') or '') if ch.isdigit())
+
+    if not code or len(code) != 6:
+        return Response({'error': 'Debes ingresar un codigo de 6 digitos.'}, status=status.HTTP_400_BAD_REQUEST)
+
+    user = None
+    if username:
+        user = User.objects.filter(username__iexact=username).first()
+    elif email:
+        user = User.objects.filter(email__iexact=email).first()
+
+    if not user:
+        return Response({'error': 'No encontramos una cuenta con esos datos.'}, status=status.HTTP_404_NOT_FOUND)
+
+    profile, _ = UserProfile.objects.get_or_create(user=user)
+    if getattr(profile, 'email_verified', False):
+        return Response({'mensaje': 'La cuenta ya esta verificada.'}, status=status.HTTP_200_OK)
+
+    fields = _profile_existing_fields()
+    if 'email_verification_code_hash' not in fields:
+        return Response({'error': 'Verificacion por codigo no disponible en este entorno.'}, status=status.HTTP_503_SERVICE_UNAVAILABLE)
+
+    if not getattr(profile, 'email_verification_code_hash', '') or not getattr(profile, 'email_verification_code_expires_at', None):
+        return Response({'error': 'Debes solicitar un nuevo codigo de verificacion.'}, status=status.HTTP_400_BAD_REQUEST)
+
+    if profile.email_verification_code_expires_at < timezone.now():
+        return Response({'error': 'El codigo expiro. Solicita un nuevo codigo.'}, status=status.HTTP_400_BAD_REQUEST)
+
+    if getattr(profile, 'email_verification_attempts', 0) >= 5:
+        return Response({'error': 'Demasiados intentos fallidos. Solicita un nuevo codigo.'}, status=status.HTTP_429_TOO_MANY_REQUESTS)
+
+    if not check_password(code, profile.email_verification_code_hash):
+        attempts = getattr(profile, 'email_verification_attempts', 0) + 1
+        _safe_update_profile(profile, {'email_verification_attempts': attempts})
+        remaining = max(0, 5 - attempts)
+        return Response({'error': f'Codigo incorrecto. Intentos restantes: {remaining}.'}, status=status.HTTP_400_BAD_REQUEST)
+
+    _safe_update_profile(
+        profile,
+        {
+            'email_verified': True,
+            'email_verified_at': timezone.now(),
+            'email_verification_code_hash': '',
+            'email_verification_code_expires_at': None,
+            'email_verification_attempts': 0,
+        },
+    )
+
+    return Response({'mensaje': 'Correo verificado correctamente con codigo. Ya puedes iniciar sesion.'}, status=status.HTTP_200_OK)
 
 
 @api_view(['POST'])
@@ -352,15 +497,21 @@ def resend_verification_email(request):
         return Response({'error': 'No encontramos una cuenta con esos datos.'}, status=status.HTTP_404_NOT_FOUND)
 
     profile, _ = UserProfile.objects.get_or_create(user=user)
-    if profile.email_verified:
+    if getattr(profile, 'email_verified', False):
         return Response({'mensaje': 'La cuenta ya está verificada.'}, status=status.HTTP_200_OK)
 
     try:
-        _send_verification_email(request, user)
+        verification_meta = _send_verification_email(request, user)
     except Exception:
         return Response({'error': 'No fue posible reenviar el correo ahora. Intenta nuevamente.'}, status=status.HTTP_503_SERVICE_UNAVAILABLE)
 
-    return Response({'mensaje': 'Se reenviaron las instrucciones de verificación a tu correo.'}, status=status.HTTP_200_OK)
+    response_payload = {'mensaje': 'Se reenviaron las instrucciones de verificación a tu correo.'}
+    if settings.DEBUG:
+        response_payload['verification_link'] = verification_meta.get('verification_link', '')
+        response_payload['verification_code'] = verification_meta.get('verification_code', '')
+        response_payload['verification_code_hint'] = 'En produccion el codigo solo se envia por correo.'
+
+    return Response(response_payload, status=status.HTTP_200_OK)
 
 
 # =====================
