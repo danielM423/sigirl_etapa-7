@@ -117,11 +117,6 @@ function Login() {
           <p className="text-sm text-stone-600 mt-2">Acceso al sistema de inventarios y reactivos</p>
         </div>
 
-        <div className="mb-4 rounded-lg border border-[#bfe9d7] bg-[#effaf5] p-3 text-xs text-[#116645]">
-          Las credenciales se sincronizan desde las variables del servicio en Render
-          (DJANGO_SUPERUSER_PASSWORD, DJANGO_JEFE_PASSWORD y DJANGO_USER_PASSWORD).
-        </div>
-
         {error && (
           <div className="mb-4 rounded-lg border border-rose-200 bg-rose-50 p-3 text-sm text-rose-700">
             {error}

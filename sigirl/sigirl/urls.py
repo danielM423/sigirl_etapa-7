@@ -9,6 +9,7 @@ from inventario.views import (
     get_current_user,
     manage_profile,
     verify_email,
+    verify_email_code,
     resend_verification_email,
     PublicTokenObtainPairView,
     PublicTokenRefreshView,
@@ -33,6 +34,7 @@ urlpatterns = [
     # Auth (Public)
     path('api/register/', register, name='register'),
     path('api/verify-email/<str:uidb64>/<str:token>/', verify_email, name='verify_email'),
+    path('api/auth/verify-email-code/', verify_email_code, name='verify_email_code'),
     path('api/auth/resend-verification/', resend_verification_email, name='resend_verification_email'),
     path('api/auth/user/', get_current_user, name='get_current_user'),
     path('api/auth/profile/', manage_profile, name='manage_profile'),

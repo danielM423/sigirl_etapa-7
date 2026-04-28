@@ -79,6 +79,7 @@ export const createMovimiento  = (data)     => api.post('movimientos/', data);
 // ── Auth ──────────────────────────────────────────────────
 export const verifyEmailToken = (uid, token) => api.get(`verify-email/${uid}/${token}/`);
 export const resendVerificationEmail = (data) => api.post('auth/resend-verification/', data);
+export const verifyEmailCode = (data) => api.post('auth/verify-email-code/', data);
 
 // ── Reportes backend ──────────────────────────────────────
 export const getInventoryExcelReportUrl = () => `${api.defaults.baseURL}reportes/inventario-excel/`;
