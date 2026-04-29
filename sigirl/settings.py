@@ -10,6 +10,8 @@ For the full list of settings and their values, see
 https://docs.djangoproject.com/en/6.0/ref/settings/
 """
 
+
+import os
 from pathlib import Path
 
 # Carpeta base del proyecto.
@@ -20,13 +22,22 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 # Quick-start development settings - unsuitable for production
 # See https://docs.djangoproject.com/en/6.0/howto/deployment/checklist/
 
-# SECURITY WARNING: keep the secret key used in production secret!
-SECRET_KEY = 'django-insecure-bkug&5%86lm3l=m2epx1xy9&mye%9xm=xitm6#c=&n3%04$pg4'
 
-# SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = True
+# === CONFIGURACIÓN SEGURA PARA PRODUCCIÓN ===
+SECRET_KEY = os.environ.get('SECRET_KEY', 'django-insecure-bkug&5%86lm3l=m2epx1xy9&mye%9xm=xitm6#c=&n3%04$pg4')
+DEBUG = os.environ.get('DEBUG', 'False') == 'True'
+ALLOWED_HOSTS = os.environ.get('ALLOWED_HOSTS', '').split(',') if os.environ.get('ALLOWED_HOSTS') else []
+CSRF_TRUSTED_ORIGINS = os.environ.get('CSRF_TRUSTED_ORIGINS', '').split(',') if os.environ.get('CSRF_TRUSTED_ORIGINS') else []
+SECURE_SSL_REDIRECT = os.environ.get('SECURE_SSL_REDIRECT', 'False') == 'True'
 
-ALLOWED_HOSTS = []
+# Email config
+EMAIL_BACKEND = os.environ.get('EMAIL_BACKEND', 'django.core.mail.backends.smtp.EmailBackend')
+EMAIL_HOST = os.environ.get('EMAIL_HOST', '')
+EMAIL_PORT = int(os.environ.get('EMAIL_PORT', 587))
+EMAIL_USE_TLS = os.environ.get('EMAIL_USE_TLS', 'True') == 'True'
+EMAIL_HOST_USER = os.environ.get('EMAIL_HOST_USER', '')
+EMAIL_HOST_PASSWORD = os.environ.get('EMAIL_HOST_PASSWORD', '')
+DEFAULT_FROM_EMAIL = os.environ.get('DEFAULT_FROM_EMAIL', EMAIL_HOST_USER)
 
 # Application definition
 
@@ -122,8 +133,9 @@ DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 # Static files (CSS, JavaScript, Images)
 # https://docs.djangoproject.com/en/6.0/howto/static-files/
 
-# URL base para servir recursos estáticos.
-STATIC_URL = 'static/'
+STATIC_URL = '/static/'
+STATIC_ROOT = BASE_DIR / 'staticfiles'
+TEMPLATES[0]['DIRS'] = [BASE_DIR / 'staticfiles']
 import os
 
 SECRET_KEY = os.environ.get('SECRET_KEY', 'django-insecure-bkug&5%86lm3l=m2epx1xy9&mye%9xm=xitm6#c=&n3%04$pg4')
@@ -143,3 +155,7 @@ EMAIL_HOST_PASSWORD = os.environ.get('EMAIL_HOST_PASSWORD', '')
 DEFAULT_FROM_EMAIL = os.environ.get('DEFAULT_FROM_EMAIL', '')
 
 FRONTEND_APP_URL = os.environ.get('FRONTEND_APP_URL', '')
+
+
+
+
