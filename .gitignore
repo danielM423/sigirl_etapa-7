@@ -30,3 +30,10 @@ Thumbs.db
 
 # Logs
 *.log
+
+# Ignorar base de datos de Django en subcarpetas
+sigirl/db.sqlite3
+
+# Ignorar archivos de salida de build y estáticos
+frontend/dist/
+staticfiles/

@@ -18,7 +18,8 @@ function Login() {
   const navigate = useNavigate();
   const { setUser, setRole } = useContext(UserContext);
 
-  const handleLogin = async () => {
+  const handleLogin = async (e) => {
+    if (e) e.preventDefault();
     setError('');
     setResendStatus('');
     setVerificationLink('');
@@ -166,7 +167,7 @@ function Login() {
           </div>
         )}
 
-        <div className="space-y-4">
+        <form className="space-y-4" onSubmit={handleLogin}>
           <div>
             <label className="block text-xs text-stone-600 mb-1">Usuario</label>
             <input
@@ -177,7 +178,6 @@ function Login() {
               placeholder="Ingresa tu usuario"
             />
           </div>
-
           <div>
             <label className="block text-xs text-stone-600 mb-1">Contraseña</label>
             <input
@@ -189,15 +189,14 @@ function Login() {
               placeholder="Ingresa tu contraseña"
             />
           </div>
-        </div>
-
-        <button
-          onClick={handleLogin}
-          disabled={loading}
-          className="w-full mt-6 py-2.5 rounded-lg bg-[#1fa971] hover:bg-[#157a55] text-white font-semibold transition-colors disabled:opacity-60"
-        >
-          {loading ? 'Ingresando...' : 'Ingresar'}
-        </button>
+          <button
+            type="submit"
+            disabled={loading}
+            className="w-full mt-6 py-2.5 rounded-lg bg-[#1fa971] hover:bg-[#157a55] text-white font-semibold transition-colors disabled:opacity-60"
+          >
+            {loading ? 'Ingresando...' : 'Ingresar'}
+          </button>
+        </form>
 
         <p className="text-center text-xs text-stone-500 mt-5">
           ¿No tienes cuenta?{' '}

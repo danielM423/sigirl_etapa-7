@@ -11,8 +11,11 @@ https://docs.djangoproject.com/en/6.0/ref/settings/
 """
 
 
+
 import os
 from pathlib import Path
+
+# === DIAGNÓSTICO DE VARIABLES DE ENTORNO EN RENDER ===
 
 # Carpeta base del proyecto.
 # A partir de aquí se construyen rutas a la base de datos, archivos estáticos, etc.
@@ -63,6 +66,7 @@ MIDDLEWARE = [
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
+    'whitenoise.middleware.WhiteNoiseMiddleware',
 ]
 
 ROOT_URLCONF = 'sigirl.urls'
@@ -136,6 +140,13 @@ DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 STATIC_URL = '/static/'
 STATIC_ROOT = BASE_DIR / 'staticfiles'
 TEMPLATES[0]['DIRS'] = [BASE_DIR / 'staticfiles']
+STATICFILES_DIRS = [
+    BASE_DIR / 'frontend' / 'dist',
+]
+
+# WhiteNoise settings para cache busting
+STATICFILES_STORAGE = 'whitenoise.storage.CompressedManifestStaticFilesStorage'
+
 import os
 
 SECRET_KEY = os.environ.get('SECRET_KEY', 'django-insecure-bkug&5%86lm3l=m2epx1xy9&mye%9xm=xitm6#c=&n3%04$pg4')

@@ -74,7 +74,8 @@ export default function Register() {
   const handleNext = () => { if (validateStep()) setCurrentStep(s => Math.min(s + 1, 3)); };
   const handlePrevious = () => { setError(''); setCurrentStep(s => Math.max(s - 1, 1)); };
 
-  const handleSubmit = async () => {
+  const handleSubmit = async (e) => {
+    if (e) e.preventDefault();
     if (!validateStep()) return;
     setLoading(true); setError('');
     try {
@@ -170,7 +171,7 @@ export default function Register() {
         </div>
 
         {/* Card */}
-        <div className="bg-white border border-[#E0E0E0] rounded-lg overflow-hidden shadow-2xl">
+        <form className="bg-white border border-[#E0E0E0] rounded-lg overflow-hidden shadow-2xl" onSubmit={handleSubmit}>
           <div className="px-6 py-4 border-b border-[#E0E0E0]">
             <span className="text-xs font-mono font-bold text-[#1FA971] uppercase tracking-wider">
               {STEPS[currentStep-1].label} — PASO {currentStep} DE 3
@@ -285,7 +286,7 @@ export default function Register() {
           {/* Footer nav */}
           <div className="flex items-center justify-between px-6 py-4 border-t border-[#E0E0E0] bg-stone-50">
             {currentStep > 1 ? (
-              <button onClick={handlePrevious} className="flex items-center gap-1.5 px-4 py-2 rounded text-xs font-mono font-bold border border-[#E0E0E0] text-stone-500 hover:text-stone-700 hover:border-slate-500 transition-colors">
+              <button type="button" onClick={handlePrevious} className="flex items-center gap-1.5 px-4 py-2 rounded text-xs font-mono font-bold border border-[#E0E0E0] text-stone-500 hover:text-stone-700 hover:border-slate-500 transition-colors">
                 <ChevronLeft className="w-3.5 h-3.5" /> Anterior
               </button>
             ) : (
@@ -293,12 +294,12 @@ export default function Register() {
             )}
 
             {currentStep < 3 ? (
-              <button onClick={handleNext} className="flex items-center gap-1.5 px-4 py-2 rounded text-xs font-mono font-bold bg-[#1FA971] text-white hover:bg-[#157A55] transition-colors shadow-sm">
+              <button type="button" onClick={handleNext} className="flex items-center gap-1.5 px-4 py-2 rounded text-xs font-mono font-bold bg-[#1FA971] text-white hover:bg-[#157A55] transition-colors shadow-sm">
                 Siguiente <ChevronRight className="w-3.5 h-3.5" />
               </button>
             ) : (
               <button
-                onClick={handleSubmit}
+                type="submit"
                 disabled={loading}
                 className="flex items-center gap-1.5 px-5 py-2 rounded text-xs font-mono font-bold bg-[#1FA971] text-white hover:bg-[#157A55] transition-colors shadow-sm disabled:opacity-50 disabled:cursor-not-allowed"
               >
@@ -310,7 +311,7 @@ export default function Register() {
               </button>
             )}
           </div>
-        </div>
+        </form>
 
         <p className="text-center text-[9px] font-mono text-stone-600 mt-6 uppercase tracking-widest">
           SIGIRL · Sistema de Gestión de Inventarios y Reactivos
