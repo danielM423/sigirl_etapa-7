@@ -276,8 +276,12 @@ class PedidoViewSet(viewsets.ModelViewSet):
 
     def update(self, request, *args, **kwargs):
         pedido = self.get_object()
-        if not (request.user.is_staff or request.user.is_superuser):
-            return Response({'error': 'No tienes permiso para actualizar pedidos.'}, status=status.HTTP_403_FORBIDDEN)
+        user = request.user
+        # Permitir staff/superuser o dueño si el pedido está pendiente
+        es_dueno = pedido.usuario == user
+        puede_editar = user.is_staff or user.is_superuser or (es_dueno and pedido.estado == 'pendiente')
+        if not puede_editar:
+            return Response({'error': 'No tienes permiso para actualizar este pedido.'}, status=status.HTTP_403_FORBIDDEN)
 
         payload = request.data.copy()
         estado = str(payload.get('estado', pedido.estado)).lower()
@@ -810,7 +814,7 @@ class UserManagementViewSet(viewsets.ModelViewSet):
     permission_classes = [IsStaffOrSuperuser]
 
     def create(self, request, *args, **kwargs):
-        # Solo admin/jefe pueden crear usuarios
+        # Solo admin/jefe pueden crear usuarios y asignar roles
         if not (request.user.is_staff or request.user.is_superuser):
             return Response({'error': 'No tienes permiso para crear usuarios.'}, status=status.HTTP_403_FORBIDDEN)
 
@@ -835,7 +839,6 @@ class UserManagementViewSet(viewsets.ModelViewSet):
                 return Response({'rol': ['Solo jefe maestro puede crear otros jefes.']}, status=status.HTTP_403_FORBIDDEN)
 
         # Jefe maestro puede crear cualquier rol
-        # (no hay restricción adicional)
 
         user = User(username=username, email=email)
         nombre = str(data.get('nombre_completo') or data.get('full_name') or username).strip()
