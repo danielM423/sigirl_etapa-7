@@ -81,7 +81,6 @@ const Tabla = ({ data = [], title = 'Pedidos recientes' }) => {
     []
   );
 
-  // eslint-disable-next-line react-hooks/incompatible-library
   const table = useReactTable({
     data: filteredRows,
     columns,
@@ -145,7 +144,7 @@ const Tabla = ({ data = [], title = 'Pedidos recientes' }) => {
               <tr>
                 <td colSpan={columns.length} className="px-5 py-10 text-center text-sm font-medium text-slate-500">
                   No se encontraron registros.
-                </td>
+                 </td>
               </tr>
             ) : (
               table.getRowModel().rows.map((row) => (

@@ -83,7 +83,7 @@ const Inventario = () => {
   const [filterCategory, setFilterCategory] = useState('todas');
   const [showModal, setShowModal] = useState(false);
   const [selectedProduct, setSelectedProduct] = useState(null);
-  const [formProducto, setFormProducto] = useState({ nombre: '', categoria: 'Solventes', ubicacion: '', cantidad: '', umbral_minimo: '', tipo: 'reactivo' });
+  const [formProducto, setFormProducto] = useState({ nombre: '', categoria: 'Solventes', unidad: '', ubicacion: '', cantidad: '', umbral_minimo: '', tipo: 'reactivo' });
   const [productoDetalle, setProductoDetalle] = useState(null);
   const [deleteConfirm, setDeleteConfirm] = useState(null); // { id, nombre, motivo }
   const [movimientosModal, setMovimientosModal] = useState(null); // producto seleccionado
@@ -103,6 +103,7 @@ const Inventario = () => {
     nombre: p.nombre || 'Sin nombre',
     categoria: typeof p.categoria === 'string' ? p.categoria : p.categoria?.nombre || p.categoria_nombre || 'General',
     cantidad: Number(p.cantidad ?? 0),
+    unidad: p.unidad || '',
     umbral_minimo: Number(p.umbral_minimo ?? p.minimo ?? 0),
     ubicacion: p.ubicacion || 'Sin ubicacion',
     estado: p.estado || (Number(p.cantidad ?? 0) <= 0 ? 'agotado' : Number(p.cantidad ?? 0) <= Number(p.umbral_minimo ?? p.minimo ?? 0) ? 'bajo_stock' : 'ok'),
@@ -124,21 +125,28 @@ const Inventario = () => {
   const handleGuardarProducto = async () => {
     if (!canManage) { toast.error('Solo consulta permitida.'); return; }
     if (!formProducto.nombre || !formProducto.cantidad || !formProducto.umbral_minimo || !formProducto.ubicacion) { toast.error('Completa todos los campos'); return; }
-    const payload = { nombre: formProducto.nombre, categoria_texto: formProducto.categoria, ubicacion: formProducto.ubicacion, cantidad: parseInt(formProducto.cantidad, 10), umbral_minimo: parseInt(formProducto.umbral_minimo, 10), tipo: formProducto.tipo || 'reactivo' };
+    const payload = {
+      nombre: formProducto.nombre,
+      categoria_texto: formProducto.categoria,
+      unidad: formProducto.unidad,
+      ubicacion: formProducto.ubicacion,
+      cantidad: parseInt(formProducto.cantidad, 10),
+      umbral_minimo: parseInt(formProducto.umbral_minimo, 10),
+      tipo: formProducto.tipo || 'reactivo'
+    };
     try {
       if (selectedProduct) {
-        const { data } = await updateProducto(selectedProduct.id, payload);
-        setProductos((prev) => prev.map((p) => p.id === selectedProduct.id ? data : p));
+        await updateProducto(selectedProduct.id, payload);
         toast.success('Producto actualizado');
       } else {
-        const { data } = await createProducto(payload);
-        setProductos((prev) => [...prev, data]);
+        await createProducto(payload);
         toast.success('Producto creado');
       }
+      const res = await getProductos();
+      setProductos(res.data.results ?? res.data ?? []);
       resetForm();
     } catch (err) {
-      const msg = err.response?.data;
-      toast.error(typeof msg === 'object' ? Object.values(msg).flat().join(' ') : (msg || 'Error al guardar'));
+      toast.error(err.response?.data?.detail || 'Error al guardar producto');
     }
   };
 
@@ -153,6 +161,16 @@ const Inventario = () => {
     } catch { setMovimientos([]); }
     finally { setLoadingMovs(false); }
   };
+
+  const payload = {
+  nombre: formProducto.nombre,
+  categoria_texto: formProducto.categoria,
+  unidad: formProducto.unidad,
+  ubicacion: formProducto.ubicacion,
+  cantidad: parseInt(formProducto.cantidad, 10),
+  umbral_minimo: parseInt(formProducto.umbral_minimo, 10),
+  tipo: formProducto.tipo || 'reactivo'
+};
 
   const handleGuardarMovimiento = async () => {
     if (!formMov.cantidad || Number(formMov.cantidad) <= 0) { toast.error('La cantidad debe ser mayor que cero'); return; }
@@ -172,7 +190,8 @@ const Inventario = () => {
     }
   };
 
-  const handleEliminarProducto = (id) => {    if (!canManage) { toast.error('Sin permisos.'); return; }
+  const handleEliminarProducto = (id) => {
+    if (!canManage) { toast.error('Sin permisos.'); return; }
     const producto = productos.find((p) => p.id === id);
     setDeleteConfirm({ id, nombre: producto?.nombre || 'Producto', motivo: '' });
   };
@@ -199,9 +218,10 @@ const Inventario = () => {
   if (loading) return <Layout><div className="flex items-center justify-center h-64"><div className="text-center"><div className="w-3 h-3 rounded-full mx-auto mb-3 bg-emerald-500 animate-pulse" /><p className="text-stone-500 font-mono text-sm">CARGANDO INVENTARIO...</p></div></div></Layout>;
 
   return (
+
     <Layout>
       <div className="space-y-5 max-w-[1400px] mx-auto">
-
+        {/* Header y estadísticas */}
         <div className="flex items-center justify-between">
           <div>
             <div className="flex items-center gap-2 mb-1">
@@ -229,6 +249,7 @@ const Inventario = () => {
           <StatCard label="Agotados"        value={stats.agotado}   icon={<AlertCircle className="w-4 h-4" />} color="rose" />
         </div>
 
+        {/* Filtros de búsqueda y categoría */}
         <div className="bg-white border border-[#E0E0E0] rounded-xl p-4 shadow-[0_2px_8px_rgba(0,0,0,0.05)]">
           <div className="flex gap-3">
             <div className="relative flex-1">
@@ -268,7 +289,7 @@ const Inventario = () => {
             <table className="w-full">
               <thead>
                 <tr className="border-b border-stone-200">
-                  {['PRODUCTO','CATEGORÍA','CANT.','MÍN.','UBICACIÓN','ESTADO','ACCIONES'].map((h) => (
+                  {['PRODUCTO','CATEGORÍA','CANT.','UNIDAD','MÍN.','UBICACIÓN','ESTADO','ACCIONES'].map((h) => (
                     <th key={h} className="pb-3 text-[9px] font-mono font-bold text-stone-500 uppercase tracking-wider text-left last:text-center">{h}</th>
                   ))}
                 </tr>
@@ -284,6 +305,7 @@ const Inventario = () => {
                     </td>
                     <td className={`${compactView ? 'py-1.5' : 'py-3'} pr-4`}><span className="px-2 py-0.5 rounded text-[10px] font-mono font-bold bg-indigo-100 text-indigo-700 border border-indigo-200">{p.categoria}</span></td>
                     <td className={`${compactView ? 'py-1.5' : 'py-3'} pr-4`}><span className="font-bold text-sm font-mono text-[#157A55]">{p.cantidad}</span></td>
+                    <td className={`${compactView ? 'py-1.5' : 'py-3'} pr-4 text-sm font-mono text-stone-500`}>{p.unidad}</td>
                     <td className={`${compactView ? 'py-1.5' : 'py-3'} pr-4 text-sm font-mono text-stone-500`}>{p.umbral_minimo}</td>
                     <td className={`${compactView ? 'py-1.5' : 'py-3'} pr-4 text-sm font-mono text-stone-500`}>{p.ubicacion}</td>
                     <td className="py-3 pr-4"><EstadoBadge estado={p.estado} /></td>
@@ -349,6 +371,10 @@ const Inventario = () => {
               <div>
                 <label className="block text-[9px] font-mono font-bold text-stone-500 uppercase tracking-wider mb-1.5">Cantidad</label>
                 <input type="number" min="0" value={formProducto.cantidad} onChange={(e) => setFormProducto({...formProducto, cantidad: e.target.value})} className={inputCls} placeholder="0" />
+              </div>
+              <div>
+                <label className="block text-[9px] font-mono font-bold text-stone-500 uppercase tracking-wider mb-1.5">Unidad</label>
+                <input type="text" value={formProducto.unidad} onChange={(e) => setFormProducto({...formProducto, unidad: e.target.value})} className={inputCls} placeholder="Ej. ml, g, unidades" />
               </div>
               <div>
                 <label className="block text-[9px] font-mono font-bold text-stone-500 uppercase tracking-wider mb-1.5">Umbral mínimo</label>
@@ -506,6 +532,18 @@ const Inventario = () => {
                     onChange={e => setFormMov(f => ({ ...f, cantidad: e.target.value }))}
                     className={inputCls} placeholder="0" />
                 </div>
+                  {/* unidad */}
+                  <div>
+                    <label className="block text-[9px] font-mono font-bold text-stone-500 uppercase tracking-wider mb-1.5">Unidad</label>
+                    <input
+                      type="text"
+                      value={formProducto.unidad}
+                      onChange={(e) => setFormProducto({ ...formProducto, unidad: e.target.value })}
+                      className={inputCls}
+                      placeholder="Ej. ml, g, unidades"
+                      />
+                    </div>
+
 
                 {/* Observación */}
                 <div>

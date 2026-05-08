@@ -1,6 +1,13 @@
+from rest_framework import serializers
+from .models import UnidadMedida, Practica, PracticaReactivo, PracticaEquipo
+# --- SERIALIZER UNIDAD DE MEDIDA ---
+class UnidadMedidaSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = UnidadMedida
+        fields = '__all__'
+
 from django.contrib.auth import get_user_model
 User = get_user_model()
-from rest_framework import serializers
 from .models import HistorialCambio
 from .models import Alerta, Categoria, Movimiento, Pedido, Producto, UserProfile
 
@@ -18,104 +25,58 @@ class CategoriaSerializer(serializers.ModelSerializer):
 
 
 class ProductoSerializer(serializers.ModelSerializer):
-    nivel_riesgo = serializers.SerializerMethodField()
-    mensaje = serializers.SerializerMethodField()
-    recomendacion = serializers.SerializerMethodField()
-    bajo_stock = serializers.SerializerMethodField()
-    por_vencer = serializers.SerializerMethodField()
-    categoria_nombre = serializers.CharField(source='categoria.nombre', read_only=True)
-    categoria_texto = serializers.CharField(write_only=True, required=False, allow_blank=True)
-    categoria = serializers.PrimaryKeyRelatedField(
-        queryset=Categoria.objects.all(), required=False, allow_null=True
-    )
-    umbral_minimo = serializers.IntegerField(source='minimo', required=False)
-    estado = serializers.CharField(read_only=True)
-
+    categoria = CategoriaSerializer(read_only=True)
     class Meta:
         model = Producto
-        fields = [
-            'id',
-            'nombre',
-            'tipo',
-            'categoria',
-            'categoria_nombre',
-            'categoria_texto',
-            'cantidad',
-            'umbral_minimo',
-            'ubicacion',
-            'fecha_vencimiento',
-            'ultima_actualizacion',
-            'bajo_stock',
-            'por_vencer',
-            'estado',
-            'nivel_riesgo',
-            'mensaje',
-            'recomendacion',
-        ]
+        fields = '__all__'
 
-    def get_nivel_riesgo(self, obj):
-        if obj.cantidad <= 0:
-            return '🔴 Crítico'
-        elif obj.cantidad <= obj.minimo:
-            return '🟠 Medio'
-        else:
-            return '🟢 Leve'
+# --- SERIALIZERS PARA PRÁCTICAS Y RELACIONES ---
+class PracticaReactivoSerializer(serializers.ModelSerializer):
+    reactivo = serializers.PrimaryKeyRelatedField(queryset=Producto.objects.filter(tipo='reactivo'))
+    unidad = serializers.PrimaryKeyRelatedField(queryset=UnidadMedida.objects.all())
+    class Meta:
+        model = PracticaReactivo
+        fields = '__all__'
 
-    def get_mensaje(self, obj):
-        if obj.cantidad <= 0:
-            return 'Stock insuficiente'
-        elif obj.cantidad <= obj.minimo:
-            return 'Stock cercano al mínimo'
-        else:
-            return 'Estado normal'
+class PracticaEquipoSerializer(serializers.ModelSerializer):
+    equipo = serializers.PrimaryKeyRelatedField(queryset=Producto.objects.filter(tipo='equipo'))
+    class Meta:
+        model = PracticaEquipo
+        fields = '__all__'
 
-    def get_recomendacion(self, obj):
-        if obj.cantidad <= 0:
-            return 'Realizar reposición inmediata'
-        elif obj.cantidad <= obj.minimo:
-            return 'Planificar reposición pronto'
-        else:
-            return 'Sin acción requerida'
-
-    def get_bajo_stock(self, obj):
-        return obj.bajo_stock()
-
-    def get_por_vencer(self, obj):
-        return obj.por_vencer()
-
-    def _resolve_categoria(self, validated_data, is_update=False):
-        categoria_texto = validated_data.pop('categoria_texto', None)
-
-        if categoria_texto is not None:
-            categoria_texto = categoria_texto.strip()
-            if not categoria_texto:
-                raise serializers.ValidationError({'categoria_texto': 'La categoría no puede estar vacía.'})
-            categoria, _ = Categoria.objects.get_or_create(nombre=categoria_texto)
-            validated_data['categoria'] = categoria
-        elif not is_update and not validated_data.get('categoria'):
-            # Solo asigna General en creación, nunca en edición
-            categoria, _ = Categoria.objects.get_or_create(nombre='General')
-            validated_data['categoria'] = categoria
-
-        return validated_data
-
-    def validate_cantidad(self, value):
-        if value < 0:
-            raise serializers.ValidationError('La cantidad no puede ser negativa.')
-        return value
-
-    def validate_minimo(self, value):
-        if value < 0:
-            raise serializers.ValidationError('El umbral mínimo no puede ser negativo.')
-        return value
+class PracticaSerializer(serializers.ModelSerializer):
+    instructor = serializers.PrimaryKeyRelatedField(queryset=User.objects.all())
+    reactivos = PracticaReactivoSerializer(many=True, required=False)
+    equipos = PracticaEquipoSerializer(many=True, required=False)
+    class Meta:
+        model = Practica
+        fields = '__all__'
 
     def create(self, validated_data):
-        validated_data = self._resolve_categoria(validated_data, is_update=False)
-        return super().create(validated_data)
+        reactivos_data = validated_data.pop('reactivos', [])
+        equipos_data = validated_data.pop('equipos', [])
+        practica = Practica.objects.create(**validated_data)
+        for reactivo in reactivos_data:
+            PracticaReactivo.objects.create(practica=practica, **reactivo)
+        for equipo in equipos_data:
+            PracticaEquipo.objects.create(practica=practica, **equipo)
+        return practica
 
     def update(self, instance, validated_data):
-        validated_data = self._resolve_categoria(validated_data, is_update=True)
-        return super().update(instance, validated_data)
+        reactivos_data = validated_data.pop('reactivos', None)
+        equipos_data = validated_data.pop('equipos', None)
+        for attr, value in validated_data.items():
+            setattr(instance, attr, value)
+        instance.save()
+        if reactivos_data is not None:
+            instance.reactivos.all().delete()
+            for reactivo in reactivos_data:
+                PracticaReactivo.objects.create(practica=instance, **reactivo)
+        if equipos_data is not None:
+            instance.equipos.all().delete()
+            for equipo in equipos_data:
+                PracticaEquipo.objects.create(practica=instance, **equipo)
+        return instance
 
 
 class MovimientoSerializer(serializers.ModelSerializer):
@@ -207,7 +168,8 @@ class UserManagementSerializer(serializers.ModelSerializer):
         import re
         nombre = validated_data.pop('nombre_input', '').strip()
         departamento = validated_data.pop('departamento_input', '').strip()
-        rol = validated_data.pop('rol_input', 'usuario').strip()
+        # Fuerza el rol a 'usuario' SIEMPRE, sin importar lo que llegue
+        rol = 'usuario'
         password = validated_data.pop('password', None)
         email = validated_data.get('email', '')
 

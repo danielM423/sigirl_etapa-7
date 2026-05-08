@@ -1,3 +1,129 @@
+from django.contrib.auth import get_user_model
+User = get_user_model()
+# Endpoint para obtener instructores (todos los usuarios)
+from rest_framework.decorators import api_view
+@api_view(['GET'])
+def instructores_list(request):
+    users = User.objects.all().values('id', 'username', 'first_name', 'last_name')
+    return Response(list(users))
+from django.db.models import Sum
+from rest_framework.response import Response
+# Endpoint para top de reactivos más usados
+from rest_framework.decorators import api_view, permission_classes
+from rest_framework.permissions import AllowAny
+@api_view(['GET'])
+@permission_classes([AllowAny])  # Cambia a IsAuthenticated si lo necesitas
+def top_reactivos_usados(request):
+    top = (
+        PracticaReactivo.objects
+        .values('reactivo__nombre')
+        .annotate(total=Sum('cantidad'))
+        .order_by('-total')[:10]
+    )
+    return Response(list(top))
+from django.db.models import Prefetch
+# =====================
+# PRÁCTICAS - Excel listado completo
+# =====================
+from rest_framework.permissions import IsAuthenticated, AllowAny
+from rest_framework.decorators import api_view, permission_classes
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def download_practicas_excel(request):
+    workbook = Workbook()
+    sheet = workbook.active
+    sheet.title = 'Prácticas'
+
+    headers = [
+        'ID', 'Ficha', 'Nombre', 'Fecha', 'Grupos', 'Instructor', 'Estado',
+        'Reactivos', 'Equipos'
+    ]
+    sheet.append(headers)
+
+    practicas = Practica.objects.select_related('instructor').prefetch_related(
+        Prefetch('reactivos', to_attr='reactivos_list'),
+        Prefetch('equipos', to_attr='equipos_list')
+    ).order_by('-fecha')
+
+    for p in practicas:
+        reactivos_str = '\n'.join([
+            f"{r.reactivo.nombre} ({r.cantidad} {r.unidad.simbolo}){' [Sensible]' if r.es_sensible else ''}"
+            for r in getattr(p, 'reactivos_list', [])
+        ])
+        equipos_str = '\n'.join([
+            f"{e.equipo.nombre} ({e.tiempo_uso_min} min, desgaste: {e.desgaste_estimado}, mantenimiento: {'Sí' if e.mantenimiento_requerido else 'No'})"
+            for e in getattr(p, 'equipos_list', [])
+        ])
+        sheet.append([
+            p.id,
+            p.ficha,
+            p.nombre,
+            p.fecha.strftime('%Y-%m-%d'),
+            p.grupos_trabajo,
+            p.instructor.get_full_name() or p.instructor.username,
+            p.estado,
+            reactivos_str,
+            equipos_str,
+        ])
+
+    # Estilos de encabezado
+    header_fill = PatternFill(start_color='1FA971', end_color='1FA971', fill_type='solid')
+    header_font = Font(color='FFFFFF', bold=True)
+    for column_index in range(1, len(headers) + 1):
+        cell = sheet.cell(row=1, column=column_index)
+        cell.fill = header_fill
+        cell.font = header_font
+        cell.alignment = Alignment(horizontal='center', vertical='center')
+        sheet.column_dimensions[chr(64 + column_index)].width = 22
+
+    # Ajuste de alineación para celdas de datos
+    for row in sheet.iter_rows(min_row=2, max_row=sheet.max_row, min_col=1, max_col=len(headers)):
+        for cell in row:
+            cell.alignment = Alignment(horizontal='left', vertical='top', wrap_text=True)
+
+    output = BytesIO()
+    workbook.save(output)
+    output.seek(0)
+
+    response = HttpResponse(
+        output.getvalue(),
+        content_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+    )
+    response['Content-Disposition'] = 'attachment; filename="practicas_sigirl.xlsx"'
+    return response
+from rest_framework import viewsets, permissions
+from .models import UnidadMedida, Practica, PracticaReactivo, PracticaEquipo, Producto
+from .serializers import UnidadMedidaSerializer, PracticaSerializer, PracticaReactivoSerializer, PracticaEquipoSerializer, ProductoSerializer
+
+# API REST para Unidades de Medida
+class UnidadMedidaViewSet(viewsets.ModelViewSet):
+    queryset = UnidadMedida.objects.all()
+    serializer_class = UnidadMedidaSerializer
+
+# API REST para Prácticas
+class PracticaViewSet(viewsets.ModelViewSet):
+    queryset = Practica.objects.all()
+    serializer_class = PracticaSerializer
+    permission_classes = [permissions.AllowAny]  # Solo para pruebas, luego volver a IsAuthenticated
+
+# API REST para Reactivos (productos tipo reactivo)
+class ReactivoViewSet(viewsets.ModelViewSet):
+    queryset = Producto.objects.filter(tipo='reactivo')
+    serializer_class = ProductoSerializer
+
+# API REST para Equipos (productos tipo equipo)
+class EquipoViewSet(viewsets.ModelViewSet):
+    queryset = Producto.objects.filter(tipo='equipo')
+    serializer_class = ProductoSerializer
+
+# API REST para PracticaReactivo y PracticaEquipo (opcional, si quieres exponerlos)
+class PracticaReactivoViewSet(viewsets.ModelViewSet):
+    queryset = PracticaReactivo.objects.all()
+    serializer_class = PracticaReactivoSerializer
+
+class PracticaEquipoViewSet(viewsets.ModelViewSet):
+    queryset = PracticaEquipo.objects.all()
+    serializer_class = PracticaEquipoSerializer
 from datetime import date, timedelta
 from io import BytesIO
 import secrets
@@ -205,13 +331,16 @@ class PublicTokenObtainPairView(TokenObtainPairView):
 
         response = super().post(request, *args, **kwargs)
 
+        # --- FIX: asegurar que el campo 'role' siempre se incluya ---
         if response.status_code == 200:
             try:
                 user = User.objects.get(username=username)
                 role = _get_role_from_user(user)
-
-                response.data["role"] = role
-                response.data["username"] = user.username
+                # Si response.data es inmutable, crear un nuevo dict
+                data = dict(response.data)
+                data["role"] = role
+                data["username"] = user.username
+                response.data = data
             except User.DoesNotExist:
                 pass
 
@@ -930,3 +1059,37 @@ class UserManagementViewSet(viewsets.ModelViewSet):
             return Response({"error": "No puedes eliminar tu propia cuenta"}, status=400)
         user.delete()
         return Response(status=204)
+    
+    from rest_framework.decorators import api_view, permission_classes
+from rest_framework.permissions import IsAuthenticated
+from rest_framework.response import Response
+from .serializers import CurrentUserProfileSerializer
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def get_current_user(request):
+    """Obtiene el perfil del usuario actual con su rol"""
+    serializer = CurrentUserProfileSerializer(request.user)
+    return Response(serializer.data)
+
+
+from rest_framework.decorators import api_view, permission_classes
+from rest_framework.permissions import IsAuthenticated
+from rest_framework.response import Response
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def get_current_user(request):
+    """Obtiene el perfil del usuario actual con su rol"""
+    user = request.user
+    return Response({
+        'id': user.id,
+        'username': user.username,
+        'email': user.email,
+        'first_name': user.first_name,
+        'last_name': user.last_name,
+        'role': 'admin' if user.is_superuser else ('jefe' if user.is_staff else 'usuario'),
+        'full_name': user.get_full_name() or user.username,
+        'is_staff': user.is_staff,
+        'is_superuser': user.is_superuser,
+    })

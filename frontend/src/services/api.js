@@ -1,10 +1,10 @@
 import axios from "axios";
 
 // Cliente HTTP central del frontend.
-// En desarrollo: VITE_API_URL=http://127.0.0.1:8000/api/
-// En producción (Railway): URL relativa /api/ — mismo dominio que Django
+// Para desarrollo local: apunta al backend Django en puerto 8000
+// Para producción: usa URL relativa
 const api = axios.create({
-  baseURL: import.meta.env.VITE_API_URL || "/api/",
+  baseURL: "http://127.0.0.1:8000/api/",  // ← MODIFICADO: URL fija para desarrollo
 });
 
 // Interceptor de salida:
@@ -12,7 +12,7 @@ const api = axios.create({
 api.interceptors.request.use((config) => {
   const token = localStorage.getItem("token");
   const requestUrl = config.url || "";
-  const isPublicRoute = ["token/", "register/", "verify-email/", "auth/resend-verification/"].some((route) => requestUrl.includes(route));
+  const isPublicRoute = ["token/", "register/", "verify-email/", "auth/resend-verification/", "auth/user/"].some((route) => requestUrl.includes(route));
 
   if (token && !isPublicRoute) {
     config.headers.Authorization = `Bearer ${token}`;
@@ -29,7 +29,7 @@ api.interceptors.response.use(
   response => response,
   error => {
     const requestUrl = error.config?.url || "";
-    const isPublicRoute = ["token/", "register/", "verify-email/", "auth/resend-verification/"].some((route) => requestUrl.includes(route));
+    const isPublicRoute = ["token/", "register/", "verify-email/", "auth/resend-verification/", "auth/user/"].some((route) => requestUrl.includes(route));
 
     if (error.response?.status === 401 && !isPublicRoute) {
       console.error("❌ 401 - Token inválido o expirado");
@@ -88,5 +88,8 @@ export const getInventoryPdfReportUrl = () => `${api.defaults.baseURL}reportes/i
 
 // ── Auditoría ──────────────────────────────────────────────
 export const getAuditoria = (params = {}) => api.get('auditoria/', { params });
+
+// ── Instructores ──────────────────────────────────────────
+export const getInstructores = () => api.get('instructores/');
 
 export default api;

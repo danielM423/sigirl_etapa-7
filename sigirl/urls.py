@@ -1,3 +1,5 @@
+from django.conf import settings
+from django.conf.urls.static import static
 """
 URL configuration for sigirl project.
 
@@ -16,22 +18,14 @@ Including another URLconf
 """
 from django.contrib import admin
 from django.urls import path, include, re_path
-from django.http import JsonResponse
 from django.views.generic import TemplateView
 
-# Vista básica para comprobar rápidamente que la API está encendida.
-def home(request):
-    return JsonResponse({
-        "mensaje": "SIGIRL API funcionando 🚀",
-        "estado": "OK"
-    })
-
-# Rutas principales del proyecto Django.
 urlpatterns = [
     path('admin/', admin.site.urls),
-    path('api/', include('inventario.urls')),
+    path('api/', include('sigirl.inventario.urls')),
     # Catch-all: sirve el frontend React para cualquier ruta que no sea API/admin
     re_path(r'^(?!api/|admin/).*$', TemplateView.as_view(template_name="index.html")),
-    # Endpoint de salud opcional (puedes moverlo si lo necesitas)
-    path('api-status/', home),
+# Servir archivos estáticos en desarrollo
 ]
+if settings.DEBUG:
+    urlpatterns += static(settings.STATIC_URL, document_root=settings.STATIC_ROOT)

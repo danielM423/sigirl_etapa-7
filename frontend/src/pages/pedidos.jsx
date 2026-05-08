@@ -73,7 +73,18 @@ const Pedidos = () => {
   const [filterStatus, setFilterStatus] = useState('todos');
   const [filterPriority, setFilterPriority] = useState('todas');
   const [showModal, setShowModal] = useState(false);
-  const [formPedido, setFormPedido] = useState({ productoId: '', cantidad: '', prioridad: 'media', observaciones: '' });
+  // Estado para encabezado de práctica y productos seleccionados
+  const [formPedido, setFormPedido] = useState({
+    ficha: '',
+    nombre: '',
+    fecha: '',
+    grupos_trabajo: '',
+    instructor: '',
+    productos: [{ productoId: '', cantidad: '' }],
+    prioridad: 'media',
+    observaciones: '',
+    estado: 'pendiente',
+  });
   const [pedidoToReject, setPedidoToReject] = useState(null);
   const [pedidoDetalle, setPedidoDetalle] = useState(null);
   const [entregadoModal, setEntregadoModal] = useState(null);
@@ -124,9 +135,15 @@ const Pedidos = () => {
   const handleGuardarPedido = async () => {
     if (!formPedido.productoId || !formPedido.cantidad) { toast.error('Completa todos los campos'); return; }
     try {
-      const { data } = await createPedido({ producto: Number(formPedido.productoId), cantidad: parseInt(formPedido.cantidad), prioridad: formPedido.prioridad, observaciones: formPedido.observaciones });
+      const { data } = await createPedido({
+        producto: Number(formPedido.productoId),
+        cantidad: parseInt(formPedido.cantidad),
+        prioridad: formPedido.prioridad,
+        observaciones: formPedido.observaciones,
+        estado: formPedido.estado,
+      });
       setPedidos((prev) => [normalizePedido(data), ...prev]);
-      setFormPedido({ productoId: '', cantidad: '', prioridad: 'media', observaciones: '' });
+      setFormPedido({ productoId: '', cantidad: '', prioridad: 'media', observaciones: '', estado: 'pendiente' });
       setShowModal(false);
       toast.success('Pedido creado');
     } catch (err) { toast.error(err.response?.data?.error || 'Error al crear el pedido'); }
@@ -313,18 +330,64 @@ const Pedidos = () => {
           <div className="w-full max-w-lg bg-white border border-[#E0E0E0] rounded-lg overflow-hidden shadow-2xl shadow-stone-300/60">
             <div className="flex items-center justify-between px-6 py-4 border-b border-[#E0E0E0]">
               <div>
-                <h2 className="text-sm font-mono font-bold text-[#1FA971] uppercase tracking-wider">NUEVO PEDIDO</h2>
-                <p className="text-[10px] font-mono text-stone-500 mt-0.5">Crear una nueva solicitud de reactivo</p>
+                <h2 className="text-sm font-mono font-bold text-[#1FA971] uppercase tracking-wider">NUEVA PRÁCTICA</h2>
+                <p className="text-[10px] font-mono text-stone-500 mt-0.5">Registrar una nueva práctica y solicitud de reactivos</p>
               </div>
               <button onClick={() => setShowModal(false)} className="p-1.5 text-stone-500 hover:text-rose-400 hover:bg-rose-500/10 rounded transition-colors"><XCircle className="w-4 h-4" /></button>
             </div>
             <div className="p-6 space-y-4">
+              {/* Encabezado de práctica */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-[9px] font-mono font-bold text-stone-500 uppercase tracking-wider mb-1.5">Ficha</label>
+                  <input type="text" value={formPedido.ficha} onChange={e => setFormPedido({ ...formPedido, ficha: e.target.value })} className={inputCls} placeholder="Ej: 123456" />
+                </div>
+                <div>
+                  <label className="block text-[9px] font-mono font-bold text-stone-500 uppercase tracking-wider mb-1.5">Nombre de la práctica</label>
+                  <input type="text" value={formPedido.nombre} onChange={e => setFormPedido({ ...formPedido, nombre: e.target.value })} className={inputCls} placeholder="Ej: Título de la práctica" />
+                </div>
+              </div>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-[9px] font-mono font-bold text-stone-500 uppercase tracking-wider mb-1.5">Fecha</label>
+                  <input type="date" value={formPedido.fecha} onChange={e => setFormPedido({ ...formPedido, fecha: e.target.value })} className={inputCls} />
+                </div>
+                <div>
+                  <label className="block text-[9px] font-mono font-bold text-stone-500 uppercase tracking-wider mb-1.5">Grupos de trabajo</label>
+                  <input type="number" min="1" value={formPedido.grupos_trabajo} onChange={e => setFormPedido({ ...formPedido, grupos_trabajo: e.target.value })} className={inputCls} placeholder="Ej: 4" />
+                </div>
+              </div>
               <div>
-                <label className="block text-[9px] font-mono font-bold text-stone-500 uppercase tracking-wider mb-1.5">Producto</label>
-                <select value={formPedido.productoId} onChange={(e) => setFormPedido({...formPedido, productoId: e.target.value})} className={selectCls}>
-                  <option value="">Seleccionar producto...</option>
-                  {productos.map((pr) => <option key={pr.id} value={pr.id}>{pr.nombre}</option>)}
-                </select>
+                <label className="block text-[9px] font-mono font-bold text-stone-500 uppercase tracking-wider mb-1.5">Instructor</label>
+                <input type="text" value={formPedido.instructor} onChange={e => setFormPedido({ ...formPedido, instructor: e.target.value })} className={inputCls} placeholder="Nombre del instructor" />
+              </div>
+
+              {/* Selección múltiple de productos */}
+              <div>
+                <label className="block text-[9px] font-mono font-bold text-stone-500 uppercase tracking-wider mb-1.5">Productos y cantidades</label>
+                {formPedido.productos.map((prod, idx) => (
+                  <div key={idx} className="flex gap-2 mb-2">
+                    <select value={prod.productoId} onChange={e => {
+                      const nuevos = [...formPedido.productos];
+                      nuevos[idx].productoId = e.target.value;
+                      setFormPedido({ ...formPedido, productos: nuevos });
+                    }} className={selectCls}>
+                      <option value="">Seleccionar producto...</option>
+                      {productos.map((pr) => <option key={pr.id} value={pr.id}>{pr.nombre}</option>)}
+                    </select>
+                    <input type="number" min="1" value={prod.cantidad} onChange={e => {
+                      const nuevos = [...formPedido.productos];
+                      nuevos[idx].cantidad = e.target.value;
+                      setFormPedido({ ...formPedido, productos: nuevos });
+                    }} className={inputCls} placeholder="Cantidad" style={{ width: 100 }} />
+                    {formPedido.productos.length > 1 && (
+                      <button type="button" onClick={() => {
+                        setFormPedido({ ...formPedido, productos: formPedido.productos.filter((_, i) => i !== idx) });
+                      }} className="px-2 text-xs text-rose-500 hover:text-rose-700">Quitar</button>
+                    )}
+                  </div>
+                ))}
+                <button type="button" onClick={() => setFormPedido({ ...formPedido, productos: [...formPedido.productos, { productoId: '', cantidad: '' }] })} className="px-3 py-1 mt-1 rounded text-xs font-mono font-bold bg-blue-100 text-blue-600 hover:bg-blue-200 transition-colors">+ Agregar producto</button>
               </div>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
@@ -344,6 +407,17 @@ const Pedidos = () => {
                 <label className="block text-[9px] font-mono font-bold text-stone-500 uppercase tracking-wider mb-1.5">Observaciones</label>
                 <textarea rows={3} value={formPedido.observaciones} onChange={(e) => setFormPedido({...formPedido, observaciones: e.target.value})} className={`${inputCls} resize-none`} placeholder="Opcional..." />
               </div>
+              {canManage && (
+                <div>
+                  <label className="block text-[9px] font-mono font-bold text-stone-500 uppercase tracking-wider mb-1.5">Estado</label>
+                  <select value={formPedido.estado} onChange={e => setFormPedido({ ...formPedido, estado: e.target.value })} className={selectCls}>
+                    <option value="pendiente">Pendiente</option>
+                    <option value="aprobado">Aprobado</option>
+                    <option value="rechazado">Rechazado</option>
+                    <option value="entregado">Entregado</option>
+                  </select>
+                </div>
+              )}
             </div>
             <div className="flex justify-end gap-3 px-6 py-4 border-t border-[#E0E0E0] bg-stone-50">
               <button onClick={() => setShowModal(false)} className="px-4 py-2 rounded text-xs font-mono font-bold border border-[#E0E0E0] text-stone-500 hover:text-stone-700 hover:border-slate-500 transition-colors">Cancelar</button>

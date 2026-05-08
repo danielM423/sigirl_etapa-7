@@ -171,7 +171,7 @@ FRONTEND_APP_URL = os.environ.get('FRONTEND_APP_URL', '').strip()
 
 # Permite desactivar verificación de correo en despliegues de recuperación.
 # En producción inicial, False para permitir acceso inmediato
-EMAIL_VERIFICATION_REQUIRED = os.environ.get('EMAIL_VERIFICATION_REQUIRED', 'False') == 'True'
+EMAIL_VERIFICATION_REQUIRED = False  # Forzado para pruebas, acceso inmediato
 
 
 # Static files (CSS, JavaScript, Images)

@@ -34,16 +34,28 @@ function Login() {
 
     setLoading(true);
     try {
+      // 1. Obtener token
       const res = await api.post('token/', { username: username.trim(), password });
+      const accessToken = res.data.access;
 
-      const savedRoles = JSON.parse(localStorage.getItem('userRoles') || '{}');
-      let userRole = res.data?.role || res.data?.user?.role || savedRoles[username] || 'usuario';
+      // 2. Guardar token temporalmente
+      localStorage.setItem('token', accessToken);
+
+      // 3. Obtener perfil del usuario con el token
+      const userRes = await api.get('auth/user/', {
+        headers: { Authorization: `Bearer ${accessToken}` }
+      });
+
+      // 4. Obtener el rol del perfil
+      let userRole = userRes.data?.role || 'usuario';
       if (userRole === 'jefe_superior') userRole = 'jefe';
 
-      localStorage.setItem('token', res.data.access || res.data.token || 'authenticated');
+      // 5. Guardar todo en localStorage
+      localStorage.setItem('token', accessToken);
       localStorage.setItem('username', username.trim());
       localStorage.setItem('role', userRole);
 
+      // 6. Actualizar contexto
       setUser({ username: username.trim(), role: userRole });
       setRole(userRole);
 
@@ -187,6 +199,7 @@ function Login() {
               onKeyDown={handleKeyDown}
               className="w-full px-4 py-2.5 rounded-lg border border-stone-200 bg-white focus:outline-none focus:ring-2 focus:ring-[#1fa971]/30 focus:border-[#1fa971]"
               placeholder="Ingresa tu contraseña"
+              autoComplete="current-password"
             />
           </div>
           <button

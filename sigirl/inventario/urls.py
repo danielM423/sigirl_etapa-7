@@ -1,30 +1,48 @@
-from django.urls import path
+from django.urls import path, include
 from rest_framework.routers import DefaultRouter
-
 from .views import (
-	AlertaViewSet,
-	CategoriaViewSet,
-	MovimientoViewSet,
-	PedidoViewSet,
-	ProductoViewSet,
-	UserManagementViewSet,
-	download_inventory_excel,
-	download_inventory_pdf,
-	download_inventory_template_excel,
+    register,
+    get_current_user,
+    manage_profile,
+    verify_email,
+    verify_email_code,
+    resend_verification_email,
+    PublicTokenObtainPairView,
+    PublicTokenRefreshView,
+    ProductoViewSet,
+    CategoriaViewSet,
+    MovimientoViewSet,
+    PedidoViewSet,
+    top_reactivos_usados,
+    instructores_list,
 )
-from .views_auditoria import AuditoriaViewSet
 
 router = DefaultRouter()
 router.register(r'productos', ProductoViewSet)
 router.register(r'categorias', CategoriaViewSet)
 router.register(r'movimientos', MovimientoViewSet)
 router.register(r'pedidos', PedidoViewSet)
-router.register(r'alertas', AlertaViewSet)
-router.register(r'auditoria', AuditoriaViewSet)
-router.register(r'usuarios', UserManagementViewSet, basename='usuarios')
 
 urlpatterns = [
-	path('reportes/inventario-excel/', download_inventory_excel, name='reporte_inventario_excel'),
-	path('reportes/plantilla-inventario/', download_inventory_template_excel, name='plantilla_inventario_excel'),
-	path('reportes/inventario-pdf/', download_inventory_pdf, name='reporte_inventario_pdf'),
-] + router.urls
+    # JWT (Public)
+    path('token/', PublicTokenObtainPairView.as_view(), name='token_obtain_pair'),
+    path('token/refresh/', PublicTokenRefreshView.as_view(), name='token_refresh'),
+
+    # Auth (Public)
+    path('register/', register, name='register'),
+    path('verify-email/<str:uidb64>/<str:token>/', verify_email, name='verify_email'),
+    path('auth/verify-email-code/', verify_email_code, name='verify_email_code'),
+    path('auth/resend-verification/', resend_verification_email, name='resend_verification_email'),
+    
+    # Perfil de usuario (requiere autenticación)
+    path('auth/user/', get_current_user, name='get_current_user'),
+    path('auth/profile/', manage_profile, name='manage_profile'),
+
+    # Endpoints REST principales
+    path('', include(router.urls)),
+
+    # Endpoint para top de reactivos más usados
+    path('top-reactivos-usados/', top_reactivos_usados, name='top_reactivos_usados'),
+    # Endpoint para instructores (todos los usuarios)
+    path('instructores/', instructores_list, name='instructores_list'),
+]

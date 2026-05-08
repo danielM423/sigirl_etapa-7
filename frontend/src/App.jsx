@@ -4,7 +4,9 @@ import 'react-toastify/dist/ReactToastify.css';
 import { UserProvider } from './context/UserContext';
 import ProtectedRouteByRole from './components/ProtectedRouteByRole';
 import ProtectedRoute from './components/ProtectedRoute';
-
+import PracticaNueva from './pages/PracticaNueva';
+// ...
+<Route path="/practicas/nueva" element={<PracticaNueva />} />
 // Páginas de autenticación
 import Login from './pages/Login';
 import Register from './pages/Register';

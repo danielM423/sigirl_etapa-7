@@ -49,7 +49,10 @@ export default function Register() {
     institution:'', department:'', role:'usuario',
   });
 
-  const handleChange = (e) => setForm(prev => ({ ...prev, [e.target.name]: e.target.value }));
+  const handleChange = (e) => {
+    setForm(prev => ({ ...prev, [e.target.name]: e.target.value }));
+    setError(''); // Limpia el error al escribir
+  };
 
   const validateStep = () => {
     setError('');
@@ -91,6 +94,12 @@ export default function Register() {
       setRole(null);
       setVerificationEmail(res.data?.email || form.email);
       setSuccess(true);
+      setError(''); // Limpia el error para evitar el cuadro rojo
+      setForm({
+        firstName:'', lastName:'', email:'',
+        username:'', password:'', confirmPassword:'',
+        institution:'', department:'', role:'usuario',
+      });
       toast.success('¡Registro exitoso! Revisa tu correo para verificar la cuenta.');
     } catch (err) {
       const msg = err.response?.data?.error || err.response?.data?.username?.[0] || err.response?.data?.email?.[0] || 'Error al registrar usuario';
@@ -209,7 +218,7 @@ export default function Register() {
             {currentStep === 2 && (
               <>
                 <div>
-                  <label className="block text-[9px] font-mono font-bold text-stone-500 uppercase tracking-wider mb-1.5">Nombre de Usuario</label>
+                  <label className="block text-[9px] font-mono font-bold text-stone-500 uppercase tracking-wider mb-1.5">Instructor</label>
                   <div className="relative">
                     <User className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-stone-400" />
                     <input name="username" value={form.username} onChange={handleChange} type="text" placeholder="lab_usuario_01" className={`${inputCls} pl-9`} autoComplete="username" />
@@ -263,14 +272,7 @@ export default function Register() {
                   <label className="block text-[9px] font-mono font-bold text-stone-500 uppercase tracking-wider mb-1.5">Departamento</label>
                   <input name="department" value={form.department} onChange={handleChange} type="text" placeholder="Laboratorio de Química" className={inputCls} />
                 </div>
-                <div>
-                  <label className="block text-[9px] font-mono font-bold text-stone-500 uppercase tracking-wider mb-1.5">Rol</label>
-                  <select name="role" value={form.role} onChange={handleChange} className={selectCls}>
-                    <option value="usuario">Usuario de Laboratorio</option>
-                    <option value="admin">Administrador</option>
-                  </select>
-                  <p className="text-[9px] font-mono text-stone-400 mt-1">El acceso de Jefe Superior es asignado por el sistema.</p>
-                </div>
+                {/* El campo de rol se elimina del formulario, el valor se mantiene fijo como 'usuario' en el estado */}
               </>
             )}
 

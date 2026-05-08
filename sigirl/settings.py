@@ -1,3 +1,5 @@
+# Agrega la importación de os al inicio del archivo
+import os
 """
 Django settings for sigirl project.
 
@@ -9,10 +11,10 @@ https://docs.djangoproject.com/en/6.0/topics/settings/
 For the full list of settings and their values, see
 https://docs.djangoproject.com/en/6.0/ref/settings/
 """
-
-
+os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'sigirl.settings')
 
 import os
+
 from pathlib import Path
 
 # === DIAGNÓSTICO DE VARIABLES DE ENTORNO EN RENDER ===
@@ -28,9 +30,18 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 
 # === CONFIGURACIÓN SEGURA PARA PRODUCCIÓN ===
 SECRET_KEY = os.environ.get('SECRET_KEY', 'django-insecure-bkug&5%86lm3l=m2epx1xy9&mye%9xm=xitm6#c=&n3%04$pg4')
-DEBUG = os.environ.get('DEBUG', 'False') == 'True'
+DEBUG = True
 ALLOWED_HOSTS = os.environ.get('ALLOWED_HOSTS', '').split(',') if os.environ.get('ALLOWED_HOSTS') else []
 CSRF_TRUSTED_ORIGINS = os.environ.get('CSRF_TRUSTED_ORIGINS', '').split(',') if os.environ.get('CSRF_TRUSTED_ORIGINS') else []
+
+# For local development, ensure these are always set
+if not ALLOWED_HOSTS or ALLOWED_HOSTS == ['']:
+    ALLOWED_HOSTS = ["localhost", "127.0.0.1"]
+if not CSRF_TRUSTED_ORIGINS or CSRF_TRUSTED_ORIGINS == ['']:
+    CSRF_TRUSTED_ORIGINS = [
+        "http://localhost",
+        "http://127.0.0.1",
+    ]
 SECURE_SSL_REDIRECT = os.environ.get('SECURE_SSL_REDIRECT', 'False') == 'True'
 
 # Email config
@@ -41,21 +52,22 @@ EMAIL_USE_TLS = os.environ.get('EMAIL_USE_TLS', 'True') == 'True'
 EMAIL_HOST_USER = os.environ.get('EMAIL_HOST_USER', '')
 EMAIL_HOST_PASSWORD = os.environ.get('EMAIL_HOST_PASSWORD', '')
 DEFAULT_FROM_EMAIL = os.environ.get('DEFAULT_FROM_EMAIL', EMAIL_HOST_USER)
+EMAIL_VERIFICATION_REQUIRED = False
 
 # Application definition
 
 # Apps activas del proyecto.
 # Incluye los módulos nativos de Django, Django REST Framework y la app inventario.
-INSTALLED_APPS = ['django.contrib.admin',
-
-    'django.contrib.auth',  # 🔴 ESTA ES CLAVE
+INSTALLED_APPS = [
+    'django.contrib.admin',
+    'django.contrib.auth',
     'django.contrib.contenttypes',
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
-
     'rest_framework',
-    'inventario',
+    'rest_framework_simplejwt',  # ← AGREGADO: Necesario para JWT
+    'sigirl.inventario',
 ]
 
 MIDDLEWARE = [
@@ -74,7 +86,7 @@ ROOT_URLCONF = 'sigirl.urls'
 TEMPLATES = [
     {
         'BACKEND': 'django.template.backends.django.DjangoTemplates',
-        'DIRS': [],
+        'DIRS': [BASE_DIR / 'frontend' / 'dist'],  # <-- Agregado: build de React
         'APP_DIRS': True,
         'OPTIONS': {
             'context_processors': [
@@ -139,34 +151,84 @@ DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
 STATIC_URL = '/static/'
 STATIC_ROOT = BASE_DIR / 'staticfiles'
-TEMPLATES[0]['DIRS'] = [BASE_DIR / 'staticfiles']
 STATICFILES_DIRS = [
-    BASE_DIR / 'frontend' / 'dist',
+    BASE_DIR / 'frontend' / 'dist',  # Apunta a la carpeta build de React
 ]
 
-# WhiteNoise settings para cache busting
-STATICFILES_STORAGE = 'whitenoise.storage.CompressedManifestStaticFilesStorage'
+# ========== CONFIGURACIÓN DE REST FRAMEWORK ==========
+# Configuración de autenticación para la API
+REST_FRAMEWORK = {
+    'DEFAULT_AUTHENTICATION_CLASSES': (
+        'rest_framework_simplejwt.authentication.JWTAuthentication',
+    ),
+    'DEFAULT_PERMISSION_CLASSES': (
+        'rest_framework.permissions.IsAuthenticated',
+    ),
+}
 
-import os
-
-SECRET_KEY = os.environ.get('SECRET_KEY', 'django-insecure-bkug&5%86lm3l=m2epx1xy9&mye%9xm=xitm6#c=&n3%04$pg4')
-DEBUG = os.environ.get('DEBUG', 'False') == 'True'
-
-ALLOWED_HOSTS = os.environ.get('ALLOWED_HOSTS', '').split(',')
-CSRF_TRUSTED_ORIGINS = os.environ.get('CSRF_TRUSTED_ORIGINS', '').split(',')
-
-SECURE_SSL_REDIRECT = os.environ.get('SECURE_SSL_REDIRECT', 'False') == 'True'
-
-EMAIL_BACKEND = os.environ.get('EMAIL_BACKEND', 'django.core.mail.backends.smtp.EmailBackend')
-EMAIL_HOST = os.environ.get('EMAIL_HOST', '')
-EMAIL_PORT = int(os.environ.get('EMAIL_PORT', 587))
-EMAIL_USE_TLS = os.environ.get('EMAIL_USE_TLS', 'True') == 'True'
-EMAIL_HOST_USER = os.environ.get('EMAIL_HOST_USER', '')
-EMAIL_HOST_PASSWORD = os.environ.get('EMAIL_HOST_PASSWORD', '')
-DEFAULT_FROM_EMAIL = os.environ.get('DEFAULT_FROM_EMAIL', '')
-
-FRONTEND_APP_URL = os.environ.get('FRONTEND_APP_URL', '')
+# NOTA: Se eliminó la segunda definición de INSTALLED_APPS que estaba aquí abajo
+# ya que estaba sobrescribiendo la configuración correcta y causando el error.
 
 
+# settings.py
+
+INSTALLED_APPS = [
+    'django.contrib.admin',
+    'django.contrib.auth',
+    'django.contrib.contenttypes',
+    'django.contrib.sessions',
+    'django.contrib.messages',
+    'django.contrib.staticfiles',
+    'rest_framework',
+    'rest_framework_simplejwt',
+    'corsheaders',  # ← AGREGA ESTA LÍNEA (si no está)
+    'sigirl.inventario',
+]
+MIDDLEWARE = [
+    'corsheaders.middleware.CorsMiddleware',  # ← AGREGA ESTA LÍNEA AL PRINCIPIO
+    'django.middleware.security.SecurityMiddleware',
+    'django.contrib.sessions.middleware.SessionMiddleware',
+    'django.middleware.common.CommonMiddleware',
+    'django.middleware.csrf.CsrfViewMiddleware',
+    'django.contrib.auth.middleware.AuthenticationMiddleware',
+    'django.contrib.messages.middleware.MessageMiddleware',
+    'django.middleware.clickjacking.XFrameOptionsMiddleware',
+    'whitenoise.middleware.WhiteNoiseMiddleware',
+]
+# Configuración CORS - Permitir todas las solicitudes desde el frontend en desarrollo
+CORS_ALLOW_ALL_ORIGINS = True  # Solo para desarrollo
+
+# O específicamente:
+# CORS_ALLOWED_ORIGINS = [
+#     "http://127.0.0.1:5173",
+#     "http://localhost:5173",
+# ]
 
 
+
+# Configuración CORS para desarrollo
+CORS_ALLOW_ALL_ORIGINS = True
+CORS_ALLOW_CREDENTIALS = True
+
+# Permitir métodos específicos (opcional)
+CORS_ALLOW_METHODS = [
+    'DELETE',
+    'GET',
+    'OPTIONS',
+    'PATCH',
+    'POST',
+    'PUT',
+]
+
+# Permitir headers específicos (opcional)
+CORS_ALLOW_HEADERS = [
+    'accept',
+    'accept-encoding',
+    'authorization',
+    'content-type',
+    'dnt',
+    'origin',
+    'user-agent',
+    'x-csrftoken',
+    'x-requested-with',
+]
