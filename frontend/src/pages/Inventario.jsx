@@ -300,14 +300,14 @@ const Inventario = () => {
                 ) : filteredProducts.map((p) => (
                   <tr key={p.id} className="hover:bg-[#E8F5F0]/40 transition-colors">
                     <td className={`${compactView ? 'py-1.5' : 'py-3'} pr-4`}>
-                      <p className="text-sm font-mono font-semibold text-stone-700">{p.nombre}</p>
+                      <p className="text-sm font-mono font-semibold text-stone-700">{typeof p.nombre === 'object' ? (p.nombre?.nombre || JSON.stringify(p.nombre)) : p.nombre}</p>
                       {!compactView && <p className="text-[10px] font-mono text-stone-400 mt-0.5">#{String(p.id).padStart(4,'0')}</p>}
                     </td>
-                    <td className={`${compactView ? 'py-1.5' : 'py-3'} pr-4`}><span className="px-2 py-0.5 rounded text-[10px] font-mono font-bold bg-indigo-100 text-indigo-700 border border-indigo-200">{p.categoria}</span></td>
+                    <td className={`${compactView ? 'py-1.5' : 'py-3'} pr-4`}><span className="px-2 py-0.5 rounded text-[10px] font-mono font-bold bg-indigo-100 text-indigo-700 border border-indigo-200">{typeof p.categoria === 'object' ? (p.categoria?.nombre || JSON.stringify(p.categoria)) : p.categoria}</span></td>
                     <td className={`${compactView ? 'py-1.5' : 'py-3'} pr-4`}><span className="font-bold text-sm font-mono text-[#157A55]">{p.cantidad}</span></td>
-                    <td className={`${compactView ? 'py-1.5' : 'py-3'} pr-4 text-sm font-mono text-stone-500`}>{p.unidad}</td>
+                    <td className={`${compactView ? 'py-1.5' : 'py-3'} pr-4 text-sm font-mono text-stone-500`}>{typeof p.unidad === 'object' ? (p.unidad?.nombre || JSON.stringify(p.unidad)) : p.unidad}</td>
                     <td className={`${compactView ? 'py-1.5' : 'py-3'} pr-4 text-sm font-mono text-stone-500`}>{p.umbral_minimo}</td>
-                    <td className={`${compactView ? 'py-1.5' : 'py-3'} pr-4 text-sm font-mono text-stone-500`}>{p.ubicacion}</td>
+                    <td className={`${compactView ? 'py-1.5' : 'py-3'} pr-4 text-sm font-mono text-stone-500`}>{typeof p.ubicacion === 'object' ? (p.ubicacion?.nombre || JSON.stringify(p.ubicacion)) : p.ubicacion}</td>
                     <td className="py-3 pr-4"><EstadoBadge estado={p.estado} /></td>
                     <td className="py-3">
                       <div className="flex items-center justify-center gap-1">

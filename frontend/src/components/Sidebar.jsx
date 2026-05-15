@@ -21,7 +21,10 @@ import { UserContext } from '../context/UserContext';
 const Sidebar = ({ isOpen, setIsOpen }) => {
   const location = useLocation();
   const navigate = useNavigate();
-  const { role, logout, user } = useContext(UserContext);
+  const { role: rawRole, logout, user } = useContext(UserContext);
+  // Normaliza el rol a minúsculas y sin espacios
+  const role = (rawRole || '').toLowerCase().replace(/\s+/g, '');
+  console.log('ROL ACTUAL:', role);
   const [openSection, setOpenSection] = useState('inventario');
   const currentTab = new URLSearchParams(location.search).get('tab');
 
@@ -41,29 +44,31 @@ const Sidebar = ({ isOpen, setIsOpen }) => {
               { path: '/admin?tab=inventario', label: 'Alertas', icon: AlertTriangle },
             ],
           },
+          { path: '/admin?tab=practicas', label: 'Prácticas', icon: ClipboardList, description: 'Gestión de prácticas' },
           { path: '/admin?tab=pedidos', label: 'Pedidos', icon: ClipboardList, description: 'Aprobaciones' },
-          { path: '/register', label: 'Usuarios', icon: Users, description: 'Crear cuentas' },
+          { path: '/usuarios', label: 'Usuarios', icon: Users, description: 'Gestión de usuarios' },
           { path: '/perfil', label: 'Configuración', icon: Settings, description: 'Mi perfil' },
         ];
       case 'jefe':
-      case 'jefe_superior':
+      case 'jefesuperior':
         return [
-          { path: '/jefe?tab=estadisticas', label: 'Dashboard', icon: BarChart3, description: 'Resumen general' },
-          {
-            key: 'inventario',
-            label: 'Inventario',
-            icon: Package,
-            description: 'Control del stock',
-            children: [
-              { path: '/inventario', label: 'Ver inventario', icon: Boxes },
-              { path: '/jefe?tab=pedidos', label: 'Movimientos', icon: ClipboardList },
-              { path: '/inventario', label: 'Alertas', icon: AlertTriangle },
-            ],
-          },
-          { path: '/jefe?tab=pedidos', label: 'Pedidos', icon: FileText, description: 'CRUD completa' },
-          { path: '/jefe?tab=usuarios', label: 'Usuarios', icon: Users, description: 'Gestión de usuarios' },
-          { path: '/perfil', label: 'Configuración', icon: Settings, description: 'Mi perfil' },
-        ];
+              { path: '/jefe?tab=estadisticas', label: 'Dashboard', icon: BarChart3, description: 'Resumen general' },
+              {
+                key: 'inventario',
+                label: 'Inventario',
+                icon: Package,
+                description: 'Control del stock',
+                children: [
+                  { path: '/inventario', label: 'Ver inventario', icon: Boxes },
+                  { path: '/jefe?tab=pedidos', label: 'Movimientos', icon: ClipboardList },
+                  { path: '/inventario', label: 'Alertas', icon: AlertTriangle },
+                ],
+              },
+              { path: '/jefe?tab=practicas', label: 'Prácticas', icon: ClipboardList, description: 'Gestión de prácticas' },
+              { path: '/jefe?tab=pedidos', label: 'Pedidos', icon: FileText, description: 'CRUD completa' },
+              { path: '/usuarios', label: 'Usuarios', icon: Users, description: 'Gestión de usuarios' },
+              { path: '/perfil', label: 'Configuración', icon: Settings, description: 'Mi perfil' },
+            ];
       case 'usuario':
         return [
           { path: '/usuario', label: 'Dashboard', icon: Home, description: 'Inicio personal' },
@@ -78,6 +83,8 @@ const Sidebar = ({ isOpen, setIsOpen }) => {
             ],
           },
           { path: '/usuario', label: 'Pedidos', icon: ClipboardList, description: 'Mis solicitudes' },
+          // --- Espacio visual igual que admin/jefe ---
+          { path: '/usuarios', label: 'Usuarios', icon: Users, description: 'Gestión de usuarios' },
           { path: '/perfil', label: 'Configuración', icon: Settings, description: 'Mi perfil' },
         ];
       default:

@@ -1,3 +1,4 @@
+import RFsDemo from './pages/RFsDemo';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import { ToastContainer } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
@@ -46,9 +47,11 @@ function App() {
           <Route path="/inventario" element={<ProtectedRoute><Inventario /></ProtectedRoute>} />
           <Route path="/pedidos" element={<ProtectedRoute><Pedidos /></ProtectedRoute>} />
           <Route path="/perfil" element={<ProtectedRoute><Perfil /></ProtectedRoute>} />
-          <Route path="/usuarios" element={<ProtectedRouteByRole requiredRoles={['admin', 'jefe']}><Usuarios /></ProtectedRouteByRole>} />
+          <Route path="/usuarios" element={<ProtectedRouteByRole requiredRoles={['admin', 'jefe', 'usuario']}><Usuarios /></ProtectedRouteByRole>} />
           <Route path="/alertas" element={<ProtectedRouteByRole requiredRoles={['admin', 'jefe']}><Alertas /></ProtectedRouteByRole>} />
           <Route path="/reportes" element={<ProtectedRouteByRole requiredRoles={['admin', 'jefe']}><Reportes /></ProtectedRouteByRole>} />
+          {/* Ruta demo para los RFs implementados */}
+          <Route path="/rfs-demo" element={<ProtectedRoute><RFsDemo /></ProtectedRoute>} />
           {/* Redirección por defecto */}
           <Route path="/" element={<Navigate to="/login" replace />} />
         </Routes>

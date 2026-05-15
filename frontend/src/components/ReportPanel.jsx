@@ -119,7 +119,7 @@ const ReportPanel = ({ title, subtitle, primaryData = [], secondaryData = [], ac
 
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 p-4">
           {/* Bar chart */}
-          <div className="h-[280px] w-full bg-stone-50 border border-[#E0E0E0] rounded-lg p-3">
+          <div className="h-[280px] min-h-[256px] w-full bg-stone-50 border border-[#E0E0E0] rounded-lg p-3">
             {chartsReady && (
               <ResponsiveContainer width="99%" height={256} debounce={120}>
                 <BarChart data={safePrimaryData} margin={{ top: 4, right: 8, left: -10, bottom: 0 }}>
@@ -138,11 +138,11 @@ const ReportPanel = ({ title, subtitle, primaryData = [], secondaryData = [], ac
           </div>
 
           {/* Pie chart */}
-          <div className="h-[280px] w-full bg-stone-50 border border-[#E0E0E0] rounded-lg p-3">
+          <div className="h-[280px] min-h-[180px] w-full bg-stone-50 border border-[#E0E0E0] rounded-lg p-3">
             {chartsReady && (
-              <div className="h-full flex flex-col sm:flex-row gap-3">
-                <div className="h-[160px] sm:h-full flex-1">
-                  <ResponsiveContainer width="99%" height="100%" debounce={120}>
+                <div className="h-full min-h-[160px] flex flex-col sm:flex-row gap-3">
+                  <div className="h-[160px] min-h-[160px] sm:h-full flex-1">
+                    <ResponsiveContainer width="99%" height="100%" debounce={120}>
                     <PieChart>
                       <Pie
                         data={compactSecondaryData}

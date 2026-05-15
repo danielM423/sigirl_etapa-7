@@ -5,16 +5,20 @@ import { useSearchParams } from 'react-router-dom';
 import {
   Search, ChevronDown, Plus, Edit2, Trash2, Package, AlertCircle,
   TrendingUp, XCircle, CheckCircle2, Eye, FlaskConical, Download,
-  Bell, Shield
+  Bell, Shield, ClipboardList
 } from 'lucide-react';
 import Layout from '../components/Layout';
+import PedidoHistorialList from '../components/PedidoHistorialList';
+import PDFDocumentoList from '../components/PDFDocumentoList';
+import AsistenciaList from '../components/AsistenciaList';
+import ListadoDiarioList from '../components/ListadoDiarioList';
+import ScrollReveal from '../components/ScrollReveal';
 import ReportPanel from '../components/ReportPanel';
-import RejectPedidoModal from '../components/RejectPedidoModal';
 import { exportToExcel, exportToPdf } from '../utils/reportExport';
 import {
   getProductos, createProducto, updateProducto, deleteProducto,
-  getPedidos, updatePedido,
   getAlertas, createAlerta, updateAlerta, deleteAlerta,
+  getPracticas, aprobarPractica, rechazarPractica
 } from '../services/api';
 
 const normalizeProducto = (p) => ({
@@ -23,10 +27,7 @@ const normalizeProducto = (p) => ({
   umbral_minimo: p.umbral_minimo ?? p.minimo ?? 0,
 });
 
-const normalizePedido = (p) => ({
-  ...p,
-  producto: p.producto_nombre || p.producto,
-});
+// Eliminado: normalizePedido y toda lógica de pedidos
 
 // ─── Badge helpers ────────────────────────────────────────────────
 const ESTADO_STYLES = {
@@ -91,11 +92,11 @@ const LabSection = ({ title, children, action, onAction }) => (
 const AdminDashboard = () => {
   const [searchParams, setSearchParams] = useSearchParams();
   const [productos, setProductos] = useState([]);
-  const [pedidos, setPedidos] = useState([]);
+  const [practicas, setPracticas] = useState([]);
   const [loading, setLoading] = useState(true);
   const [alertas, setAlertas] = useState([]);
 
-  const activeTab = ['pedidos', 'alertas'].includes(searchParams.get('tab'))
+  const activeTab = ['alertas', 'practicas'].includes(searchParams.get('tab'))
     ? searchParams.get('tab')
     : 'inventario';
 
@@ -113,18 +114,19 @@ const AdminDashboard = () => {
 
   const [showModalAlerta, setShowModalAlerta] = useState(false);
   const [formAlerta, setFormAlerta] = useState({ titulo: '', descripcion: '', prioridad: 'media', remitente: 'Admin' });
-  const [pedidoToReject, setPedidoToReject] = useState(null);
-  const [pedidoModal, setPedidoModal] = useState(null);
+  // Eliminado: estado de pedidos
 
   const changeTab = (tab) => setSearchParams({ tab });
 
   useEffect(() => {
     const hydrate = async () => {
       try {
-        const [prodRes, pedRes, alertRes] = await Promise.all([getProductos(), getPedidos(), getAlertas()]);
+        const [prodRes, alertRes, pracRes] = await Promise.all([
+          getProductos(), getAlertas(), getPracticas()
+        ]);
         setProductos((prodRes.data.results ?? prodRes.data).map(normalizeProducto));
-        setPedidos((pedRes.data.results ?? pedRes.data).map(normalizePedido));
         setAlertas(alertRes.data.results ?? alertRes.data);
+        setPracticas(pracRes.data.results ?? pracRes.data);
       } catch (err) {
         toast.error('Error al cargar datos del servidor');
         console.error(err);
@@ -135,29 +137,7 @@ const AdminDashboard = () => {
     hydrate();
   }, []);
 
-  const handleRechazarPedido = async (id) => {
-    const motivo = String(pedidoToReject?.motivo || '').trim();
-    if (!motivo.trim()) { toast.error('Debes indicar un motivo de rechazo'); return; }
-    try {
-      const { data } = await updatePedido(id, { estado: 'rechazado', motivo_rechazo: motivo });
-      setPedidos((prev) => prev.map((p) => p.id === id ? normalizePedido(data) : p));
-      setPedidoToReject(null);
-      toast.success('Pedido rechazado');
-    } catch (err) { toast.error(err.response?.data?.error || 'Error al rechazar pedido'); }
-  };
-
-  const handleAprobarPedido = async (id) => {
-    try {
-      const pedido = pedidos.find((p) => p.id === id);
-      const { data } = await updatePedido(id, { estado: 'aprobado' });
-      setPedidos((prev) => prev.map((p) => p.id === id ? normalizePedido(data) : p));
-      if (pedido?.evaluacion_seguridad?.reactivoCritico) {
-        createAlerta({ tipo: 'autorizacion', titulo: `Reactivo autorizado: ${pedido.producto}`, descripcion: `Admin autorizó solicitud de ${pedido.solicitante}.`, remitente: 'Administrador', prioridad: 'media' })
-          .then(({ data: a }) => setAlertas((prev) => [a, ...prev])).catch(() => {});
-      }
-      toast.success('Pedido aprobado');
-    } catch (err) { toast.error(err.response?.data?.error || 'Error al aprobar pedido'); }
-  };
+  // Eliminado: handlers de pedidos
 
   const resetFormProducto = () => {
     setFormProducto({ nombre: '', categoria: 'Solventes', ubicacion: '', cantidad: '', umbral_minimo: '' });
@@ -229,18 +209,8 @@ const AdminDashboard = () => {
     } catch { toast.error('Error al eliminar la alerta'); }
   };
 
-  const handleVerPedido = (pedido) => {
-    setPedidoModal(pedido);
-  };
-
   // Filtros
-  const filteredPedidos = pedidos.filter((p) => {
-    const t = searchTerm.toLowerCase();
-    return (p.producto.toLowerCase().includes(t) || p.codigo.toLowerCase().includes(t) || p.solicitante.toLowerCase().includes(t))
-      && (filterStatus === 'todos' || p.estado === filterStatus)
-      && (!dateFrom || (p.fecha_solicitud || '') >= dateFrom)
-      && (!dateTo || (p.fecha_solicitud || '') <= dateTo);
-  });
+  // Eliminado: filtro de pedidos
 
   const categoriasDisponibles = ['todas', ...new Set(productos.map((p) => p.categoria).filter(Boolean))];
 
@@ -252,36 +222,18 @@ const AdminDashboard = () => {
 
   const filteredAlertas = alertas.filter((a) => alertPriorityFilter === 'todas' || a.prioridad === alertPriorityFilter);
 
-  const statsPedidos = { total: pedidos.length, pendientes: pedidos.filter(p=>p.estado==='pendiente').length, aprobados: pedidos.filter(p=>p.estado==='aprobado').length, rechazados: pedidos.filter(p=>p.estado==='rechazado').length };
+  // Eliminado: stats de pedidos
   const statsAlertas = { total: alertas.length, nuevas: alertas.filter(a=>a.estado==='nueva').length, altas: alertas.filter(a=>a.prioridad==='alta').length };
 
   const reportPrimaryData = activeTab === 'inventario'
     ? [{ name:'OK', value:productos.filter(p=>p.estado==='ok').length },{ name:'Bajo stock', value:productos.filter(p=>p.estado==='bajo_stock').length },{ name:'Agotados', value:productos.filter(p=>p.estado==='agotado').length }]
-    : activeTab === 'pedidos'
-    ? [{ name:'Pendientes', value:statsPedidos.pendientes },{ name:'Aprobados', value:statsPedidos.aprobados },{ name:'Rechazados', value:statsPedidos.rechazados }]
     : [{ name:'Nuevas', value:statsAlertas.nuevas },{ name:'Resueltas', value:alertas.filter(a=>a.estado==='resuelta').length },{ name:'Alta prioridad', value:statsAlertas.altas }];
 
   const reportSecondaryData = activeTab === 'inventario'
     ? Object.entries(filteredProductos.reduce((acc,p)=>{ acc[p.categoria]=(acc[p.categoria]||0)+1; return acc; },{})).map(([name,value])=>({name,value}))
-    : activeTab === 'pedidos'
-    ? Object.entries(filteredPedidos.reduce((acc,p)=>{ acc[p.prioridad]=(acc[p.prioridad]||0)+1; return acc; },{})).map(([name,value])=>({name,value}))
     : Object.entries(filteredAlertas.reduce((acc,a)=>{ acc[a.prioridad]=(acc[a.prioridad]||0)+1; return acc; },{})).map(([name,value])=>({name,value}));
 
   const activityItems = [
-    ...pedidos.slice(0, 5).map((p) => {
-      const badgeMap = {
-        aprobado:  { badge: 'Aprobado',  badgeCls: 'bg-emerald-100 text-emerald-700 border-emerald-200' },
-        rechazado: { badge: 'Rechazado', badgeCls: 'bg-rose-100 text-rose-700 border-rose-200' },
-        pendiente: { badge: 'Pendiente', badgeCls: 'bg-amber-100 text-amber-700 border-amber-200' },
-      };
-      return {
-        id: `pedido-${p.id}`,
-        title: `${p.codigo} · ${p.producto}`,
-        detail: `${p.solicitante} solicitó ${p.cantidad} u. de ${p.producto}`,
-        date: p.fecha_respuesta || p.fecha_solicitud,
-        ...(badgeMap[p.estado] || { badge: p.estado, badgeCls: 'bg-stone-100 text-stone-500 border-stone-200' }),
-      };
-    }),
     ...alertas.slice(0, 3).map((a) => {
       const prioMap = {
         alta:  { badge: '⬆ Alta',  badgeCls: 'bg-rose-100 text-rose-700 border-rose-200' },
@@ -296,7 +248,7 @@ const AdminDashboard = () => {
         ...(prioMap[a.prioridad] || {}),
       };
     }),
-  ].slice(0, 7);
+  ];
 
   const handleExportExcel = () => {
     if (activeTab === 'inventario') {
@@ -323,9 +275,45 @@ const AdminDashboard = () => {
   // ─── Tabs config ─────────────────────────────────────────────────
   const TABS = [
     { key: 'inventario', label: 'INVENTARIO', icon: <Package className="w-3.5 h-3.5" /> },
-    { key: 'pedidos',    label: 'PEDIDOS',    icon: <FlaskConical className="w-3.5 h-3.5" /> },
+    { key: 'practicas',  label: 'PRÁCTICAS',  icon: <ClipboardList className="w-3.5 h-3.5" /> },
     { key: 'alertas',   label: 'ALERTAS',    icon: <Bell className="w-3.5 h-3.5" /> },
   ];
+        {/* ── PRÁCTICAS ───────────────────────────────────────────── */}
+        {activeTab === 'practicas' && (
+          <div className="space-y-4">
+            <LabSection title="Listado de Prácticas">
+              <ScrollReveal direction="up" delay={0.1}>
+                <div className="overflow-x-auto">
+                  <table className="min-w-full text-xs font-mono border">
+                  <thead>
+                    <tr className="bg-stone-100">
+                      <th className="px-2 py-1 border">ID</th>
+                      <th className="px-2 py-1 border">Nombre</th>
+                      <th className="px-2 py-1 border">Fecha</th>
+                      <th className="px-2 py-1 border">Instructor</th>
+                      <th className="px-2 py-1 border">Estado</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {practicas.length === 0 && (
+                      <tr><td colSpan="5" className="text-center py-2 text-stone-400">No hay prácticas registradas</td></tr>
+                    )}
+                    {practicas.map(prac => (
+                      <tr key={prac.id} className="border-b">
+                        <td className="px-2 py-1 border">{prac.id}</td>
+                        <td className="px-2 py-1 border">{prac.nombre}</td>
+                        <td className="px-2 py-1 border">{prac.fecha}</td>
+                        <td className="px-2 py-1 border">{prac.instructor_nombre || prac.instructor}</td>
+                        <td className="px-2 py-1 border">{prac.estado || 'pendiente'}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                  </table>
+                </div>
+              </ScrollReveal>
+            </LabSection>
+          </div>
+        )}
 
   if (loading) return (
     <Layout>
@@ -354,7 +342,7 @@ const AdminDashboard = () => {
               <h1 className="text-xl font-bold font-mono text-stone-700">Control de Sistema</h1>
               <div className="flex flex-wrap gap-2 mt-2">
                 <span className="px-2 py-0.5 rounded text-[10px] font-mono bg-[#E8F5F0] text-[#1FA971] border border-[#1FA971]/25">{productos.length} productos</span>
-                <span className="px-2 py-0.5 rounded text-[10px] font-mono bg-amber-500/10 text-amber-400 border border-amber-200">{statsPedidos.pendientes} pendientes</span>
+                {/* <span className="px-2 py-0.5 rounded text-[10px] font-mono bg-amber-500/10 text-amber-400 border border-amber-200">{statsPedidos.pendientes} pendientes</span> */}
                 <span className="px-2 py-0.5 rounded text-[10px] font-mono bg-rose-500/10 text-rose-400 border border-rose-200">{statsAlertas.nuevas} alertas</span>
               </div>
             </div>
@@ -392,141 +380,73 @@ const AdminDashboard = () => {
         {/* ── INVENTARIO ───────────────────────────────────────────── */}
         {activeTab === 'inventario' && (
           <div className="space-y-4">
-            <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4">
-              <StatCard label="Total Productos"  value={productos.length}                                              icon={<Package className="w-4 h-4" />} color="blue" />
-              <StatCard label="Reactivos Críticos" value={productos.filter(p=>p.estado==='agotado').length}           icon={<AlertCircle className="w-4 h-4" />} color="rose" />
-              <StatCard label="Alertas Activas"   value={alertas.filter(a=>a.estado==='nueva').length}                icon={<AlertCircle className="w-4 h-4" />} color="amber" />
-              <StatCard label="Nivel Inventario"  value={`${productos.length?Math.max(10,Math.round((productos.filter(p=>p.estado==='ok').length/productos.length)*100)):0}%`} icon={<TrendingUp className="w-4 h-4" />} color="emerald" />
-            </div>
-
-            <LabSection
-              title="INVENTARIO DE REACTIVOS"
-              action={<><Plus className="w-3 h-3" /> NUEVO</>}
-              onAction={handleNuevoProducto}
-            >
-              {/* Filtros */}
-              <div className="flex flex-col md:flex-row gap-3 mb-4">
-                <div className="relative flex-1">
-                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-stone-400" />
-                  <input type="text" placeholder="Buscar producto..." value={inventorySearchTerm} onChange={(e)=>setInventorySearchTerm(e.target.value)} className={`${inputCls} pl-9`} />
-                </div>
-                <div className="relative w-full md:w-48">
-                  <select value={inventoryCategory} onChange={(e)=>setInventoryCategory(e.target.value)} className={`${selectCls} pr-8`}>
-                    {categoriasDisponibles.map(c=><option key={c} value={c}>{c==='todas'?'Todas las categorías':c}</option>)}
-                  </select>
-                  <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-3 h-3 text-stone-400 pointer-events-none" />
-                </div>
-                <span className="px-3 py-2 rounded text-[10px] font-mono self-center text-[#1FA971] bg-[#E8F5F0] border border-[#1FA971]/25">{filteredProductos.length} visibles</span>
+            <ScrollReveal direction="up" delay={0.1}>
+              <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4">
+                <StatCard label="Total Productos"  value={productos.length}                                              icon={<Package className="w-4 h-4" />} color="blue" />
+                <StatCard label="Reactivos Críticos" value={productos.filter(p=>p.estado==='agotado').length}           icon={<AlertCircle className="w-4 h-4" />} color="rose" />
+                <StatCard label="Alertas Activas"   value={alertas.filter(a=>a.estado==='nueva').length}                icon={<AlertCircle className="w-4 h-4" />} color="amber" />
+                <StatCard label="Nivel Inventario"  value={`${productos.length?Math.max(10,Math.round((productos.filter(p=>p.estado==='ok').length/productos.length)*100)):0}%`} icon={<TrendingUp className="w-4 h-4" />} color="emerald" />
               </div>
-
-              {/* Tabla */}
-              <div className="overflow-x-auto">
-                <table className="w-full">
-                  <thead>
-                    <tr className="border-b border-[#E0E0E0]">
-                      {['PRODUCTO','CATEGORÍA','CANT.','UBICACIÓN','ESTADO','ACCIONES'].map(h=>(
-                        <th key={h} className="pb-3 text-[9px] font-mono font-bold text-stone-500 uppercase tracking-wider text-left">{h}</th>
-                      ))}
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-[#E0E0E0]">
-                    {filteredProductos.length === 0 ? (
-                      <tr><td colSpan={6} className="py-10 text-center text-stone-400 font-mono text-sm">Sin resultados</td></tr>
-                    ) : filteredProductos.map((p) => (
-                      <tr key={p.id} className="hover:bg-[#E8F5F0]/60 transition-colors">
-                        <td className="py-3 text-sm font-mono font-semibold text-stone-700">{p.nombre}</td>
-                        <td className="py-3"><span className="px-2 py-0.5 rounded text-[10px] font-mono bg-blue-500/10 text-blue-400 border border-blue-500/20">{p.categoria}</span></td>
-                        <td className="py-3">
-                          <span className={`inline-flex items-center justify-center w-8 h-8 rounded font-bold font-mono text-sm ${p.cantidad<=p.umbral_minimo?'bg-amber-100 text-amber-400':'bg-[#E8F5F0] text-[#1FA971]'}`}>{p.cantidad}</span>
-                        </td>
-                        <td className="py-3 text-sm font-mono text-stone-500">{p.ubicacion}</td>
-                        <td className="py-3"><EstadoBadge estado={p.estado} /></td>
-                        <td className="py-3">
-                          <div className="flex items-center gap-1">
-                            <button onClick={()=>handleEditarProducto(p)} className="p-1.5 text-stone-500 hover:text-[#1FA971] hover:bg-[#E8F5F0] rounded transition-colors" title="Editar"><Edit2 className="w-3.5 h-3.5" /></button>
-                            <button onClick={()=>handleEliminarProducto(p.id)} className="p-1.5 text-stone-500 hover:text-rose-400 hover:bg-rose-500/10 rounded transition-colors" title="Eliminar"><Trash2 className="w-3.5 h-3.5" /></button>
-                          </div>
-                        </td>
+            </ScrollReveal>
+            <ScrollReveal direction="up" delay={0.2}>
+              <LabSection
+                title="INVENTARIO DE REACTIVOS"
+                action={<><Plus className="w-3 h-3" /> NUEVO</>}
+                onAction={handleNuevoProducto}
+              >
+                {/* Filtros */}
+                <div className="flex flex-col md:flex-row gap-3 mb-4">
+                  <div className="relative flex-1">
+                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-stone-400" />
+                    <input type="text" placeholder="Buscar producto..." value={inventorySearchTerm} onChange={(e)=>setInventorySearchTerm(e.target.value)} className={`${inputCls} pl-9`} />
+                  </div>
+                  <div className="relative w-full md:w-48">
+                    <select value={inventoryCategory} onChange={(e)=>setInventoryCategory(e.target.value)} className={`${selectCls} pr-8`}>
+                      {categoriasDisponibles.map(c=><option key={c} value={c}>{c==='todas'?'Todas las categorías':c}</option>)}
+                    </select>
+                    <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-3 h-3 text-stone-400 pointer-events-none" />
+                  </div>
+                  <span className="px-3 py-2 rounded text-[10px] font-mono self-center text-[#1FA971] bg-[#E8F5F0] border border-[#1FA971]/25">{filteredProductos.length} visibles</span>
+                </div>
+                {/* Tabla */}
+                <div className="overflow-x-auto">
+                  <table className="w-full">
+                    <thead>
+                      <tr className="border-b border-[#E0E0E0]">
+                        {['PRODUCTO','CATEGORÍA','CANT.','UBICACIÓN','ESTADO','ACCIONES'].map(h=>(
+                          <th key={h} className="pb-3 text-[9px] font-mono font-bold text-stone-500 uppercase tracking-wider text-left">{h}</th>
+                        ))}
                       </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            </LabSection>
+                    </thead>
+                    <tbody className="divide-y divide-[#E0E0E0]">
+                      {filteredProductos.length === 0 ? (
+                        <tr><td colSpan={6} className="py-10 text-center text-stone-400 font-mono text-sm">Sin resultados</td></tr>
+                      ) : filteredProductos.map((p) => (
+                        <tr key={p.id} className="hover:bg-[#E8F5F0]/60 transition-colors">
+                          <td className="py-3 text-sm font-mono font-semibold text-stone-700">{typeof p.nombre === 'object' ? (p.nombre?.nombre || JSON.stringify(p.nombre)) : p.nombre}</td>
+                          <td className="py-3"><span className="px-2 py-0.5 rounded text-[10px] font-mono bg-blue-500/10 text-blue-400 border border-blue-500/20">{typeof p.categoria === 'object' ? (p.categoria?.nombre || JSON.stringify(p.categoria)) : p.categoria}</span></td>
+                          <td className="py-3">
+                            <span className={`inline-flex items-center justify-center w-8 h-8 rounded font-bold font-mono text-sm ${p.cantidad<=p.umbral_minimo?'bg-amber-100 text-amber-400':'bg-[#E8F5F0] text-[#1FA971]'}`}>{p.cantidad}</span>
+                          </td>
+                          <td className="py-3 text-sm font-mono text-stone-500">{typeof p.ubicacion === 'object' ? (p.ubicacion?.nombre || JSON.stringify(p.ubicacion)) : p.ubicacion}</td>
+                          <td className="py-3"><EstadoBadge estado={p.estado} /></td>
+                          <td className="py-3">
+                            <div className="flex items-center gap-1">
+                              <button onClick={()=>handleEditarProducto(p)} className="p-1.5 text-stone-500 hover:text-[#1FA971] hover:bg-[#E8F5F0] rounded transition-colors" title="Editar"><Edit2 className="w-3.5 h-3.5" /></button>
+                              <button onClick={()=>handleEliminarProducto(p.id)} className="p-1.5 text-stone-500 hover:text-rose-400 hover:bg-rose-500/10 rounded transition-colors" title="Eliminar"><Trash2 className="w-3.5 h-3.5" /></button>
+                            </div>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </LabSection>
+            </ScrollReveal>
           </div>
         )}
 
-        {/* ── PEDIDOS ──────────────────────────────────────────────── */}
-        {activeTab === 'pedidos' && (
-          <div className="space-y-4">
-            <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4">
-              <StatCard label="Total Pedidos"  value={statsPedidos.total}     icon={<Package className="w-4 h-4" />}       color="blue" />
-              <StatCard label="Pendientes"     value={statsPedidos.pendientes} icon={<AlertCircle className="w-4 h-4" />}  color="amber" />
-              <StatCard label="Aprobados"      value={statsPedidos.aprobados}  icon={<CheckCircle2 className="w-4 h-4" />} color="emerald" />
-              <StatCard label="Rechazados"     value={statsPedidos.rechazados} icon={<XCircle className="w-4 h-4" />}      color="rose" />
-            </div>
-
-            <LabSection title="GESTIÓN DE PEDIDOS">
-              <div className="flex flex-col md:flex-row gap-3 mb-4">
-                <div className="relative flex-1">
-                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-stone-400" />
-                  <input type="text" placeholder="Buscar pedido o solicitante..." value={searchTerm} onChange={(e)=>setSearchTerm(e.target.value)} className={`${inputCls} pl-9`} />
-                </div>
-                <div className="relative w-full md:w-44">
-                  <select value={filterStatus} onChange={(e)=>setFilterStatus(e.target.value)} className={`${selectCls} pr-8`}>
-                    <option value="todos">Todos</option>
-                    <option value="pendiente">Pendiente</option>
-                    <option value="aprobado">Aprobado</option>
-                    <option value="rechazado">Rechazado</option>
-                  </select>
-                  <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-3 h-3 text-stone-400 pointer-events-none" />
-                </div>
-                <input type="date" value={dateFrom} onChange={(e)=>setDateFrom(e.target.value)} className={`${inputCls} w-full md:w-36`} />
-                <input type="date" value={dateTo}   onChange={(e)=>setDateTo(e.target.value)}   className={`${inputCls} w-full md:w-36`} />
-              </div>
-
-              <div className="overflow-x-auto">
-                <table className="w-full">
-                  <thead>
-                    <tr className="border-b border-[#E0E0E0]">
-                      {['CÓDIGO','SOLICITANTE','PRODUCTO','CANT.','PRIORIDAD','ESTADO','ACCIONES'].map(h=>(
-                        <th key={h} className="pb-3 text-[9px] font-mono font-bold text-stone-500 uppercase tracking-wider text-left">{h}</th>
-                      ))}
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-[#E0E0E0]">
-                    {filteredPedidos.length===0 ? (
-                      <tr><td colSpan={7} className="py-10 text-center text-stone-400 font-mono text-sm">Sin pedidos</td></tr>
-                    ) : filteredPedidos.map((p) => (
-                      <tr key={p.id} className="hover:bg-[#E8F5F0]/60 transition-colors">
-                        <td className="py-3 text-[11px] font-mono font-bold text-stone-600">{p.codigo}</td>
-                        <td className="py-3 text-[11px] font-mono text-stone-600">{p.solicitante}</td>
-                        <td className="py-3">
-                          <p className="text-[11px] font-mono text-stone-600">{p.producto}</p>
-                          {p.evaluacion_seguridad?.reactivoCritico && <span className="text-[9px] font-mono text-amber-400">⚠ Autorización especial</span>}
-                        </td>
-                        <td className="py-3 text-[11px] font-mono text-stone-500">{p.cantidad}</td>
-                        <td className="py-3">
-                          <span className={`px-2 py-0.5 rounded text-[10px] font-mono font-bold ${p.prioridad==='alta'?'bg-rose-100 text-rose-400 border border-rose-200':p.prioridad==='media'?'bg-amber-100 text-amber-400 border border-amber-200':'bg-[#E8F5F0] text-[#1FA971] border border-[#1FA971]/25'}`}>{p.prioridad}</span>
-                        </td>
-                        <td className="py-3"><EstadoBadge estado={p.estado} /></td>
-                        <td className="py-3">
-                          <div className="flex items-center gap-1">
-                            <button onClick={()=>handleVerPedido(p)} className="p-1.5 text-stone-500 hover:text-stone-600 hover:bg-stone-100 rounded transition-colors" title="Ver"><Eye className="w-3.5 h-3.5" /></button>
-                            {p.estado==='pendiente' && <>
-                              <button onClick={()=>handleAprobarPedido(p.id)} className="p-1.5 text-stone-500 hover:text-[#1FA971] hover:bg-[#E8F5F0] rounded transition-colors" title="Aprobar"><CheckCircle2 className="w-3.5 h-3.5" /></button>
-                              <button onClick={()=>setPedidoToReject({ id: p.id, codigo: p.codigo, producto: p.producto, solicitante: p.solicitante, motivo: '' })} className="p-1.5 text-stone-500 hover:text-rose-400 hover:bg-rose-500/10 rounded transition-colors" title="Rechazar"><XCircle className="w-3.5 h-3.5" /></button>
-                            </>}
-                          </div>
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            </LabSection>
-          </div>
-        )}
+        {/* PEDIDOS eliminados completamente: solo prácticas, inventario y alertas */}
 
         {/* ── ALERTAS ──────────────────────────────────────────────── */}
         {activeTab === 'alertas' && (
@@ -694,48 +614,23 @@ const AdminDashboard = () => {
 
       </div>
 
-        {/* ── MODAL DETALLE PEDIDO ──────────────────────────────── */}
-        {pedidoModal && (
-          <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4">
-            <div className="w-full max-w-lg bg-white border border-[#E0E0E0] rounded-xl overflow-hidden shadow-2xl">
-              <div className="flex items-center justify-between px-6 py-4 border-b border-[#E0E0E0] bg-[#E8F5F0]">
-                <div>
-                  <h2 className="text-sm font-mono font-bold text-[#157A55] uppercase tracking-wider">DETALLE DEL PEDIDO</h2>
-                  <p className="text-[10px] font-mono text-stone-500 mt-0.5">{pedidoModal.codigo}</p>
-                </div>
-                <button onClick={() => setPedidoModal(null)} className="p-1.5 text-stone-400 hover:text-rose-500 hover:bg-rose-50 rounded transition-colors">
-                  <XCircle className="w-4 h-4" />
-                </button>
-              </div>
-              <div className="p-6 space-y-3">
-                {[
-                  { label: 'Código', value: pedidoModal.codigo },
-                  { label: 'Solicitante', value: pedidoModal.solicitante },
-                  { label: 'Producto', value: pedidoModal.producto },
-                  { label: 'Cantidad', value: pedidoModal.cantidad },
-                  { label: 'Departamento', value: pedidoModal.departamento },
-                  { label: 'Prioridad', value: pedidoModal.prioridad },
-                  { label: 'Estado', value: pedidoModal.estado },
-                  { label: 'Fecha solicitud', value: pedidoModal.fecha_solicitud },
-                  pedidoModal.observaciones && { label: 'Observaciones', value: pedidoModal.observaciones },
-                  pedidoModal.motivo_rechazo && { label: 'Motivo rechazo', value: pedidoModal.motivo_rechazo },
-                  pedidoModal.evaluacion_seguridad?.reactivoCritico && {
-                    label: 'Puntaje seguridad',
-                    value: `${pedidoModal.evaluacion_seguridad.puntaje}/${pedidoModal.evaluacion_seguridad.puntajeMinimo} — ${pedidoModal.evaluacion_seguridad.aprobado ? 'Aprobado' : 'Insuficiente'}`,
-                  },
-                ].filter(Boolean).map((row) => (
-                  <div key={row.label} className="flex items-start gap-3 bg-stone-50 border border-[#E0E0E0] rounded-lg px-4 py-2.5">
-                    <span className="text-[10px] font-mono font-bold text-stone-400 uppercase tracking-wider w-28 shrink-0 pt-0.5">{row.label}</span>
-                    <span className="text-sm font-mono text-stone-700 break-all">{row.value ?? '—'}</span>
-                  </div>
-                ))}
-              </div>
-              <div className="flex justify-end px-6 py-4 border-t border-[#E0E0E0] bg-stone-50">
-                <button onClick={() => setPedidoModal(null)} className="px-4 py-2 rounded text-xs font-mono font-bold bg-[#1FA971] text-white hover:bg-[#157A55] transition-colors">Cerrar</button>
-              </div>
-            </div>
-          </div>
-        )}
+      {/* INTEGRACIÓN RFs para presentación */}
+      <div className="bg-white border border-[#E0E0E0] rounded-lg p-5 my-4">
+        <h2 className="text-lg font-bold mb-2 text-emerald-700">RF-034: Historial de Pedidos</h2>
+        <PedidoHistorialList />
+      </div>
+      <div className="bg-white border border-[#E0E0E0] rounded-lg p-5 my-4">
+        <h2 className="text-lg font-bold mb-2 text-emerald-700">RF-039: PDFs Almacenados</h2>
+        <PDFDocumentoList />
+      </div>
+      <div className="bg-white border border-[#E0E0E0] rounded-lg p-5 my-4">
+        <h2 className="text-lg font-bold mb-2 text-emerald-700">RF-055: Asistencias</h2>
+        <AsistenciaList />
+      </div>
+      <div className="bg-white border border-[#E0E0E0] rounded-lg p-5 my-4">
+        <h2 className="text-lg font-bold mb-2 text-emerald-700">RF-056: Listados Diarios</h2>
+        <ListadoDiarioList />
+      </div>
 
     </Layout>
   );

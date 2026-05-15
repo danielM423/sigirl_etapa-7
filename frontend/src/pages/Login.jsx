@@ -183,18 +183,19 @@ function Login() {
           <div>
             <label className="block text-xs text-stone-600 mb-1">Usuario</label>
             <input
-              value={username}
+              value={username || ''}
               onChange={(e) => setUsername(e.target.value)}
               onKeyDown={handleKeyDown}
               className="w-full px-4 py-2.5 rounded-lg border border-stone-200 bg-white focus:outline-none focus:ring-2 focus:ring-[#1fa971]/30 focus:border-[#1fa971]"
               placeholder="Ingresa tu usuario"
+              autoComplete="username"
             />
           </div>
           <div>
             <label className="block text-xs text-stone-600 mb-1">Contraseña</label>
             <input
               type="password"
-              value={password}
+              value={password || ''}
               onChange={(e) => setPassword(e.target.value)}
               onKeyDown={handleKeyDown}
               className="w-full px-4 py-2.5 rounded-lg border border-stone-200 bg-white focus:outline-none focus:ring-2 focus:ring-[#1fa971]/30 focus:border-[#1fa971]"

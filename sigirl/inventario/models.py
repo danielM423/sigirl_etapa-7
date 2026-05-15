@@ -1,8 +1,49 @@
+from django.db import models
+from django.contrib.auth.models import User
+# === RF-034: Historial de pedidos ===
+class PedidoHistorial(models.Model):
+    pedido = models.ForeignKey('Pedido', on_delete=models.CASCADE, related_name='historial')
+    estado = models.CharField(max_length=20)
+    fecha = models.DateTimeField(auto_now_add=True)
+    usuario_modificador = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True)
+    comentario = models.TextField(blank=True, null=True)
+
+    def __str__(self):
+        return f"{self.pedido.codigo} - {self.estado} ({self.fecha:%Y-%m-%d %H:%M})"
+
+# === RF-039: Almacenamiento de PDFs ===
+class PDFDocumento(models.Model):
+    archivo = models.FileField(upload_to='pdfs/')
+    fecha = models.DateTimeField(auto_now_add=True)
+    usuario = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True)
+    tipo = models.CharField(max_length=50, blank=True, default='')
+    referencia = models.CharField(max_length=100, blank=True, default='')
+
+    def __str__(self):
+        return f"PDF {self.tipo} - {self.referencia} ({self.fecha:%Y-%m-%d})"
+
+# === RF-055/056/057/058: Listados diarios y asistencia ===
+class Asistencia(models.Model):
+    usuario = models.ForeignKey(User, on_delete=models.CASCADE)
+    practica = models.ForeignKey('Practica', on_delete=models.CASCADE)
+    fecha = models.DateField()
+    presente = models.BooleanField(default=True)
+    observaciones = models.TextField(blank=True, null=True)
+
+    def __str__(self):
+        return f"{self.usuario.username} - {self.practica.nombre} - {self.fecha} ({'Presente' if self.presente else 'Ausente'})"
+
+class ListadoDiario(models.Model):
+    practica = models.ForeignKey('Practica', on_delete=models.CASCADE)
+    fecha = models.DateField()
+    creado_por = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True)
+    observaciones = models.TextField(blank=True, null=True)
+
+    def __str__(self):
+        return f"Listado {self.practica.nombre} - {self.fecha}"
 from datetime import date
 from django.db import models
 from django.contrib.auth.models import User
-from django.contrib.auth.models import User
-from django.db import models
 
 # 📁 Categoría de productos
 class Categoria(models.Model):
@@ -29,6 +70,7 @@ class Producto(models.Model):
     fecha_vencimiento = models.DateField(blank=True, null=True)
     ultima_actualizacion = models.DateTimeField(auto_now=True)
     unidad = models.CharField(max_length=30, default='unidades')
+    es_sensible = models.BooleanField(default=False, help_text='¿Este producto es sensible y requiere doble aprobación?')
 
     def __str__(self):
         return self.nombre
@@ -67,8 +109,7 @@ class Movimiento(models.Model):
 
     def __str__(self):
         return f"{self.tipo} - {self.producto.nombre}"
-    
-    from django.contrib.auth.models import User
+
 
 class Pedido(models.Model):
     PRIORIDADES = [
@@ -209,6 +250,7 @@ class UnidadMedida(models.Model):
     def __str__(self):
         return f"{self.nombre} ({self.simbolo})"
 
+
 class Practica(models.Model):
     ficha = models.CharField(max_length=50)
     nombre = models.CharField(max_length=200)
@@ -216,35 +258,47 @@ class Practica(models.Model):
     grupos_trabajo = models.PositiveIntegerField()
     instructor = models.ForeignKey(User, on_delete=models.CASCADE, related_name='practicas')
     estado = models.CharField(max_length=20, choices=[
-        ('pendiente', 'Pendiente'),
-        ('aprobacion', 'En aprobación'),
-        ('aprobada', 'Aprobada'),
-        ('rechazada', 'Rechazada'),
-        ('cancelada', 'Cancelada'),
-        ('finalizada', 'Finalizada'),
-    ], default='pendiente')
+        ("pendiente", "Pendiente"),
+        ("aprobacion", "En aprobacion"),
+        ("aprobada", "Aprobada"),
+        ("rechazada", "Rechazada"),
+        ("cancelada", "Cancelada"),
+        ("finalizada", "Finalizada"),
+    ], default="pendiente")
     requiere_doble_aprobacion = models.BooleanField(default=False)
-    jefe_aprobado = models.BooleanField(default=False)
-    admin_aprobado = models.BooleanField(default=False)
-    pdf = models.FileField(upload_to='practicas_pdfs/', blank=True, null=True)
     observaciones = models.TextField(blank=True, null=True)
-
-    class Meta:
-        unique_together = ('fecha', 'ficha')
 
     def __str__(self):
         return f"{self.nombre} ({self.ficha}) - {self.fecha}"
 
+
+class PracticaMaterial(models.Model):
+    practica = models.ForeignKey(Practica, on_delete=models.CASCADE, related_name="materiales")
+    nombre = models.CharField(max_length=150)
+    cantidad_por_grupo = models.FloatField(default=0)
+    cantidad_total = models.FloatField(default=0)
+
+    def __str__(self):
+        return f"{self.nombre} (por grupo: {self.cantidad_por_grupo}, total: {self.cantidad_total})"
+
+
+# --- MODELOS RESTAURADOS PARA PRÁCTICAS ---
 class PracticaReactivo(models.Model):
     practica = models.ForeignKey(Practica, on_delete=models.CASCADE, related_name='reactivos')
-    reactivo = models.ForeignKey('Producto', on_delete=models.CASCADE)
+    reactivo = models.ForeignKey(Producto, on_delete=models.CASCADE)
     cantidad = models.FloatField()
     unidad = models.ForeignKey(UnidadMedida, on_delete=models.CASCADE)
     es_sensible = models.BooleanField(default=False)
 
+    def __str__(self):
+        return f"{self.reactivo} x {self.cantidad} {self.unidad}"
+
 class PracticaEquipo(models.Model):
     practica = models.ForeignKey(Practica, on_delete=models.CASCADE, related_name='equipos')
-    equipo = models.ForeignKey('Producto', on_delete=models.CASCADE)
+    equipo = models.ForeignKey(Producto, on_delete=models.CASCADE)
     tiempo_uso_min = models.PositiveIntegerField()
     desgaste_estimado = models.FloatField(default=0.0)
     mantenimiento_requerido = models.BooleanField(default=False)
+
+    def __str__(self):
+        return f"{self.equipo} ({self.tiempo_uso_min} min)"

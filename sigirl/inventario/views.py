@@ -1,3 +1,50 @@
+# --- IMPORTS PRINCIPALES ---
+from rest_framework import viewsets, permissions
+# === RF-034: Historial de pedidos ===
+from .models import PedidoHistorial, PDFDocumento, Asistencia, ListadoDiario
+from .serializers import PedidoHistorialSerializer, PDFDocumentoSerializer, AsistenciaSerializer, ListadoDiarioSerializer
+from rest_framework.parsers import MultiPartParser, FormParser
+
+class PedidoHistorialViewSet(viewsets.ModelViewSet):
+    queryset = PedidoHistorial.objects.none()
+    serializer_class = PedidoHistorialSerializer
+    permission_classes = [permissions.IsAuthenticated]
+
+    def get_queryset(self):
+        user = self.request.user
+        queryset = PedidoHistorial.objects.filter(usuario_modificador=user)
+        fecha = self.request.query_params.get('fecha')
+        if fecha:
+            queryset = queryset.filter(fecha__date=fecha)
+        return queryset
+
+class PDFDocumentoViewSet(viewsets.ModelViewSet):
+    queryset = PDFDocumento.objects.all()
+    serializer_class = PDFDocumentoSerializer
+    parser_classes = (MultiPartParser, FormParser)
+    permission_classes = [permissions.IsAuthenticated]
+
+    def perform_create(self, serializer):
+        # Al guardar un PDF, registrar el usuario autenticado
+        serializer.save(usuario=self.request.user)
+
+class AsistenciaViewSet(viewsets.ModelViewSet):
+    queryset = Asistencia.objects.all()
+    serializer_class = AsistenciaSerializer
+    permission_classes = [permissions.IsAuthenticated]
+
+    def perform_create(self, serializer):
+        # Registrar automáticamente el usuario autenticado
+        serializer.save(usuario=self.request.user)
+
+class ListadoDiarioViewSet(viewsets.ModelViewSet):
+    queryset = ListadoDiario.objects.all()
+    serializer_class = ListadoDiarioSerializer
+    permission_classes = [permissions.IsAuthenticated]
+
+    def perform_create(self, serializer):
+        # Registrar automáticamente el usuario autenticado como creador
+        serializer.save(creado_por=self.request.user)
 from django.contrib.auth import get_user_model
 User = get_user_model()
 # Endpoint para obtener instructores (todos los usuarios)
@@ -26,6 +73,9 @@ from django.db.models import Prefetch
 # PRÁCTICAS - Excel listado completo
 # =====================
 from rest_framework.permissions import IsAuthenticated, AllowAny
+from rest_framework import status
+from .models import Practica, PracticaReactivo, Producto
+from .serializers import ProductoSerializer
 from rest_framework.decorators import api_view, permission_classes
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])
@@ -91,6 +141,24 @@ def download_practicas_excel(request):
     )
     response['Content-Disposition'] = 'attachment; filename="practicas_sigirl.xlsx"'
     return response
+
+# === NUEVO ENDPOINT: Inventario por práctica abierta solo para instructores ===
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def inventario_practicas_abiertas_instructor(request):
+    user = request.user
+    # Ahora admin y jefe pueden ver el inventario de todas las prácticas abiertas
+    if user.is_superuser or user.is_staff:
+        practicas = Practica.objects.filter(estado__in=['aprobada', 'pendiente'])
+    else:
+        practicas = Practica.objects.filter(instructor=user, estado__in=['aprobada', 'pendiente'])
+        if not practicas.exists():
+            return Response({'detail': 'No tienes prácticas abiertas asignadas.'}, status=404)
+    reactivos = PracticaReactivo.objects.filter(practica__in=practicas).select_related('reactivo')
+    productos = [pr.reactivo for pr in reactivos]
+    productos_unicos = {p.id: p for p in productos}.values()
+    data = ProductoSerializer(productos_unicos, many=True).data
+    return Response(data)
 from rest_framework import viewsets, permissions
 from .models import UnidadMedida, Practica, PracticaReactivo, PracticaEquipo, Producto
 from .serializers import UnidadMedidaSerializer, PracticaSerializer, PracticaReactivoSerializer, PracticaEquipoSerializer, ProductoSerializer
@@ -105,6 +173,87 @@ class PracticaViewSet(viewsets.ModelViewSet):
     queryset = Practica.objects.all()
     serializer_class = PracticaSerializer
     permission_classes = [permissions.AllowAny]  # Solo para pruebas, luego volver a IsAuthenticated
+
+    from rest_framework.decorators import action
+    from rest_framework.response import Response
+    from rest_framework import status
+
+    @action(detail=True, methods=['post'], url_path='aprobar')
+    def aprobar(self, request, pk=None):
+        from django.db import transaction
+        practica = self.get_object()
+        user = request.user
+        role = 'jefe' if user.is_superuser else 'admin' if user.is_staff else 'usuario'
+        if role not in ['jefe', 'admin']:
+            return self._forbidden_response()
+        if practica.estado not in ['pendiente', 'en aprobación']:
+            return Response({'error': 'La práctica no puede ser aprobada en su estado actual.'}, status=status.HTTP_400_BAD_REQUEST)
+        if role == 'jefe':
+            practica.jefe_aprobado = True
+        if role == 'admin':
+            practica.admin_aprobado = True
+
+        # Si requiere doble aprobación, ambas deben estar en True para aprobar
+        aprobar_definitivo = False
+        if practica.requiere_doble_aprobacion:
+            if practica.jefe_aprobado and practica.admin_aprobado:
+                aprobar_definitivo = True
+                practica.estado = 'aprobada'
+            else:
+                practica.estado = 'en aprobación'
+        else:
+            aprobar_definitivo = True
+            practica.estado = 'aprobada'
+
+
+        # Validación y descuento de stock solo si se aprueba definitivamente
+        if aprobar_definitivo:
+            reactivos = practica.reactivos.all()
+            errores = []
+            errores_sensibles = []
+            # Validar stock suficiente y reactivos sensibles
+            for pr in reactivos:
+                producto = pr.reactivo
+                cantidad_necesaria = pr.cantidad
+                if producto.cantidad < cantidad_necesaria:
+                    errores.append(f"Stock insuficiente para {producto.nombre} (disponible: {producto.cantidad}, requerido: {cantidad_necesaria})")
+                if pr.es_sensible and producto.cantidad < cantidad_necesaria:
+                    errores_sensibles.append(f"Reactivo sensible sin stock suficiente: {producto.nombre}")
+            # Si hay error de reactivo sensible, bloquear y mostrar mensaje especial
+            if errores_sensibles:
+                return Response({'error': 'No se puede aprobar la práctica por reactivos sensibles sin stock suficiente', 'detalles': errores_sensibles}, status=status.HTTP_400_BAD_REQUEST)
+            # Si hay error de stock general, bloquear
+            if errores:
+                return Response({'error': 'No se puede aprobar la práctica', 'detalles': errores}, status=status.HTTP_400_BAD_REQUEST)
+            # Descontar stock
+            with transaction.atomic():
+                for pr in reactivos:
+                    producto = pr.reactivo
+                    producto.cantidad -= pr.cantidad
+                    producto.save()
+                practica.save()
+        else:
+            practica.save()
+
+        return Response({'status': practica.estado, 'practica': PracticaSerializer(practica).data})
+
+    @action(detail=True, methods=['post'], url_path='rechazar')
+    def rechazar(self, request, pk=None):
+        practica = self.get_object()
+        user = request.user
+        role = 'jefe' if user.is_superuser else 'admin' if user.is_staff else 'usuario'
+        if role not in ['jefe', 'admin']:
+            return self._forbidden_response()
+        if practica.estado not in ['pendiente', 'en aprobación']:
+            return Response({'error': 'La práctica no puede ser rechazada en su estado actual.'}, status=status.HTTP_400_BAD_REQUEST)
+        practica.estado = 'rechazada'
+        practica.save()
+        return Response({'status': 'rechazada', 'practica': PracticaSerializer(practica).data})
+
+    def _forbidden_response(self):
+        from rest_framework.response import Response
+        from rest_framework import status
+        return Response({'error': 'No tienes permiso para esta acción.'}, status=status.HTTP_403_FORBIDDEN)
 
 # API REST para Reactivos (productos tipo reactivo)
 class ReactivoViewSet(viewsets.ModelViewSet):
@@ -139,7 +288,7 @@ from django.http import HttpResponse
 from django.utils import timezone
 from django.utils.encoding import force_bytes, force_str
 from django.utils.http import urlsafe_base64_decode, urlsafe_base64_encode
-from rest_framework import permissions, status, viewsets, generics
+
 from rest_framework.decorators import api_view, permission_classes
 from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated, AllowAny
@@ -208,7 +357,7 @@ def _validate_registration_email(email: str):
     return normalized_email
 
 
-def _get_role_from_user(user: User) -> str:
+def _get_role_from_user(user: User) -> str: # pyright: ignore[reportInvalidTypeForm]
     return 'jefe' if user.is_superuser else 'admin' if user.is_staff else 'usuario'
 
 
@@ -238,7 +387,7 @@ def _generate_email_verification_code() -> str:
     return ''.join(secrets.choice('0123456789') for _ in range(6))
 
 
-def _issue_email_verification_code(user: User):
+def _issue_email_verification_code(user: User): # pyright: ignore[reportInvalidTypeForm]
     code = _generate_email_verification_code()
     profile, _ = UserProfile.objects.get_or_create(user=user)
     expires_at = timezone.now() + timedelta(minutes=15)
@@ -259,7 +408,7 @@ def _issue_email_verification_code(user: User):
     return code, expires_at
 
 
-def _build_verification_link(request, user: User) -> str:
+def _build_verification_link(request, user: User) -> str: # pyright: ignore[reportInvalidTypeForm]
     uid = urlsafe_base64_encode(force_bytes(user.pk))
     token = default_token_generator.make_token(user)
     frontend_base = getattr(settings, 'FRONTEND_APP_URL', '').rstrip('/')
@@ -270,7 +419,7 @@ def _build_verification_link(request, user: User) -> str:
     return f'{origin}/verify-email/{uid}/{token}'
 
 
-def _send_verification_email(request, user: User):
+def _send_verification_email(request, user: User): # pyright: ignore[reportInvalidTypeForm]
     verification_link = _build_verification_link(request, user)
     verification_code, expires_at = _issue_email_verification_code(user)
     code_line = ''
@@ -406,7 +555,6 @@ class PedidoViewSet(viewsets.ModelViewSet):
     def update(self, request, *args, **kwargs):
         pedido = self.get_object()
         user = request.user
-        # Permitir staff/superuser o dueño si el pedido está pendiente
         es_dueno = pedido.usuario == user
         puede_editar = user.is_staff or user.is_superuser or (es_dueno and pedido.estado == 'pendiente')
         if not puede_editar:
@@ -424,6 +572,13 @@ class PedidoViewSet(viewsets.ModelViewSet):
             if producto.cantidad >= pedido.cantidad:
                 producto.cantidad -= pedido.cantidad
                 producto.save()
+                from .models import Movimiento
+                Movimiento.objects.create(
+                    producto=producto,
+                    tipo='salida',
+                    cantidad=pedido.cantidad,
+                    observacion=f"Pedido aprobado (ID: {pedido.id})"
+                )
             else:
                 return Response({'error': 'No hay suficiente stock'}, status=status.HTTP_400_BAD_REQUEST)
 
@@ -434,6 +589,16 @@ class PedidoViewSet(viewsets.ModelViewSet):
         serializer = self.get_serializer(pedido, data=payload, partial=True)
         serializer.is_valid(raise_exception=True)
         serializer.save()
+
+        # === RF-034: Guardar historial de cambios de estado ===
+        if estado != estado_anterior:
+            from .models import PedidoHistorial
+            PedidoHistorial.objects.create(
+                pedido=pedido,
+                estado=estado,
+                usuario_modificador=user,
+                comentario=payload.get('comentario', '')
+            )
 
         return Response(serializer.data)
 
@@ -776,7 +941,7 @@ def download_inventory_template_excel(request):
 @permission_classes([AllowAny])
 def download_inventory_excel(request):
     workbook = Workbook()
-    workbook.encoding = 'utf-8'
+    # openpyxl usa UTF-8 por defecto, pero forzamos encoding en la respuesta
     sheet = workbook.active
     sheet.title = 'Inventario'
 
@@ -810,9 +975,10 @@ def download_inventory_excel(request):
 
     response = HttpResponse(
         output.getvalue(),
-        content_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+        content_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet; charset=utf-8',
     )
     response['Content-Disposition'] = 'attachment; filename="inventario_sigirl.xlsx"'
+    response['Content-Encoding'] = 'utf-8'
     return response
 
 
@@ -862,7 +1028,8 @@ def download_inventory_pdf(request):
         bottomMargin=14 * mm,
     )
 
-    font_name = _register_pdf_font()
+    # Usar fuente DejaVuSans para compatibilidad UTF-8
+    font_name = _register_pdf_font(font_path=None, font_name='DejaVuSans') if '_register_pdf_font' in globals() else 'Helvetica'
     title_style = ParagraphStyle(
         name='Title',
         fontName=font_name,
@@ -922,6 +1089,7 @@ def download_inventory_pdf(request):
 
     response = HttpResponse(pdf_data, content_type='application/pdf; charset=utf-8')
     response['Content-Disposition'] = 'attachment; filename="reporte_inventario_sigirl.pdf"'
+    response['Content-Encoding'] = 'utf-8'
     return response
 
 

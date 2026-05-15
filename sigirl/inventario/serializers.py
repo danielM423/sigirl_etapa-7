@@ -1,5 +1,36 @@
 from rest_framework import serializers
-from .models import UnidadMedida, Practica, PracticaReactivo, PracticaEquipo
+# === RF-034: Historial de pedidos ===
+from .models import PedidoHistorial, PDFDocumento, Asistencia, ListadoDiario
+
+class PedidoHistorialSerializer(serializers.ModelSerializer):
+    usuario_modificador = serializers.StringRelatedField(read_only=True)
+    class Meta:
+        model = PedidoHistorial
+        fields = '__all__'
+
+# === RF-039: Almacenamiento de PDFs ===
+class PDFDocumentoSerializer(serializers.ModelSerializer):
+    usuario = serializers.StringRelatedField(read_only=True)
+    class Meta:
+        model = PDFDocumento
+        fields = '__all__'
+
+# === RF-055/056/057/058: Asistencia y ListadoDiario ===
+class AsistenciaSerializer(serializers.ModelSerializer):
+    usuario = serializers.StringRelatedField(read_only=True)
+    practica = serializers.StringRelatedField(read_only=True)
+    class Meta:
+        model = Asistencia
+        fields = '__all__'
+
+class ListadoDiarioSerializer(serializers.ModelSerializer):
+    practica = serializers.StringRelatedField(read_only=True)
+    creado_por = serializers.StringRelatedField(read_only=True)
+    class Meta:
+        model = ListadoDiario
+        fields = '__all__'
+from rest_framework import serializers
+from .models import UnidadMedida, Practica, PracticaReactivo, PracticaEquipo, PracticaMaterial
 # --- SERIALIZER UNIDAD DE MEDIDA ---
 class UnidadMedidaSerializer(serializers.ModelSerializer):
     class Meta:
@@ -26,9 +57,11 @@ class CategoriaSerializer(serializers.ModelSerializer):
 
 class ProductoSerializer(serializers.ModelSerializer):
     categoria = CategoriaSerializer(read_only=True)
+    categoria_id = serializers.PrimaryKeyRelatedField(queryset=Categoria.objects.all(), source='categoria', write_only=True, required=False)
     class Meta:
         model = Producto
         fields = '__all__'
+        extra_kwargs = {'es_sensible': {'required': False}}
 
 # --- SERIALIZERS PARA PRÁCTICAS Y RELACIONES ---
 class PracticaReactivoSerializer(serializers.ModelSerializer):
@@ -37,8 +70,15 @@ class PracticaReactivoSerializer(serializers.ModelSerializer):
     class Meta:
         model = PracticaReactivo
         fields = '__all__'
+        read_only_fields = ('practica',)
+
+class PracticaMaterialSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = PracticaMaterial
+        fields = '__all__'
 
 class PracticaEquipoSerializer(serializers.ModelSerializer):
+
     equipo = serializers.PrimaryKeyRelatedField(queryset=Producto.objects.filter(tipo='equipo'))
     class Meta:
         model = PracticaEquipo
@@ -48,6 +88,8 @@ class PracticaSerializer(serializers.ModelSerializer):
     instructor = serializers.PrimaryKeyRelatedField(queryset=User.objects.all())
     reactivos = PracticaReactivoSerializer(many=True, required=False)
     equipos = PracticaEquipoSerializer(many=True, required=False)
+    materiales = PracticaMaterialSerializer(many=True, required=False)
+
     class Meta:
         model = Practica
         fields = '__all__'
@@ -55,16 +97,20 @@ class PracticaSerializer(serializers.ModelSerializer):
     def create(self, validated_data):
         reactivos_data = validated_data.pop('reactivos', [])
         equipos_data = validated_data.pop('equipos', [])
+        materiales_data = validated_data.pop('materiales', [])
         practica = Practica.objects.create(**validated_data)
         for reactivo in reactivos_data:
             PracticaReactivo.objects.create(practica=practica, **reactivo)
         for equipo in equipos_data:
             PracticaEquipo.objects.create(practica=practica, **equipo)
+        for material in materiales_data:
+            PracticaMaterial.objects.create(practica=practica, **material)
         return practica
 
     def update(self, instance, validated_data):
         reactivos_data = validated_data.pop('reactivos', None)
         equipos_data = validated_data.pop('equipos', None)
+        materiales_data = validated_data.pop('materiales', None)
         for attr, value in validated_data.items():
             setattr(instance, attr, value)
         instance.save()
@@ -76,6 +122,10 @@ class PracticaSerializer(serializers.ModelSerializer):
             instance.equipos.all().delete()
             for equipo in equipos_data:
                 PracticaEquipo.objects.create(practica=instance, **equipo)
+        if materiales_data is not None:
+            instance.materiales.all().delete()
+            for material in materiales_data:
+                PracticaMaterial.objects.create(practica=instance, **material)
         return instance
 
 
@@ -311,3 +361,4 @@ class CurrentUserProfileSerializer(serializers.ModelSerializer):
             profile.save()
 
         return instance
+

@@ -1,5 +1,5 @@
 from django.contrib.auth.models import User
-from inventario.models import UnidadMedida, Practica, PracticaReactivo, PracticaEquipo, Producto, Categoria
+from sigirl.inventario.models import UnidadMedida, Practica, PracticaReactivo, PracticaEquipo, Producto, Categoria
 from datetime import date, timedelta
 import random
 

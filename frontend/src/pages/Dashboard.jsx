@@ -26,7 +26,7 @@ import {
   ArrowUpRight,
   FlaskConical,
 } from 'lucide-react';
-import api from '../services/api';
+import api, { getInventarioPracticasInstructor } from '../services/api';
 import { UserContext } from '../context/UserContext';
 import { exportToExcel } from '../utils/reportExport';
 import Layout from '../components/Layout';
@@ -118,6 +118,21 @@ function Dashboard() {
   const [pedidos, setPedidos] = useState([]);
   const [loading, setLoading] = useState(true);
   const [chartsReady, setChartsReady] = useState(false);
+  // Inventario de prácticas abiertas
+  const [inventario, setInventario] = useState([]);
+  const [loadingInventario, setLoadingInventario] = useState(true);
+  // Cargar inventario de prácticas abiertas
+  useEffect(() => {
+    getInventarioPracticasInstructor()
+      .then(res => {
+        setInventario(Array.isArray(res.data) ? res.data : []);
+        setLoadingInventario(false);
+      })
+      .catch(() => {
+        setInventario([]);
+        setLoadingInventario(false);
+      });
+  }, []);
 
   const cargarDatos = useCallback(async (showToast = false) => {
     setLoading(true);
@@ -296,6 +311,49 @@ function Dashboard() {
             icon={<XCircle className="h-5 w-5 text-rose-500" />}
             subtitle="Alertas críticas"
           />
+        </div>
+
+        {/* Inventario de Prácticas Abiertas */}
+        <div className="bg-gradient-to-br from-emerald-50 to-white border border-[#E0E0E0] rounded-xl p-6 shadow-sm mb-2">
+          <div className="flex items-center gap-2 mb-2">
+            <Package2 className="h-5 w-5 text-emerald-600" />
+            <span className="text-[11px] font-mono font-bold text-emerald-700 uppercase tracking-wider">Inventario de Prácticas Abiertas</span>
+          </div>
+          {loadingInventario ? (
+            <div className="text-stone-400 text-xs py-4 text-center">Cargando inventario...</div>
+          ) : inventario.length === 0 ? (
+            <div className="flex flex-col items-center py-6">
+              <svg width="48" height="48" fill="none" viewBox="0 0 24 24" className="mb-2 text-emerald-200"><path d="M12 2v2m0 16v2m10-10h-2M4 12H2m15.07-7.07l-1.41 1.41M6.34 17.66l-1.41 1.41m12.02 0l1.41-1.41M6.34 6.34L4.93 4.93" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/></svg>
+              <span className="text-stone-400 text-sm font-mono">No hay inventario asociado a tus prácticas abiertas.</span>
+            </div>
+          ) : (
+            <div className="overflow-x-auto mb-2">
+              <table className="min-w-full text-xs font-mono border rounded-lg overflow-hidden">
+                <thead>
+                  <tr className="bg-emerald-100 text-emerald-800">
+                    <th className="px-3 py-2 border">ID</th>
+                    <th className="px-3 py-2 border">Nombre</th>
+                    <th className="px-3 py-2 border">Tipo</th>
+                    <th className="px-3 py-2 border">Cantidad</th>
+                    <th className="px-3 py-2 border">Unidad</th>
+                    <th className="px-3 py-2 border">Ubicación</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {inventario.map(prod => (
+                    <tr key={prod.id} className="border-b hover:bg-emerald-50/60 transition-colors">
+                      <td className="px-3 py-2 border text-center">{prod.id}</td>
+                      <td className="px-3 py-2 border">{prod.nombre}</td>
+                      <td className="px-3 py-2 border text-center">{prod.tipo}</td>
+                      <td className="px-3 py-2 border text-center">{prod.cantidad}</td>
+                      <td className="px-3 py-2 border text-center">{prod.unidad}</td>
+                      <td className="px-3 py-2 border">{prod.ubicacion}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
         </div>
 
         {/* Accesos rápidos */}

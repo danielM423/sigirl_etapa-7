@@ -1,3 +1,170 @@
+/* Toast personalizado para notificaciones bonitas */
+/* Toast pastel profesional */
+.Toastify__toast {
+  background: linear-gradient(120deg, #bbf7d0 60%, #f0fdfa 100%) !important;
+  color: #166534 !important;
+  border-radius: 16px !important;
+  box-shadow: 0 8px 32px 0 rgba(16, 185, 129, 0.13), 0 1.5px 8px 0 rgba(30,41,59,0.07) !important;
+  font-family: 'Roboto', sans-serif !important;
+  font-size: 1.12rem !important;
+  font-weight: 600 !important;
+  border: 2px solid #86efac !important;
+  padding: 22px 28px !important;
+  animation: fadeInUp 0.8s cubic-bezier(.23,1.01,.32,1) both !important;
+  transition: box-shadow 0.2s, transform 0.2s;
+}
+.Toastify__toast--success {
+  background: linear-gradient(120deg, #bbf7d0 80%, #f0fdfa 100%) !important;
+  color: #166534 !important;
+  border-left: 7px solid #22c55e !important;
+  box-shadow: 0 8px 32px 0 #bbf7d0cc, 0 1.5px 8px 0 #22c55e33 !important;
+}
+.Toastify__toast--error {
+  background: linear-gradient(120deg, #fee2e2 80%, #fef2f2 100%) !important;
+  color: #991b1b !important;
+  border-left: 7px solid #dc2626 !important;
+  box-shadow: 0 8px 32px 0 #fecaca99, 0 1.5px 8px 0 #dc262633 !important;
+}
+.Toastify__toast--info {
+  background: linear-gradient(120deg, #e0e7ff 80%, #f0fdfa 100%) !important;
+  color: #334155 !important;
+  border-left: 7px solid #38bdf8 !important;
+}
+.Toastify__progress-bar {
+  background: #22c55e !important;
+  height: 4px !important;
+  border-radius: 2px !important;
+}
+.Toastify__close-button {
+  color: #64748b !important;
+  opacity: 0.7 !important;
+  font-size: 1.2em !important;
+  transition: color 0.2s;
+}
+.Toastify__close-button:hover {
+  color: #0f172a !important;
+  opacity: 1 !important;
+}
+/* Fondo general con degradado moderno */
+
+/* Estilos unificados para bloques RF fácil con animación */
+.rf-block {
+  background: rgba(255,255,255,0.92);
+  border-radius: 18px;
+  box-shadow: 0 8px 32px 0 rgba(16, 185, 129, 0.13), 0 1.5px 8px 0 rgba(30,41,59,0.07);
+  padding: 36px 28px 28px 28px;
+  margin-bottom: 36px;
+  animation: fadeInUp 0.7s cubic-bezier(.23,1.01,.32,1) both;
+  backdrop-filter: blur(2px);
+}
+.rf-title {
+  font-size: 1.7rem;
+  font-weight: 700;
+  margin-bottom: 22px;
+  color: #0f172a;
+  letter-spacing: 0.01em;
+  text-shadow: 0 1px 8px #e0e7ff44;
+  animation: fadeIn 1s cubic-bezier(.23,1.01,.32,1) both;
+}
+.rf-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 24px;
+}
+.rf-card {
+  background: linear-gradient(120deg, #f0fdfa 60%, #e0e7ff 100%);
+  border-radius: 14px;
+  box-shadow: 0 2px 16px 0 rgba(16, 185, 129, 0.10), 0 1.5px 8px 0 rgba(30,41,59,0.07);
+  padding: 22px 22px 16px 22px;
+  min-width: 260px;
+  max-width: 340px;
+  flex: 1 1 260px;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  border: 1.5px solid #a5b4fc;
+  transition: transform 0.18s cubic-bezier(.23,1.01,.32,1), box-shadow 0.18s;
+  animation: fadeInUp 0.8s cubic-bezier(.23,1.01,.32,1) both;
+}
+.rf-card:hover {
+  transform: translateY(-6px) scale(1.025);
+  box-shadow: 0 8px 32px 0 rgba(16, 185, 129, 0.18), 0 2px 12px 0 rgba(30,41,59,0.13);
+}
+.rf-card-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 10px;
+  animation: fadeIn 1.1s cubic-bezier(.23,1.01,.32,1) both;
+}
+.rf-card-actions {
+  gap: 10px;
+}
+.rf-btn {
+  background: #22c55e;
+  color: #fff;
+  border: none;
+  border-radius: 7px;
+  padding: 7px 18px;
+  font-size: 1rem;
+  font-weight: 600;
+  cursor: pointer;
+  margin-right: 4px;
+  box-shadow: 0 1px 4px 0 #a7f3d0cc;
+  transition: background 0.15s, transform 0.13s;
+  animation: fadeIn 1.2s cubic-bezier(.23,1.01,.32,1) both;
+}
+.rf-btn:hover {
+  background: #16a34a;
+  transform: scale(1.07);
+}
+/* Botón eliminar: rojo */
+.rf-btn-danger {
+  background: #dc2626;
+  box-shadow: 0 1px 4px 0 #fecaca99;
+}
+.rf-btn-danger:hover {
+  background: #b91c1c;
+  transform: scale(1.07);
+}
+.rf-modal-bg {
+  position: fixed;
+  top: 0; left: 0; right: 0; bottom: 0;
+  background: rgba(30,41,59,0.18);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+  animation: fadeIn 0.5s cubic-bezier(.23,1.01,.32,1) both;
+}
+.rf-modal {
+  background: #fff;
+  padding: 32px 36px;
+  border-radius: 16px;
+  min-width: 340px;
+  box-shadow: 0 8px 32px 0 rgba(16, 185, 129, 0.13), 0 1.5px 8px 0 rgba(30,41,59,0.07);
+  animation: fadeInUp 0.7s cubic-bezier(.23,1.01,.32,1) both;
+}
+
+/* Animaciones clave */
+@keyframes fadeInUp {
+  0% {
+    opacity: 0;
+    transform: translateY(30px);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+@keyframes fadeIn {
+  0% {
+    opacity: 0;
+  }
+  100% {
+    opacity: 1;
+  }
+}
 /* Shared helper styles for SIGIRL */
 
 .app-shell {

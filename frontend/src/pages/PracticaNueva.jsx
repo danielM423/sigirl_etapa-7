@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { createPractica } from '../services/api';
 
 const PracticaNueva = () => {
   // Estado para encabezado
@@ -51,7 +52,6 @@ const PracticaNueva = () => {
   // Función para enviar el formulario (POST a la API)
   const handleSubmit = async (e) => {
     e.preventDefault();
-    // Construir payload
     const payload = {
       ...encabezado,
       grupos_trabajo: parseInt(encabezado.grupos_trabajo),
@@ -70,32 +70,25 @@ const PracticaNueva = () => {
       })),
     };
     try {
-      const res = await fetch('/api/practicas/', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload)
-      });
-      if (res.ok) {
-        alert('¡Práctica guardada exitosamente!');
-      } else {
-        const error = await res.json();
-        alert('Error al guardar: ' + JSON.stringify(error));
-      }
+      await createPractica(payload);
+      alert('¡Práctica guardada exitosamente!');
     } catch (err) {
-      alert('Error de red: ' + err.message);
+      const error = err.response?.data || err.message;
+      alert('Error al guardar: ' + (typeof error === 'object' ? JSON.stringify(error) : error));
     }
   };
 
   return (
-    <form onSubmit={handleSubmit} className="max-w-3xl mx-auto p-6 bg-white rounded shadow">
+    <ScrollReveal direction="up" delay={0.1}>
+      <form onSubmit={handleSubmit} className="max-w-3xl mx-auto p-6 bg-white rounded shadow">
       <h2 className="text-xl font-bold mb-4">Nueva Práctica</h2>
       {/* Encabezado */}
       <div className="grid grid-cols-2 gap-4 mb-6">
-        <input placeholder="Ficha" value={encabezado.ficha} onChange={e => setEncabezado({ ...encabezado, ficha: e.target.value })} className="input" />
-        <input placeholder="Nombre de la práctica" value={encabezado.nombre} onChange={e => setEncabezado({ ...encabezado, nombre: e.target.value })} className="input" />
-        <input type="date" placeholder="Fecha" value={encabezado.fecha} onChange={e => setEncabezado({ ...encabezado, fecha: e.target.value })} className="input" />
-        <input placeholder="Grupos de trabajo" value={encabezado.grupos_trabajo} onChange={e => setEncabezado({ ...encabezado, grupos_trabajo: e.target.value })} className="input" />
-        <select value={encabezado.instructor} onChange={e => setEncabezado({ ...encabezado, instructor: e.target.value })} className="input">
+        <input placeholder="Ficha" value={encabezado.ficha || ''} onChange={e => setEncabezado({ ...encabezado, ficha: e.target.value })} className="input" />
+        <input placeholder="Nombre de la práctica" value={encabezado.nombre || ''} onChange={e => setEncabezado({ ...encabezado, nombre: e.target.value })} className="input" />
+        <input type="date" placeholder="Fecha" value={encabezado.fecha || ''} onChange={e => setEncabezado({ ...encabezado, fecha: e.target.value })} className="input" />
+        <input placeholder="Grupos de trabajo" value={encabezado.grupos_trabajo || ''} onChange={e => setEncabezado({ ...encabezado, grupos_trabajo: e.target.value })} className="input" />
+        <select value={encabezado.instructor || ''} onChange={e => setEncabezado({ ...encabezado, instructor: e.target.value })} className="input">
           <option value="">Selecciona instructor</option>
           {instructores.map(inst => (
             <option key={inst.id} value={inst.id}>{inst.username || inst.nombre}</option>
@@ -114,14 +107,14 @@ const PracticaNueva = () => {
               <option key={prod.id} value={prod.id}>{prod.nombre}</option>
             ))}
           </select>
-          <input placeholder="Cantidad" value={r.cantidad} onChange={e => handleArrayChange(setReactivos, reactivos, i, 'cantidad', e.target.value)} className="input" />
+          <input placeholder="Cantidad" value={r.cantidad || ''} onChange={e => handleArrayChange(setReactivos, reactivos, i, 'cantidad', e.target.value)} className="input" />
           <select value={r.unidad || ''} onChange={e => handleArrayChange(setReactivos, reactivos, i, 'unidad', e.target.value)} className="input">
             <option value="">Unidad</option>
             {unidadesCatalogo.map(u => (
               <option key={u.id} value={u.id}>{u.nombre} ({u.simbolo})</option>
             ))}
           </select>
-          <label className="flex items-center"><input type="checkbox" checked={r.es_sensible || false} onChange={e => handleArrayChange(setReactivos, reactivos, i, 'es_sensible', e.target.checked)} /> Sensible</label>
+          <label className="flex items-center"><input type="checkbox" checked={!!r.es_sensible} onChange={e => handleArrayChange(setReactivos, reactivos, i, 'es_sensible', e.target.checked)} /> Sensible</label>
         </div>
       ))}
 
@@ -130,9 +123,9 @@ const PracticaNueva = () => {
       <button type="button" onClick={addMaterial} className="mb-2 btn">Agregar material</button>
       {materiales.map((m, i) => (
         <div key={i} className="grid grid-cols-3 gap-2 mb-2">
-          <input placeholder="Nombre" value={m.nombre} onChange={e => handleArrayChange(setMateriales, materiales, i, 'nombre', e.target.value)} className="input" />
-          <input placeholder="Cantidad por grupo" value={m.cantidad_por_grupo} onChange={e => handleArrayChange(setMateriales, materiales, i, 'cantidad_por_grupo', e.target.value)} className="input" />
-          <input placeholder="Cantidad total" value={m.cantidad_total} onChange={e => handleArrayChange(setMateriales, materiales, i, 'cantidad_total', e.target.value)} className="input" />
+          <input placeholder="Nombre" value={m.nombre || ''} onChange={e => handleArrayChange(setMateriales, materiales, i, 'nombre', e.target.value)} className="input" />
+          <input placeholder="Cantidad por grupo" value={m.cantidad_por_grupo || ''} onChange={e => handleArrayChange(setMateriales, materiales, i, 'cantidad_por_grupo', e.target.value)} className="input" />
+          <input placeholder="Cantidad total" value={m.cantidad_total || ''} onChange={e => handleArrayChange(setMateriales, materiales, i, 'cantidad_total', e.target.value)} className="input" />
         </div>
       ))}
 
@@ -149,12 +142,13 @@ const PracticaNueva = () => {
           </select>
           <input placeholder="Tiempo uso (min)" value={eq.tiempo_uso_min || ''} onChange={e => handleArrayChange(setEquipos, equipos, i, 'tiempo_uso_min', e.target.value)} className="input" />
           <input placeholder="Desgaste estimado" value={eq.desgaste_estimado || ''} onChange={e => handleArrayChange(setEquipos, equipos, i, 'desgaste_estimado', e.target.value)} className="input" />
-          <label className="flex items-center"><input type="checkbox" checked={eq.mantenimiento_requerido || false} onChange={e => handleArrayChange(setEquipos, equipos, i, 'mantenimiento_requerido', e.target.checked)} /> Mantenimiento</label>
+          <label className="flex items-center"><input type="checkbox" checked={!!eq.mantenimiento_requerido} onChange={e => handleArrayChange(setEquipos, equipos, i, 'mantenimiento_requerido', e.target.checked)} /> Mantenimiento</label>
         </div>
       ))}
 
       <button type="submit" className="mt-6 btn-primary">Guardar práctica</button>
     </form>
+    </ScrollReveal>
   );
 };
 

@@ -66,6 +66,7 @@ INSTALLED_APPS = [
     'django.contrib.messages',
     'django.contrib.staticfiles',
     'rest_framework',
+    'django_extensions',
     'rest_framework_simplejwt',  # ← AGREGADO: Necesario para JWT
     'sigirl.inventario',
 ]
@@ -179,6 +180,7 @@ INSTALLED_APPS = [
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
+    'django_extensions',
     'rest_framework',
     'rest_framework_simplejwt',
     'corsheaders',  # ← AGREGA ESTA LÍNEA (si no está)

@@ -198,10 +198,10 @@ const Usuarios = () => {
               <tbody className="divide-y divide-stone-100">
                 {filteredUsuarios.length === 0 ? <tr><td colSpan={5} className="py-12 text-center text-stone-500 font-mono text-sm">No se encontraron usuarios</td></tr> : filteredUsuarios.map((usuario) => (
                   <tr key={usuario.id} className="hover:bg-[#E8F5F0]/40 transition-colors">
-                    <td className="py-3 pr-4 text-sm font-mono font-semibold text-stone-700">{usuario.username}</td>
-                    <td className="py-3 pr-4 text-sm font-mono text-stone-500">{usuario.email || '—'}</td>
-                    <td className="py-3 pr-4 text-sm font-mono text-stone-500">{usuario.departamento || '—'}</td>
-                    <td className="py-3 pr-4"><span className={`px-2 py-0.5 rounded text-[10px] font-mono font-bold border ${usuario.rol === 'jefe' ? 'bg-purple-100 text-purple-700 border-purple-200' : usuario.rol === 'admin' ? 'bg-blue-100 text-blue-700 border-blue-200' : 'bg-emerald-100 text-emerald-700 border-emerald-200'}`}>{usuario.rol}</span></td>
+                    <td className="py-3 pr-4 text-sm font-mono font-semibold text-stone-700">{typeof usuario.username === 'object' ? (usuario.username?.nombre || usuario.username?.username || JSON.stringify(usuario.username)) : usuario.username}</td>
+                    <td className="py-3 pr-4 text-sm font-mono text-stone-500">{typeof usuario.email === 'object' ? (usuario.email?.email || JSON.stringify(usuario.email)) : (usuario.email || '—')}</td>
+                    <td className="py-3 pr-4 text-sm font-mono text-stone-500">{typeof usuario.departamento === 'object' ? (usuario.departamento?.nombre || JSON.stringify(usuario.departamento)) : (usuario.departamento || '—')}</td>
+                    <td className="py-3 pr-4"><span className={`px-2 py-0.5 rounded text-[10px] font-mono font-bold border ${usuario.rol === 'jefe' ? 'bg-purple-100 text-purple-700 border-purple-200' : usuario.rol === 'admin' ? 'bg-blue-100 text-blue-700 border-blue-200' : 'bg-emerald-100 text-emerald-700 border-emerald-200'}`}>{typeof usuario.rol === 'object' ? (usuario.rol?.nombre || JSON.stringify(usuario.rol)) : usuario.rol}</span></td>
                     <td className="py-3"><div className="flex items-center gap-1"><button onClick={() => setDetailModal(usuario)} className="p-1.5 text-blue-600 hover:bg-blue-50 rounded transition-colors" title="Ver detalle"><Eye className="w-3.5 h-3.5" /></button><button onClick={() => openEdit(usuario)} className="p-1.5 text-amber-600 hover:bg-amber-50 rounded transition-colors" title="Editar usuario"><Pencil className="w-3.5 h-3.5" /></button><button onClick={() => handleDelete(usuario)} className="p-1.5 text-rose-600 hover:bg-rose-50 rounded transition-colors" title="Eliminar usuario"><Trash2 className="w-3.5 h-3.5" /></button></div></td>
                   </tr>
                 ))}

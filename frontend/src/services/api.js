@@ -1,3 +1,7 @@
+// ── Inventario de prácticas abiertas para instructores ───────────────
+export const getInventarioPracticasInstructor = () => api.get('inventario-practicas-abiertas-instructor/');
+// ── Categorías ───────────────────────────────────────────
+export const getCategorias = () => api.get('categorias/');
 import axios from "axios";
 
 // Cliente HTTP central del frontend.
@@ -54,6 +58,9 @@ export const createProducto = (data)     => api.post('productos/', data);
 export const updateProducto = (id, data) => api.patch(`productos/${id}/`, data);
 export const deleteProducto = (id)       => api.delete(`productos/${id}/`);
 
+// Obtener detalle de producto/reactivo por ID (incluye stock y si es sensible)
+export const getProductoById = (id) => api.get(`productos/${id}/`);
+
 // ── Pedidos ────────────────────────────────────────────────
 export const getPedidos   = ()         => api.get('pedidos/');
 export const createPedido = (data)     => api.post('pedidos/', data);
@@ -91,5 +98,29 @@ export const getAuditoria = (params = {}) => api.get('auditoria/', { params });
 
 // ── Instructores ──────────────────────────────────────────
 export const getInstructores = () => api.get('instructores/');
+
+// ── Prácticas ──────────────────────────────────────────────
+export const getPracticas = () => api.get('practicas/');
+export const createPractica = (data) => api.post('practicas/', data);
+export const updatePractica = (id, data) => api.patch(`practicas/${id}/`, data);
+export const deletePractica = (id) => api.delete(`practicas/${id}/`);
+export const aprobarPractica = (id) => api.post(`practicas/${id}/aprobar/`);
+export const rechazarPractica = (id, data) => api.post(`practicas/${id}/rechazar/`, data);
+export const descargarExcelPracticas = () => api.get('practicas/excel/', { responseType: 'blob' });
+
+// ── Equipos ────────────────────────────────────────────────
+export const getEquipos = () => api.get('equipos/');
+export const createEquipo = (data) => api.post('equipos/', data);
+export const updateEquipo = (id, data) => api.patch(`equipos/${id}/`, data);
+export const deleteEquipo = (id) => api.delete(`equipos/${id}/`);
+
+// ── Reactivos ──────────────────────────────────────────────
+export const getReactivos = () => api.get('reactivos/');
+export const createReactivo = (data) => api.post('reactivos/', data);
+export const updateReactivo = (id, data) => api.patch(`reactivos/${id}/`, data);
+export const deleteReactivo = (id) => api.delete(`reactivos/${id}/`);
+
+// ── Top reactivos usados ──────────────────────────────────
+export const getTopReactivosUsados = () => api.get('top-reactivos-usados/');
 
 export default api;
