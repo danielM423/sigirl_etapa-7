@@ -4,7 +4,7 @@ import { createPractica } from '../services/api';
 const PracticaNueva = () => {
   // Estado para encabezado
   const [encabezado, setEncabezado] = useState({
-    ficha: '',
+    fichaa: '',
     nombre: '',
     fecha: '',
     grupos_trabajo: '',
