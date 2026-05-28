@@ -1,6 +1,17 @@
 from rest_framework import serializers
-# === RF-034: Historial de pedidos ===
-from .models import PedidoHistorial, PDFDocumento, Asistencia, ListadoDiario
+from django.contrib.auth import get_user_model
+from .models import (
+    Programa, Competencia, Practica, PracticaReactivo, PracticaEquipo, 
+    PracticaMaterial, PedidoHistorial, PDFDocumento, Asistencia, ListadoDiario,
+    UnidadMedida, HistorialCambio, Alerta, Categoria, Movimiento, Pedido, 
+    Producto, UserProfile
+)
+
+User = get_user_model()
+
+# ============================================================
+# SERIALIZERS EXISTENTES
+# ============================================================
 
 class PedidoHistorialSerializer(serializers.ModelSerializer):
     usuario_modificador = serializers.StringRelatedField(read_only=True)
@@ -8,14 +19,12 @@ class PedidoHistorialSerializer(serializers.ModelSerializer):
         model = PedidoHistorial
         fields = '__all__'
 
-# === RF-039: Almacenamiento de PDFs ===
 class PDFDocumentoSerializer(serializers.ModelSerializer):
     usuario = serializers.StringRelatedField(read_only=True)
     class Meta:
         model = PDFDocumento
         fields = '__all__'
 
-# === RF-055/056/057/058: Asistencia y ListadoDiario ===
 class AsistenciaSerializer(serializers.ModelSerializer):
     usuario = serializers.StringRelatedField(read_only=True)
     practica = serializers.StringRelatedField(read_only=True)
@@ -29,19 +38,11 @@ class ListadoDiarioSerializer(serializers.ModelSerializer):
     class Meta:
         model = ListadoDiario
         fields = '__all__'
-from rest_framework import serializers
-from .models import UnidadMedida, Practica, PracticaReactivo, PracticaEquipo, PracticaMaterial
-# --- SERIALIZER UNIDAD DE MEDIDA ---
+
 class UnidadMedidaSerializer(serializers.ModelSerializer):
     class Meta:
         model = UnidadMedida
         fields = '__all__'
-
-from django.contrib.auth import get_user_model
-User = get_user_model()
-from .models import HistorialCambio
-from .models import Alerta, Categoria, Movimiento, Pedido, Producto, UserProfile
-
 
 class HistorialCambioSerializer(serializers.ModelSerializer):
     usuario = serializers.StringRelatedField()
@@ -54,7 +55,6 @@ class CategoriaSerializer(serializers.ModelSerializer):
         model = Categoria
         fields = '__all__'
 
-
 class ProductoSerializer(serializers.ModelSerializer):
     categoria = CategoriaSerializer(read_only=True)
     categoria_id = serializers.PrimaryKeyRelatedField(queryset=Categoria.objects.all(), source='categoria', write_only=True, required=False)
@@ -63,10 +63,8 @@ class ProductoSerializer(serializers.ModelSerializer):
         fields = '__all__'
         extra_kwargs = {'es_sensible': {'required': False}}
 
-# --- SERIALIZERS PARA PRÁCTICAS Y RELACIONES ---
 class PracticaReactivoSerializer(serializers.ModelSerializer):
-    reactivo = serializers.PrimaryKeyRelatedField(queryset=Producto.objects.filter(tipo='reactivo'))
-    unidad = serializers.PrimaryKeyRelatedField(queryset=UnidadMedida.objects.all())
+    reactivo_nombre = serializers.CharField(source='reactivo.nombre', read_only=True)
     class Meta:
         model = PracticaReactivo
         fields = '__all__'
@@ -78,69 +76,45 @@ class PracticaMaterialSerializer(serializers.ModelSerializer):
         fields = '__all__'
 
 class PracticaEquipoSerializer(serializers.ModelSerializer):
-
-    equipo = serializers.PrimaryKeyRelatedField(queryset=Producto.objects.filter(tipo='equipo'))
+    equipo_nombre = serializers.CharField(source='equipo.nombre', read_only=True)
     class Meta:
         model = PracticaEquipo
         fields = '__all__'
 
 class PracticaSerializer(serializers.ModelSerializer):
-    instructor = serializers.PrimaryKeyRelatedField(queryset=User.objects.all())
-    reactivos = PracticaReactivoSerializer(many=True, required=False)
-    equipos = PracticaEquipoSerializer(many=True, required=False)
-    materiales = PracticaMaterialSerializer(many=True, required=False)
+    instructor_nombre = serializers.CharField(source='instructor.username', read_only=True)
+    competencia_nombre = serializers.CharField(source='competencia.nombre', read_only=True, allow_null=True)
+    
+    # Estos campos son de solo lectura para evitar errores en PUT
+    reactivos = PracticaReactivoSerializer(many=True, required=False, read_only=True)
+    equipos = PracticaEquipoSerializer(many=True, required=False, read_only=True)
+    materiales = PracticaMaterialSerializer(many=True, required=False, read_only=True)
 
     class Meta:
         model = Practica
         fields = '__all__'
 
     def create(self, validated_data):
-        reactivos_data = validated_data.pop('reactivos', [])
-        equipos_data = validated_data.pop('equipos', [])
-        materiales_data = validated_data.pop('materiales', [])
-        practica = Practica.objects.create(**validated_data)
-        for reactivo in reactivos_data:
-            PracticaReactivo.objects.create(practica=practica, **reactivo)
-        for equipo in equipos_data:
-            PracticaEquipo.objects.create(practica=practica, **equipo)
-        for material in materiales_data:
-            PracticaMaterial.objects.create(practica=practica, **material)
-        return practica
+        # Los datos anidados se ignoran en la creación por ahora
+        return Practica.objects.create(**validated_data)
 
     def update(self, instance, validated_data):
-        reactivos_data = validated_data.pop('reactivos', None)
-        equipos_data = validated_data.pop('equipos', None)
-        materiales_data = validated_data.pop('materiales', None)
+        # Actualizar solo los campos directos, ignorar los anidados
         for attr, value in validated_data.items():
             setattr(instance, attr, value)
         instance.save()
-        if reactivos_data is not None:
-            instance.reactivos.all().delete()
-            for reactivo in reactivos_data:
-                PracticaReactivo.objects.create(practica=instance, **reactivo)
-        if equipos_data is not None:
-            instance.equipos.all().delete()
-            for equipo in equipos_data:
-                PracticaEquipo.objects.create(practica=instance, **equipo)
-        if materiales_data is not None:
-            instance.materiales.all().delete()
-            for material in materiales_data:
-                PracticaMaterial.objects.create(practica=instance, **material)
         return instance
-
 
 class MovimientoSerializer(serializers.ModelSerializer):
     class Meta:
         model = Movimiento
         fields = '__all__'
 
-
 class PedidoSerializer(serializers.ModelSerializer):
     producto_nombre = serializers.CharField(source='producto.nombre', read_only=True)
     producto_id = serializers.IntegerField(source='producto.id', read_only=True)
     stock_actual = serializers.IntegerField(source='producto.cantidad', read_only=True)
     usuario_username = serializers.CharField(source='usuario.username', read_only=True)
-
     class Meta:
         model = Pedido
         fields = '__all__'
@@ -151,23 +125,51 @@ class PedidoSerializer(serializers.ModelSerializer):
             raise serializers.ValidationError('La cantidad debe ser mayor que cero.')
         return value
 
-
 class AlertaSerializer(serializers.ModelSerializer):
     estado = serializers.SerializerMethodField()
-    mensaje = serializers.CharField(required=False, allow_blank=True, default='')
-    tipo = serializers.CharField(required=False, default='otro')
-
     class Meta:
         model = Alerta
         fields = ['id', 'tipo', 'producto', 'titulo', 'mensaje', 'descripcion', 'remitente', 'prioridad', 'resuelta', 'estado', 'fecha']
-
     def get_estado(self, obj):
         return obj.estado
 
-    def validate_tipo(self, value):
-        if value in ('ayuda', 'problema'):
-            return 'otro'
-        return value
+class UserProfileSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = UserProfile
+        fields = ['avatar', 'phone', 'department', 'institution', 'cargo', 'bio', 'updated_at']
+        read_only_fields = ['updated_at']
+
+# ============================================================
+# SERIALIZERS PARA GESTIÓN ACADÉMICA
+# ============================================================
+
+class ProgramaSerializer(serializers.ModelSerializer):
+    competencias_count = serializers.SerializerMethodField()
+    practicas_count = serializers.SerializerMethodField()
+    
+    class Meta:
+        model = Programa
+        fields = '__all__'
+    
+    def get_competencias_count(self, obj):
+        return obj.competencias.filter(activo=True).count()
+    
+    def get_practicas_count(self, obj):
+        total = 0
+        for comp in obj.competencias.filter(activo=True):
+            total += comp.practicas.count()
+        return total
+
+class CompetenciaSerializer(serializers.ModelSerializer):
+    programa_nombre = serializers.CharField(source='programa.nombre', read_only=True)
+    practicas_count = serializers.SerializerMethodField()
+    
+    class Meta:
+        model = Competencia
+        fields = '__all__'
+    
+    def get_practicas_count(self, obj):
+        return obj.practicas.count()
 
 
 class UserManagementSerializer(serializers.ModelSerializer):
@@ -198,7 +200,7 @@ class UserManagementSerializer(serializers.ModelSerializer):
     def get_departamento(self, obj):
         try:
             return obj.profile.department or ''
-        except Exception:
+        except:
             return ''
 
     def get_rol(self, obj):
@@ -218,8 +220,7 @@ class UserManagementSerializer(serializers.ModelSerializer):
         import re
         nombre = validated_data.pop('nombre_input', '').strip()
         departamento = validated_data.pop('departamento_input', '').strip()
-        # Fuerza el rol a 'usuario' SIEMPRE, sin importar lo que llegue
-        rol = 'usuario'
+        rol = validated_data.pop('rol_input', 'usuario')
         password = validated_data.pop('password', None)
         email = validated_data.get('email', '')
 
@@ -270,14 +271,6 @@ class UserManagementSerializer(serializers.ModelSerializer):
         profile.department = department
         profile.save(update_fields=['department'])
 
-
-class UserProfileSerializer(serializers.ModelSerializer):
-    class Meta:
-        model = UserProfile
-        fields = ['avatar', 'phone', 'department', 'institution', 'cargo', 'bio', 'updated_at']
-        read_only_fields = ['updated_at']
-
-
 class CurrentUserProfileSerializer(serializers.ModelSerializer):
     role = serializers.SerializerMethodField()
     full_name = serializers.SerializerMethodField()
@@ -292,21 +285,9 @@ class CurrentUserProfileSerializer(serializers.ModelSerializer):
     class Meta:
         model = User
         fields = [
-            'id',
-            'username',
-            'email',
-            'first_name',
-            'last_name',
-            'date_joined',
-            'role',
-            'full_name',
-            'profile',
-            'department',
-            'institution',
-            'phone',
-            'cargo',
-            'bio',
-            'avatar',
+            'id', 'username', 'email', 'first_name', 'last_name',
+            'date_joined', 'role', 'full_name', 'profile',
+            'department', 'institution', 'phone', 'cargo', 'bio', 'avatar',
         ]
         read_only_fields = ['id', 'date_joined', 'role', 'full_name', 'profile']
 
@@ -323,42 +304,3 @@ class CurrentUserProfileSerializer(serializers.ModelSerializer):
     def get_profile(self, obj):
         profile, _ = UserProfile.objects.get_or_create(user=obj)
         return UserProfileSerializer(profile).data
-
-    def validate_username(self, value):
-        value = value.strip()
-        if not value:
-            raise serializers.ValidationError('El nombre de usuario es obligatorio.')
-        if User.objects.exclude(pk=self.instance.pk if self.instance else None).filter(username=value).exists():
-            raise serializers.ValidationError('Ese nombre de usuario ya está en uso.')
-        return value
-
-    def validate_email(self, value):
-        value = value.strip()
-        if value and User.objects.exclude(pk=self.instance.pk if self.instance else None).filter(email__iexact=value).exists():
-            raise serializers.ValidationError('Ese correo ya está registrado.')
-        return value
-
-    def validate_avatar(self, value):
-        if value and len(value) > 2_500_000:
-            raise serializers.ValidationError('La imagen es demasiado grande. Usa una foto más ligera.')
-        return value
-
-    def update(self, instance, validated_data):
-        profile_fields = {}
-        for field in ['department', 'institution', 'phone', 'cargo', 'bio', 'avatar']:
-            if field in validated_data:
-                profile_fields[field] = validated_data.pop(field)
-
-        for field, value in validated_data.items():
-            setattr(instance, field, value.strip() if isinstance(value, str) else value)
-        instance.save()
-
-        if profile_fields:
-            profile, _ = UserProfile.objects.get_or_create(user=instance)
-            for field, value in profile_fields.items():
-                cleaned_value = value if field == 'avatar' else (value.strip() if isinstance(value, str) else value)
-                setattr(profile, field, cleaned_value or '')
-            profile.save()
-
-        return instance
-

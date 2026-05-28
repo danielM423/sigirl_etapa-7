@@ -37,9 +37,12 @@ function Login() {
       // 1. Obtener token
       const res = await api.post('token/', { username: username.trim(), password });
       const accessToken = res.data.access;
+      const refreshToken = res.data.refresh;
 
-      // 2. Guardar token temporalmente
+      // 2. Guardar token (AMBAS claves para compatibilidad)
+      localStorage.setItem('access_token', accessToken);
       localStorage.setItem('token', accessToken);
+      localStorage.setItem('refresh_token', refreshToken);
 
       // 3. Obtener perfil del usuario con el token
       const userRes = await api.get('auth/user/', {
@@ -50,16 +53,21 @@ function Login() {
       let userRole = userRes.data?.role || 'usuario';
       if (userRole === 'jefe_superior') userRole = 'jefe';
 
-      // 5. Guardar todo en localStorage
-      localStorage.setItem('token', accessToken);
+      // 5. Guardar usuario
       localStorage.setItem('username', username.trim());
       localStorage.setItem('role', userRole);
+      localStorage.setItem('user', JSON.stringify({ 
+        id: userRes.data?.id,
+        username: username.trim(), 
+        email: userRes.data?.email,
+        role: userRole 
+      }));
 
       // 6. Actualizar contexto
       setUser({ username: username.trim(), role: userRole });
       setRole(userRole);
 
-      // Si ya está en una ruta protegida, no redirigir a dashboard por recarga
+      // 7. Redirigir según el rol
       const currentPath = window.location.pathname;
       if (currentPath === '/login' || currentPath === '/' || currentPath === '/register') {
         if (userRole === 'admin') navigate('/admin');
@@ -73,9 +81,9 @@ function Login() {
         setNeedsVerification(true);
         setError(data.error || 'Debes verificar tu correo antes de iniciar sesión.');
       } else if (statusCode === 401) {
-        setError('Usuario o contraseña inválidos. Verifica las credenciales activas del despliegue.');
+        setError('Usuario o contraseña inválidos.');
       } else if (statusCode >= 500) {
-        setError('El servidor presentó un error temporal. Intenta de nuevo en unos segundos.');
+        setError('Error en el servidor. Intenta de nuevo.');
       } else {
         setError(data.error || 'Credenciales incorrectas.');
       }

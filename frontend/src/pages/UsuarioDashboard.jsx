@@ -2,7 +2,8 @@
 import ScrollReveal from '../components/ScrollReveal';
 import Layout from '../components/Layout';
 import PedidoHistorialList from '../components/PedidoHistorialList';
-// --- Estilo admin ---
+import { getPracticas, getInventarioPracticasInstructor } from '../services/api';
+
 const LabSection = ({ title, children, action, onAction }) => (
   <div className="bg-white border border-[#E0E0E0] rounded-lg overflow-hidden">
     <div className="flex items-center justify-between px-5 py-3 border-b border-[#E0E0E0]">
@@ -38,8 +39,13 @@ const UsuarioDashboard = () => {
         setInventario(Array.isArray(res.data) ? res.data : []);
         setLoadingInventario(false);
       })
-      .catch(() => {
-        setInventario([]);
+      .catch(err => {
+        // Si es 404, significa que no hay prácticas abiertas (es normal)
+        if (err.response?.status === 404) {
+          setInventario([]);
+        } else {
+          console.error('Error cargando inventario:', err);
+        }
         setLoadingInventario(false);
       });
   }, []);
@@ -49,7 +55,6 @@ const UsuarioDashboard = () => {
       <div className="space-y-5">
         <div className="bg-white border border-[#E0E0E0] rounded-lg p-5">
           <div className="flex items-center gap-2 mb-1">
-            <FileText className="h-4 w-4 text-[#1FA971]" />
             <span className="text-[10px] font-mono font-bold text-[#1FA971] uppercase tracking-wider">PRÁCTICAS REGISTRADAS</span>
             <span className="w-2 h-2 rounded-full bg-emerald-400 shadow-[0_0_6px_#22c55e] animate-pulse" />
           </div>
@@ -64,7 +69,9 @@ const UsuarioDashboard = () => {
             {loadingInventario ? (
               <div className="text-stone-400 text-xs">Cargando inventario...</div>
             ) : inventario.length === 0 ? (
-              <div className="text-stone-400 text-xs">No hay inventario asociado a tus prácticas abiertas o no tienes permisos.</div>
+              <div className="text-stone-400 text-xs text-center py-4">
+                No tienes prácticas abiertas asignadas.
+              </div>
             ) : (
               <div className="overflow-x-auto mb-4">
                 <table className="min-w-full text-xs font-mono border">
@@ -98,9 +105,9 @@ const UsuarioDashboard = () => {
 
         {/* Listado de prácticas */}
         <div className="bg-white border border-[#E0E0E0] rounded-lg p-5">
-            <ScrollReveal direction="up" delay={0.1}>
-              <div className="overflow-x-auto">
-                <table className="min-w-full text-xs font-mono border">
+          <ScrollReveal direction="up" delay={0.1}>
+            <div className="overflow-x-auto">
+              <table className="min-w-full text-xs font-mono border">
                 <thead>
                   <tr className="bg-stone-100">
                     <th className="px-2 py-1 border">ID</th>
@@ -124,9 +131,9 @@ const UsuarioDashboard = () => {
                     </tr>
                   ))}
                 </tbody>
-                </table>
-              </div>
-            </ScrollReveal>
+              </table>
+            </div>
+          </ScrollReveal>
         </div>
       </div>
       {/* Solo mostrar pedidos del usuario con animación y estilo admin */}
@@ -140,4 +147,3 @@ const UsuarioDashboard = () => {
 };
 
 export default UsuarioDashboard;
-// Confirmado: UsuarioDashboard.jsx ya solo muestra prácticas en modo solo lectura, sin lógica de pedidos ni edición.

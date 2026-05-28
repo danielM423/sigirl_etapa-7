@@ -17,6 +17,8 @@ import {
   ChevronRight,
 } from 'lucide-react';
 import { UserContext } from '../context/UserContext';
+import SelectorPractica from './pages/SelectorPractica';
+
 
 const Sidebar = ({ isOpen, setIsOpen }) => {
   const location = useLocation();
@@ -48,27 +50,42 @@ const Sidebar = ({ isOpen, setIsOpen }) => {
           { path: '/admin?tab=pedidos', label: 'Pedidos', icon: ClipboardList, description: 'Aprobaciones' },
           { path: '/usuarios', label: 'Usuarios', icon: Users, description: 'Gestión de usuarios' },
           { path: '/perfil', label: 'Configuración', icon: Settings, description: 'Mi perfil' },
+          // === NUEVOS ENLACES PARA ADMIN ===
+          { path: '/sustancias-controladas', label: 'Sustancias Controladas', icon: AlertTriangle, description: 'Reporte de reactivos sensibles' },
+          { path: '/programas', label: 'Programas', icon: FileText, description: 'Gestión de programas' },
+          { path: '/competencias', label: 'Competencias', icon: FileText, description: 'Gestión de competencias' },
+          { path: '/selector-practica', label: 'Generar Solicitud', icon: ClipboardList, description: 'Solicitud automática' },
+          { path: '/practicas/gestion', label: 'Gestionar Prácticas', icon: ClipboardList, description: 'CRUD de prácticas' },
+          { path: '/practicas/gestion', label: 'Gestionar Prácticas', icon: ClipboardList, description: 'CRUD de prácticas recurrentes' },
         ];
       case 'jefe':
       case 'jefesuperior':
         return [
-              { path: '/jefe?tab=estadisticas', label: 'Dashboard', icon: BarChart3, description: 'Resumen general' },
-              {
-                key: 'inventario',
-                label: 'Inventario',
-                icon: Package,
-                description: 'Control del stock',
-                children: [
-                  { path: '/inventario', label: 'Ver inventario', icon: Boxes },
-                  { path: '/jefe?tab=pedidos', label: 'Movimientos', icon: ClipboardList },
-                  { path: '/inventario', label: 'Alertas', icon: AlertTriangle },
-                ],
-              },
-              { path: '/jefe?tab=practicas', label: 'Prácticas', icon: ClipboardList, description: 'Gestión de prácticas' },
-              { path: '/jefe?tab=pedidos', label: 'Pedidos', icon: FileText, description: 'CRUD completa' },
-              { path: '/usuarios', label: 'Usuarios', icon: Users, description: 'Gestión de usuarios' },
-              { path: '/perfil', label: 'Configuración', icon: Settings, description: 'Mi perfil' },
-            ];
+          { path: '/jefe?tab=estadisticas', label: 'Dashboard', icon: BarChart3, description: 'Resumen general' },
+          {
+            key: 'inventario',
+            label: 'Inventario',
+            icon: Package,
+            description: 'Control del stock',
+            children: [
+              { path: '/inventario', label: 'Ver inventario', icon: Boxes },
+              { path: '/jefe?tab=pedidos', label: 'Movimientos', icon: ClipboardList },
+              { path: '/inventario', label: 'Alertas', icon: AlertTriangle },
+            ],
+          },
+          { path: '/sustancias-controladas', label: 'Sustancias Controladas', icon: AlertTriangle, description: 'Reporte de reactivos sensibles' },
+          { path: '/jefe?tab=practicas', label: 'Prácticas', icon: ClipboardList, description: 'Gestión de prácticas' },
+          { path: '/jefe?tab=pedidos', label: 'Pedidos', icon: FileText, description: 'CRUD completa' },
+          { path: '/usuarios', label: 'Usuarios', icon: Users, description: 'Gestión de usuarios' },
+          { path: '/perfil', label: 'Configuración', icon: Settings, description: 'Mi perfil' },
+          // === NUEVOS ENLACES PARA JEFE ===
+          { path: '/programas', label: 'Programas', icon: FileText, description: 'Gestión de programas' },
+          { path: '/competencias', label: 'Competencias', icon: FileText, description: 'Gestión de competencias' },
+          { path: '/selector-practica', label: 'Generar Solicitud', icon: ClipboardList, description: 'Solicitud automática' },
+          { path: '/practicas/gestion', label: 'Gestionar Prácticas', icon: ClipboardList, description: 'CRUD de prácticas' },
+          { path: '/practicas/gestion', label: 'Gestionar Prácticas', icon: ClipboardList, description: 'CRUD de prácticas recurrentes' },
+          { path: '/aprobaciones-jefe', label: 'Aprobar Excepciones', icon: AlertTriangle, description: 'Pedidos que requieren aprobación' },
+        ];
       case 'usuario':
         return [
           { path: '/usuario', label: 'Dashboard', icon: Home, description: 'Inicio personal' },
@@ -83,9 +100,10 @@ const Sidebar = ({ isOpen, setIsOpen }) => {
             ],
           },
           { path: '/usuario', label: 'Pedidos', icon: ClipboardList, description: 'Mis solicitudes' },
-          // --- Espacio visual igual que admin/jefe ---
           { path: '/usuarios', label: 'Usuarios', icon: Users, description: 'Gestión de usuarios' },
           { path: '/perfil', label: 'Configuración', icon: Settings, description: 'Mi perfil' },
+          // === NUEVOS ENLACES PARA USUARIO/INSTRUCTOR ===
+          { path: '/selector-practica', label: 'Generar Solicitud', icon: ClipboardList, description: 'Solicitud automática' },
         ];
       default:
         return [];

@@ -151,7 +151,11 @@ class Pedido(models.Model):
     condicion_entrega = models.CharField(max_length=20, choices=CONDICIONES_ENTREGA, blank=True, null=True)
     responsable_entrega = models.CharField(max_length=150, blank=True, null=True)
     notas_entrega = models.TextField(blank=True, null=True)
-
+     # NUEVO CAMPO PARA APROBACIÓN DE EXCEPCIONES
+    requiere_aprobacion_jefe = models.BooleanField(default=False)
+    aprobado_por_jefe = models.BooleanField(default=False)
+    fecha_aprobacion_jefe = models.DateTimeField(null=True, blank=True)
+    
     class Meta:
         ordering = ['-fecha_solicitud', '-id']
 
@@ -266,11 +270,30 @@ class Practica(models.Model):
         ("finalizada", "Finalizada"),
     ], default="pendiente")
     requiere_doble_aprobacion = models.BooleanField(default=False)
-    observaciones = models.TextField(blank=True, null=True)
+    observaciones = models.TextField(blank=True, null=True)  # ← SOLO UNA VEZ
+    
+    # NUEVO CAMPO - Competencia
+    competencia = models.ForeignKey(
+        'Competencia', 
+        on_delete=models.SET_NULL, 
+        null=True, 
+        blank=True,
+        related_name='practicas'
+    )
+    
+    # ========== NUEVOS CAMPOS PARA PRÁCTICAS RECURRENTES ==========
+    es_recurrente = models.BooleanField(default=False)
+    periodicidad_dias = models.IntegerField(
+        null=True, 
+        blank=True, 
+        help_text="Número de días entre repeticiones (ej: 2 = cada 2 días, 7 = semanal)"
+    )
+    fecha_ultima_repeticion = models.DateField(null=True, blank=True)
+    repeticiones_totales = models.IntegerField(default=1, help_text="Número total de veces que se repite")
+    repeticiones_realizadas = models.IntegerField(default=0)
 
     def __str__(self):
         return f"{self.nombre} ({self.ficha}) - {self.fecha}"
-
 
 class PracticaMaterial(models.Model):
     practica = models.ForeignKey(Practica, on_delete=models.CASCADE, related_name="materiales")
@@ -292,6 +315,53 @@ class PracticaReactivo(models.Model):
 
     def __str__(self):
         return f"{self.reactivo} x {self.cantidad} {self.unidad}"
+
+# ============================================================
+# NUEVOS MODELOS PARA GESTIÓN ACADÉMICA
+# ============================================================
+
+class Programa(models.Model):
+    """
+    Programa de formación (ej: ADSO, Redes, Electricidad)
+    """
+    nombre = models.CharField(max_length=100, unique=True)
+    codigo = models.CharField(max_length=20, unique=True)
+    version = models.CharField(max_length=10, blank=True, default='1')
+    descripcion = models.TextField(blank=True, null=True)
+    activo = models.BooleanField(default=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        verbose_name = "Programa"
+        verbose_name_plural = "Programas"
+        ordering = ['nombre']
+
+    def __str__(self):
+        return f"{self.codigo} - {self.nombre}"
+
+
+class Competencia(models.Model):
+    """
+    Competencia asociada a un programa (ej: Construir Bases de Datos)
+    """
+    programa = models.ForeignKey(Programa, on_delete=models.CASCADE, related_name='competencias')
+    nombre = models.CharField(max_length=200)
+    codigo = models.CharField(max_length=20)
+    descripcion = models.TextField(blank=True, null=True)
+    horas_estimadas = models.IntegerField(default=0, help_text="Horas estimadas para la competencia")
+    activo = models.BooleanField(default=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        verbose_name = "Competencia"
+        verbose_name_plural = "Competencias"
+        ordering = ['programa__nombre', 'nombre']
+        unique_together = ['programa', 'codigo']
+
+    def __str__(self):
+        return f"{self.programa.codigo} - {self.nombre}"
 
 class PracticaEquipo(models.Model):
     practica = models.ForeignKey(Practica, on_delete=models.CASCADE, related_name='equipos')

@@ -121,7 +121,7 @@ const ReportPanel = ({ title, subtitle, primaryData = [], secondaryData = [], ac
           {/* Bar chart */}
           <div className="h-[280px] min-h-[256px] w-full bg-stone-50 border border-[#E0E0E0] rounded-lg p-3">
             {chartsReady && (
-              <ResponsiveContainer width="99%" height={256} debounce={120}>
+              <ResponsiveContainer width="100%" height={256} debounce={120}>
                 <BarChart data={safePrimaryData} margin={{ top: 4, right: 8, left: -10, bottom: 0 }}>
                   <CartesianGrid strokeDasharray="3 3" stroke="#E0E0E0" vertical={false} />
                   <XAxis dataKey="name" tick={{ fill: '#78716c', fontSize: 10, fontFamily: 'monospace' }} axisLine={false} tickLine={false} />

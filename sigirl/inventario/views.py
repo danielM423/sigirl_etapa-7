@@ -1,8 +1,8 @@
 # --- IMPORTS PRINCIPALES ---
 from rest_framework import viewsets, permissions
 # === RF-034: Historial de pedidos ===
-from .models import PedidoHistorial, PDFDocumento, Asistencia, ListadoDiario
-from .serializers import PedidoHistorialSerializer, PDFDocumentoSerializer, AsistenciaSerializer, ListadoDiarioSerializer
+from .models import Competencia, PedidoHistorial, PDFDocumento, Asistencia, ListadoDiario, Programa
+from .serializers import CompetenciaSerializer, PedidoHistorialSerializer, PDFDocumentoSerializer, AsistenciaSerializer, ListadoDiarioSerializer, ProgramaSerializer
 from rest_framework.parsers import MultiPartParser, FormParser
 
 class PedidoHistorialViewSet(viewsets.ModelViewSet):
@@ -1261,3 +1261,540 @@ def get_current_user(request):
         'is_staff': user.is_staff,
         'is_superuser': user.is_superuser,
     })
+
+
+# ============================================================
+# VIEWSETS PARA GESTIÓN ACADÉMICA
+# ============================================================
+
+class ProgramaViewSet(viewsets.ModelViewSet):
+    queryset = Programa.objects.all()
+    serializer_class = ProgramaSerializer
+    
+    def get_permissions(self):
+        from .permissions import IsAdminOrJefe
+        if self.action in ['create', 'update', 'partial_update', 'destroy']:
+            return [permissions.IsAuthenticated(), IsAdminOrJefe()]
+        return [permissions.IsAuthenticated()]
+
+class CompetenciaViewSet(viewsets.ModelViewSet):
+    queryset = Competencia.objects.all()
+    serializer_class = CompetenciaSerializer
+    
+    def get_permissions(self):
+        from .permissions import IsAdminOrJefe
+        if self.action in ['create', 'update', 'partial_update', 'destroy']:
+            return [permissions.IsAuthenticated(), IsAdminOrJefe()]
+        return [permissions.IsAuthenticated()]
+    
+    def get_queryset(self):
+        queryset = Competencia.objects.all()
+        programa_id = self.request.query_params.get('programa')
+        if programa_id:
+            queryset = queryset.filter(programa_id=programa_id)
+        return queryset
+    
+    from rest_framework.decorators import api_view, permission_classes
+from rest_framework.permissions import IsAuthenticated
+from rest_framework.response import Response
+from rest_framework import status
+from .models import Practica, PracticaReactivo, PracticaEquipo, Pedido
+from django.db import transaction
+
+# ============================================================
+# ENDPOINTS PARA CÁLCULO AUTOMÁTICO DE PEDIDOS
+# ============================================================
+
+@api_view(['POST'])
+@permission_classes([IsAuthenticated])
+def calcular_pedido(request):
+    print("=== FUNCIÓN CALCULAR_PEDIDO EJECUTADA ===")
+    practica_id = request.data.get('practica_id')
+    numero_grupos = request.data.get('numero_grupos', 1)
+    
+    if not practica_id:
+        return Response({'error': 'Se requiere practica_id'}, status=status.HTTP_400_BAD_REQUEST)
+    
+    try:
+        practica = Practica.objects.get(id=practica_id)
+    except Practica.DoesNotExist:
+        return Response({'error': 'Práctica no encontrada'}, status=status.HTTP_404_NOT_FOUND)
+    
+    # Calcular reactivos
+    reactivos = []
+    for pr in practica.reactivos.all():
+        cantidad_total = float(pr.cantidad) * numero_grupos
+        reactivos.append({
+            'id': pr.reactivo.id,
+            'nombre': pr.reactivo.nombre,
+            'cantidad_base': float(pr.cantidad),
+            'unidad': pr.unidad.simbolo,
+            'cantidad_total': cantidad_total,
+            'stock_actual': pr.reactivo.cantidad,
+            'suficiente': pr.reactivo.cantidad >= cantidad_total
+        })
+    
+    # Calcular equipos
+    equipos = []
+    for pe in practica.equipos.all():
+        cantidad_total = 1 * numero_grupos
+        equipos.append({
+            'id': pe.equipo.id,
+            'nombre': pe.equipo.nombre,
+            'cantidad_base': 1,
+            'cantidad_total': cantidad_total,
+            'stock_actual': pe.equipo.cantidad,
+            'suficiente': pe.equipo.cantidad >= cantidad_total
+        })
+    
+    # ========== CALCULAR MATERIALES ==========
+    materiales = []
+    for pm in practica.materiales.all():
+        cantidad_total = pm.cantidad_por_grupo * numero_grupos
+        materiales.append({
+            'nombre': pm.nombre,
+            'cantidad_por_grupo': pm.cantidad_por_grupo,
+            'cantidad_total': cantidad_total
+        })
+    
+    return Response({
+        'practica': {
+            'id': practica.id,
+            'nombre': practica.nombre,
+            'ficha': practica.ficha
+        },
+        'numero_grupos': numero_grupos,
+        'reactivos': reactivos,
+        'equipos': equipos,
+        'materiales': materiales,
+        'tiene_stock_suficiente': all(r['suficiente'] for r in reactivos) and all(e['suficiente'] for e in equipos)
+    })
+
+@api_view(['POST'])
+@permission_classes([IsAuthenticated])
+def generar_pedido(request):
+    practica_id = request.data.get('practica_id')
+    numero_grupos = request.data.get('numero_grupos', 1)
+    observaciones = request.data.get('observaciones', '')
+    
+    try:
+        practica = Practica.objects.get(id=practica_id)
+    except Practica.DoesNotExist:
+        return Response({'error': 'Práctica no encontrada'}, status=404)
+    
+    pedidos_creados = []
+    requiere_aprobacion = False
+    
+    with transaction.atomic():
+        for pr in practica.reactivos.all():
+            cantidad_total = float(pr.cantidad) * numero_grupos
+            stock_suficiente = pr.reactivo.cantidad >= cantidad_total
+            
+            pedido = Pedido.objects.create(
+                usuario=request.user,
+                producto=pr.reactivo,
+                cantidad=int(cantidad_total),
+                estado='pendiente' if stock_suficiente else 'requiere_aprobacion',
+                prioridad='media',
+                solicitante=request.user.get_full_name() or request.user.username,
+                observaciones=f"Práctica: {practica.nombre}\nGrupos: {numero_grupos}\n{observaciones}",
+                requiere_aprobacion_jefe=not stock_suficiente
+            )
+            pedidos_creados.append(pedido.id)
+            if not stock_suficiente:
+                requiere_aprobacion = True
+    
+    return Response({
+        'success': True,
+        'solicitud_id': practica.id,
+        'pedidos_ids': pedidos_creados,
+        'requiere_aprobacion': requiere_aprobacion,
+        'mensaje': f'Se generaron {len(pedidos_creados)} pedidos. {"Requiere aprobación del Jefe" if requiere_aprobacion else "Todo en stock"}'
+    }, status=status.HTTP_201_CREATED)
+
+
+@api_view(['POST'])
+@permission_classes([IsAuthenticated])
+def aprobar_excepcion_pedido(request, pedido_id):
+    user = request.user
+    if not (user.is_staff or user.is_superuser):
+        return Response({'error': 'Solo el Jefe puede aprobar excepciones'}, status=403)
+    
+    try:
+        pedido = Pedido.objects.get(id=pedido_id)
+    except Pedido.DoesNotExist:
+        return Response({'error': 'Pedido no encontrado'}, status=404)
+    
+    if pedido.estado != 'requiere_aprobacion':
+        return Response({'error': 'Este pedido no requiere aprobación especial'}, status=400)
+    
+    pedido.estado = 'aprobado'
+    pedido.aprobado_por_jefe = True
+    pedido.fecha_aprobacion_jefe = timezone.now()
+    pedido.save()
+    
+    return Response({'success': True, 'mensaje': 'Pedido aprobado excepcionalmente'})
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def pedidos_requieren_aprobacion(request):
+    user = request.user
+    if not (user.is_staff or user.is_superuser):
+        return Response({'error': 'Solo el Jefe puede ver esta lista'}, status=status.HTTP_403_FORBIDDEN)
+    
+    pedidos = Pedido.objects.filter(estado='requiere_aprobacion').select_related('producto', 'usuario')
+    
+    data = []
+    for p in pedidos:
+        data.append({
+            'id': p.id,
+            'codigo': p.codigo,
+            'producto': p.producto.nombre,
+            'cantidad': p.cantidad,
+            'solicitante': p.solicitante,
+            'fecha_solicitud': p.fecha_solicitud,
+            'observaciones': p.observaciones,
+            'stock_actual': p.producto.cantidad
+        })
+    
+    return Response(data)
+
+
+# ============================================================
+# GENERAR PDF DEL FORMATO DE SOLICITUD
+# ============================================================
+
+from reportlab.lib.pagesizes import A4, landscape
+from reportlab.lib.units import mm, cm
+from reportlab.lib import colors
+from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
+from reportlab.platypus import SimpleDocTemplate, Table, TableStyle, Paragraph, Spacer, HRFlowable
+from reportlab.pdfbase import pdfmetrics
+from reportlab.pdfbase.ttfonts import TTFont
+from io import BytesIO
+from datetime import datetime
+
+@api_view(['POST'])
+@permission_classes([IsAuthenticated])
+def generar_pdf_solicitud(request):
+    """Genera PDF con el formato de solicitud de laboratorio"""
+    
+    practica_id = request.data.get('practica_id')
+    numero_grupos = request.data.get('numero_grupos', 1)
+    observaciones = request.data.get('observaciones', '')
+    
+    try:
+        practica = Practica.objects.get(id=practica_id)
+    except Practica.DoesNotExist:
+        return Response({'error': 'Práctica no encontrada'}, status=404)
+    
+    # Calcular cantidades
+    reactivos = []
+    for pr in practica.reactivos.all():
+        cantidad_total = float(pr.cantidad) * numero_grupos
+        reactivos.append({
+            'nombre': pr.reactivo.nombre,
+            'cantidad_total': cantidad_total,
+            'unidad': pr.unidad.simbolo
+        })
+    
+    materiales = []
+    for pm in practica.materiales.all():
+        cantidad_total = pm.cantidad_por_grupo * numero_grupos
+        materiales.append({
+            'nombre': pm.nombre,
+            'cantidad_por_grupo': pm.cantidad_por_grupo,
+            'cantidad_total': cantidad_total
+        })
+    
+    equipos = []
+    for pe in practica.equipos.all():
+        cantidad_total = 1 * numero_grupos
+        equipos.append({
+            'nombre': pe.equipo.nombre,
+            'cantidad_total': cantidad_total
+        })
+    
+    # Crear PDF
+    buffer = BytesIO()
+    doc = SimpleDocTemplate(buffer, pagesize=A4, topMargin=2*cm, bottomMargin=2*cm, leftMargin=1.5*cm, rightMargin=1.5*cm)
+    styles = getSampleStyleSheet()
+    
+    # Estilo de título
+    title_style = ParagraphStyle(
+        'TitleStyle',
+        parent=styles['Heading1'],
+        fontSize=12,
+        alignment=1,  # Centro
+        spaceAfter=10,
+        fontName='Helvetica-Bold'
+    )
+    
+    subtitle_style = ParagraphStyle(
+        'SubtitleStyle',
+        parent=styles['Normal'],
+        fontSize=9,
+        alignment=1,
+        spaceAfter=15
+    )
+    
+    header_style = ParagraphStyle(
+        'HeaderStyle',
+        parent=styles['Normal'],
+        fontSize=9,
+        alignment=1,
+        fontName='Helvetica-Bold'
+    )
+    
+    cell_style = ParagraphStyle(
+        'CellStyle',
+        parent=styles['Normal'],
+        fontSize=8
+    )
+    
+    elements = []
+    
+    # Título principal
+    elements.append(Paragraph("FORMATO SOLICITUD DE REACTIVOS, MATERIALES, EQUIPOS E INSTRUMENTOS", title_style))
+    elements.append(Paragraph("LABORATORIOS DE QUÍMICA Y BIOTECNOLOGÍA v.0.3", subtitle_style))
+    elements.append(Spacer(1, 5))
+    
+    # Información general
+    info_data = [
+        ["Laboratorio No.", "______", "GRUPO", "______", "Especialidad", "______"],
+        ["Fecha elaboración", datetime.now().strftime('%Y-%m-%d'), "Fecha de la práctica", practica.fecha.strftime('%Y-%m-%d') if practica.fecha else "______", "Hora de la práctica", "______"],
+        ["Número de grupos", str(numero_grupos), "Competencia", practica.competencia.nombre if practica.competencia else "______", "Instructor", request.user.username],
+        ["Nombre de la práctica", practica.nombre, "", "", "", ""],
+    ]
+    
+    for row in info_data:
+        t = Table([row], colWidths=[3*cm, 3*cm, 3*cm, 3*cm, 3*cm, 3*cm])
+        t.setStyle(TableStyle([
+            ('FONTNAME', (0, 0), (-1, -1), 'Helvetica'),
+            ('FONTSIZE', (0, 0), (-1, -1), 8),
+            ('GRID', (0, 0), (-1, -1), 0.5, colors.grey),
+            ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
+        ]))
+        elements.append(t)
+        elements.append(Spacer(1, 5))
+    
+    elements.append(Spacer(1, 10))
+    
+    # Tabla de Reactivos
+    elements.append(Paragraph("SOLICITUD DE REACTIVOS Y SOLUCIONES", header_style))
+    elements.append(Spacer(1, 5))
+    
+    reactivo_headers = ["REACTIVO", "CANTIDAD REQUERIDA (g/ml)", "PESO INICIAL (g)", "PESO FINAL (g)", "CANTIDAD CONSUMIDA (g)", "NOMBRE SOLUCION", "CONCENTRACION", "CANTIDAD REQUERIDA (ml)"]
+    reactivo_data = [reactivo_headers]
+    for r in reactivos:
+        reactivo_data.append([r['nombre'], f"{r['cantidad_total']}", "___", "___", "___", "___", "___", "___"])
+    
+    t_reactivos = Table(reactivo_data, colWidths=[3*cm, 2.5*cm, 2*cm, 2*cm, 2.5*cm, 2.5*cm, 2.5*cm, 2.5*cm])
+    t_reactivos.setStyle(TableStyle([
+        ('FONTNAME', (0, 0), (-1, -1), 'Helvetica'),
+        ('FONTSIZE', (0, 0), (-1, -1), 7),
+        ('BACKGROUND', (0, 0), (-1, 0), colors.lightgrey),
+        ('GRID', (0, 0), (-1, -1), 0.5, colors.grey),
+        ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
+    ]))
+    elements.append(t_reactivos)
+    elements.append(Spacer(1, 10))
+    
+    # Tabla de Materiales
+    elements.append(Paragraph("MATERIALES", header_style))
+    elements.append(Spacer(1, 5))
+    
+    material_headers = ["ELEMENTO", "CANTIDAD POR GRUPO", "CANTIDAD TOTAL", "ELEMENTO", "CANTIDAD POR GRUPO", "CANTIDAD TOTAL"]
+    material_data = [material_headers]
+    
+    # Organizar materiales en 2 columnas
+    half = len(materiales) // 2 + len(materiales) % 2
+    col1 = materiales[:half]
+    col2 = materiales[half:]
+    
+    for i in range(max(len(col1), len(col2))):
+        row = []
+        if i < len(col1):
+            row.extend([col1[i]['nombre'], str(col1[i]['cantidad_por_grupo']), str(col1[i]['cantidad_total'])])
+        else:
+            row.extend(["", "", ""])
+        if i < len(col2):
+            row.extend([col2[i]['nombre'], str(col2[i]['cantidad_por_grupo']), str(col2[i]['cantidad_total'])])
+        else:
+            row.extend(["", "", ""])
+        material_data.append(row)
+    
+    t_materiales = Table(material_data, colWidths=[4*cm, 2.5*cm, 2.5*cm, 4*cm, 2.5*cm, 2.5*cm])
+    t_materiales.setStyle(TableStyle([
+        ('FONTNAME', (0, 0), (-1, -1), 'Helvetica'),
+        ('FONTSIZE', (0, 0), (-1, -1), 7),
+        ('BACKGROUND', (0, 0), (-1, 0), colors.lightgrey),
+        ('GRID', (0, 0), (-1, -1), 0.5, colors.grey),
+        ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
+    ]))
+    elements.append(t_materiales)
+    elements.append(Spacer(1, 10))
+    
+    # Tabla de Equipos
+    elements.append(Paragraph("EQUIPOS / INSTRUMENTOS", header_style))
+    elements.append(Spacer(1, 5))
+    
+    equipos_data = [["EQUIPO", "CANTIDAD", "ACCESORIOS", "CONDICIONES DE ALISTAMIENTO Y OPERACIÓN"]]
+    for e in equipos:
+        equipos_data.append([e['nombre'], str(e['cantidad_total']), "___", "___"])
+    
+    t_equipos = Table(equipos_data, colWidths=[5*cm, 2.5*cm, 3*cm, 5*cm])
+    t_equipos.setStyle(TableStyle([
+        ('FONTNAME', (0, 0), (-1, -1), 'Helvetica'),
+        ('FONTSIZE', (0, 0), (-1, -1), 7),
+        ('BACKGROUND', (0, 0), (-1, 0), colors.lightgrey),
+        ('GRID', (0, 0), (-1, -1), 0.5, colors.grey),
+        ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
+    ]))
+    elements.append(t_equipos)
+    elements.append(Spacer(1, 10))
+    
+    # Observaciones
+    elements.append(Paragraph(f"OBSERVACIONES: {observaciones or 'Ninguna'}", cell_style))
+    elements.append(Spacer(1, 15))
+    
+    # Firmas
+    firmas_data = [
+        ["LOGÍSTICA", "APRENDIZ ENCARGADO", "OBSERVACIONES", "FIRMA RECIBIDO DE MATERIALES DE FORMACION"],
+        ["CABINAS", "_________________", "_________________", "_________________"],
+        ["REACTIVOS", "", "", ""],
+        ["MATERIAL", "", "NOMBRE INSTRUCTOR", "FIRMA INSTRUCTOR"],
+        ["BALANZAS", "", "_________________", "_________________"],
+        ["MESONES", "", "", ""],
+        ["PISO", "", "NOMBRE VOCERO", "FIRMA VOCERO"],
+        ["POCETAS", "", "_________________", "_________________"],
+        ["", "", "", ""],
+        ["", "", "NOMBRE TECNICO", "FIRMA TECNICO"],
+        ["", "", "_________________", "_________________"],
+        ["FIRMA LÍDER LABORATORIO", "_________________", "", ""],
+    ]
+    
+    t_firmas = Table(firmas_data, colWidths=[3.5*cm, 4*cm, 4*cm, 4*cm])
+    t_firmas.setStyle(TableStyle([
+        ('FONTNAME', (0, 0), (-1, -1), 'Helvetica'),
+        ('FONTSIZE', (0, 0), (-1, -1), 7),
+        ('GRID', (0, 0), (-1, -1), 0.5, colors.grey),
+        ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
+    ]))
+    elements.append(t_firmas)
+    
+    # Construir PDF
+    doc.build(elements)
+    pdf = buffer.getvalue()
+    buffer.close()
+    
+    # Devolver PDF
+    response = HttpResponse(pdf, content_type='application/pdf')
+    response['Content-Disposition'] = f'attachment; filename="solicitud_{practica.nombre.replace(" ", "_")}.pdf"'
+    return response
+
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def reporte_sustancias_controladas(request):
+    from datetime import date
+    
+    user = request.user
+    if not (user.is_staff or user.is_superuser):
+        return Response({'error': 'Solo administradores pueden ver este reporte'}, status=403)
+    
+    # Mostrar TODOS los reactivos, no solo los sensibles
+    reactivos = Producto.objects.filter(tipo='reactivo')
+    
+    data = []
+    for r in reactivos:
+        alertas = []
+        if r.cantidad <= r.minimo:
+            alertas.append(f"Stock bajo: {r.cantidad} (mínimo: {r.minimo})")
+        if r.fecha_vencimiento:
+            dias = (r.fecha_vencimiento - date.today()).days
+            if dias <= 30:
+                alertas.append(f"Vence en {dias} días")
+        
+        data.append({
+            'id': r.id,
+            'nombre': r.nombre,
+            'cantidad': r.cantidad,
+            'minimo': r.minimo,
+            'ubicacion': r.ubicacion,
+            'fecha_vencimiento': r.fecha_vencimiento,
+            'es_sensible': r.es_sensible,
+            'alertas': alertas
+        })
+    
+    return Response({
+        'total_reactivos': len(data),
+        'total_sensibles': len([r for r in data if r['es_sensible']]),
+        'reactivos_con_alerta': len([r for r in data if r['alertas']]),
+        'reactivos': data
+    })
+
+
+@api_view(['POST'])
+@permission_classes([IsAuthenticated])
+def toggle_reactivo_sensible(request, reactivo_id):
+    """Activar/desactivar la marca de reactivo sensible"""
+    user = request.user
+    if not (user.is_staff or user.is_superuser):
+        return Response({'error': 'Solo administradores pueden hacer esto'}, status=403)
+    
+    try:
+        reactivo = Producto.objects.get(id=reactivo_id, tipo='reactivo')
+        reactivo.es_sensible = not reactivo.es_sensible
+        reactivo.save()
+        
+        return Response({
+            'success': True,
+            'id': reactivo.id,
+            'nombre': reactivo.nombre,
+            'es_sensible': reactivo.es_sensible,
+            'mensaje': f'Reactivo {"marcado como sensible" if reactivo.es_sensible else "desmarcado como sensible"}'
+        })
+    except Producto.DoesNotExist:
+        return Response({'error': 'Reactivo no encontrado'}, status=404)
+
+
+@api_view(['POST'])
+@permission_classes([IsAuthenticated])
+def crear_reactivo_sensible(request):
+    """Crear un nuevo reactivo y marcarlo como sensible"""
+    user = request.user
+    if not (user.is_staff or user.is_superuser):
+        return Response({'error': 'Solo administradores pueden hacer esto'}, status=403)
+    
+    data = request.data
+    nombre = data.get('nombre')
+    cantidad = data.get('cantidad', 0)
+    minimo = data.get('minimo', 10)
+    ubicacion = data.get('ubicacion', '')
+    categoria_nombre = data.get('categoria', 'Reactivos')
+    
+    if not nombre:
+        return Response({'error': 'El nombre es obligatorio'}, status=400)
+    
+    # Obtener o crear categoría
+    categoria, _ = Categoria.objects.get_or_create(nombre=categoria_nombre)
+    
+    reactivo = Producto.objects.create(
+        nombre=nombre,
+        tipo='reactivo',
+        categoria=categoria,
+        cantidad=int(cantidad),
+        minimo=int(minimo),
+        ubicacion=ubicacion,
+        unidad='ml',
+        es_sensible=True  # Marcar como sensible
+    )
+    
+    return Response({
+        'success': True,
+        'id': reactivo.id,
+        'nombre': reactivo.nombre,
+        'es_sensible': reactivo.es_sensible,
+        'mensaje': f'Reactivo sensible "{nombre}" creado exitosamente'
+    }, status=201)

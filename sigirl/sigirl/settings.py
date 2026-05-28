@@ -5,7 +5,7 @@ Django settings for sigirl project.
 import os
 from pathlib import Path
 import dj_database_url
-
+from celery.schedules import crontab # type: ignore
 try:
     from dotenv import load_dotenv
     load_dotenv()
@@ -49,8 +49,10 @@ REST_FRAMEWORK = {
 }
 
 SIMPLE_JWT = {
-    'ACCESS_TOKEN_LIFETIME': timedelta(hours=1),
+    'ACCESS_TOKEN_LIFETIME': timedelta(hours=8),  # 8 horas
+    'REFRESH_TOKEN_LIFETIME': timedelta(days=7),
 }
+
 
 
 # Application definition
