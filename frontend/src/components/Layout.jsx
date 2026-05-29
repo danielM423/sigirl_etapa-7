@@ -26,6 +26,34 @@ const Layout = ({ children }) => {
   const [currentTime, setCurrentTime] = useState(new Date());
   const normalizedRole = role === 'jefe_superior' ? 'jefe' : role;
 
+  // ========== CONTADOR DE APROBACIONES PENDIENTES (BADGE) ==========
+  const [aprobacionesPendientes, setAprobacionesPendientes] = useState(0);
+
+  const contarAprobacionesPendientes = async () => {
+    try {
+      const token = localStorage.getItem('access_token');
+      if (!token) return;
+      
+      const res = await fetch('http://127.0.0.1:8000/api/pedidos-requieren-aprobacion/', {
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+      
+      if (res.ok) {
+        const data = await res.json();
+        setAprobacionesPendientes(data.length);
+      }
+    } catch (error) {
+      console.error('Error contando aprobaciones:', error);
+    }
+  };
+
+  // Cargar al inicio y actualizar cada 30 segundos
+  useEffect(() => {
+    contarAprobacionesPendientes();
+    const interval = setInterval(contarAprobacionesPendientes, 30000);
+    return () => clearInterval(interval);
+  }, []);
+
   // Reloj en tiempo real
   useEffect(() => {
     const timer = setInterval(() => setCurrentTime(new Date()), 1000);
@@ -59,14 +87,19 @@ const Layout = ({ children }) => {
     });
   };
 
+  // ========== MENÚ SUPERIOR CON BADGE ==========
   const navItems = [
     { path: '/dashboard', label: 'Dashboard', icon: <LayoutDashboard className="w-4 h-4" />, roles: ['admin', 'jefe', 'usuario'] },
     { path: '/inventario', label: 'Inventario', icon: <Package className="w-4 h-4" />, roles: ['admin', 'jefe', 'usuario'] },
     { path: '/pedidos', label: 'Pedidos', icon: <ClipboardList className="w-4 h-4" />, roles: ['admin', 'jefe', 'usuario'] },
+    { path: '/aprobaciones-jefe', label: 'Aprobar Excepciones', icon: <AlertTriangle className="w-4 h-4" />, roles: ['admin', 'jefe'], badge: true },
     { path: '/usuarios', label: 'Usuarios', icon: <Users className="w-4 h-4" />, roles: ['admin', 'jefe'] },
     { path: '/alertas', label: 'Alertas', icon: <AlertTriangle className="w-4 h-4" />, roles: ['admin', 'jefe'] },
     { path: '/reportes', label: 'Reportes', icon: <FileText className="w-4 h-4" />, roles: ['admin', 'jefe'] },
     { path: '/perfil', label: 'Perfil', icon: <User className="w-4 h-4" />, roles: ['admin', 'jefe', 'usuario'] },
+    { path: '/selector-practica', label: 'Generar Solicitud', icon: <ClipboardList className="w-4 h-4" />, roles: ['usuario'] },
+
+    
   ];
 
   const filteredNav = navItems.filter(item => item.roles.includes(normalizedRole));
@@ -234,7 +267,14 @@ const Layout = ({ children }) => {
                   `}
                 >
                   {item.icon}
-                  {item.label}
+                  <div className="flex items-center gap-1 flex-1">
+                    <span>{item.label}</span>
+                    {item.badge && aprobacionesPendientes > 0 && (
+                      <span className="bg-red-500 text-white text-xs font-bold px-2 py-0.5 rounded-full ml-auto">
+                        {aprobacionesPendientes}
+                      </span>
+                    )}
+                  </div>
                 </Link>
               ))}
               

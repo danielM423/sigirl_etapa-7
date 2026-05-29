@@ -4,7 +4,7 @@ from .models import (
     Programa, Competencia, Practica, PracticaReactivo, PracticaEquipo, 
     PracticaMaterial, PedidoHistorial, PDFDocumento, Asistencia, ListadoDiario,
     UnidadMedida, HistorialCambio, Alerta, Categoria, Movimiento, Pedido, 
-    Producto, UserProfile
+    Producto, UserProfile, FormularioPlantilla, CampoFormulario, FormularioRespuesta
 )
 
 User = get_user_model()
@@ -304,3 +304,35 @@ class CurrentUserProfileSerializer(serializers.ModelSerializer):
     def get_profile(self, obj):
         profile, _ = UserProfile.objects.get_or_create(user=obj)
         return UserProfileSerializer(profile).data
+    
+
+    # ============================================================
+# SERIALIZERS PARA FORMULARIOS
+# ============================================================
+
+class CampoFormularioSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = CampoFormulario # type: ignore
+        fields = '__all__'
+
+
+class FormularioPlantillaSerializer(serializers.ModelSerializer):
+    campos = CampoFormularioSerializer(many=True, read_only=True)
+    campos_count = serializers.SerializerMethodField()
+    
+    class Meta:
+        model = FormularioPlantilla # type: ignore
+        fields = '__all__'
+    
+    def get_campos_count(self, obj):
+        return obj.campos.count()
+
+
+class FormularioRespuestaSerializer(serializers.ModelSerializer):
+    plantilla_nombre = serializers.CharField(source='plantilla.nombre', read_only=True)
+    usuario_nombre = serializers.CharField(source='usuario.username', read_only=True)
+    
+    class Meta:
+        model = FormularioRespuesta # type: ignore
+        fields = '__all__'
+        read_only_fields = ('usuario', 'fecha')

@@ -17,8 +17,6 @@ import {
   ChevronRight,
 } from 'lucide-react';
 import { UserContext } from '../context/UserContext';
-import SelectorPractica from './pages/SelectorPractica';
-
 
 const Sidebar = ({ isOpen, setIsOpen }) => {
   const location = useLocation();
@@ -29,6 +27,36 @@ const Sidebar = ({ isOpen, setIsOpen }) => {
   console.log('ROL ACTUAL:', role);
   const [openSection, setOpenSection] = useState('inventario');
   const currentTab = new URLSearchParams(location.search).get('tab');
+  
+  // ========== NUEVO: ESTADO PARA EL CONTADOR ==========
+  const [aprobacionesPendientes, setAprobacionesPendientes] = useState(0);
+
+  // ========== NUEVO: FUNCIÓN PARA CONTAR PEDIDOS ==========
+  const contarAprobacionesPendientes = async () => {
+    try {
+      const token = localStorage.getItem('access_token');
+      if (!token) return;
+      
+      const res = await fetch('http://127.0.0.1:8000/api/pedidos-requieren-aprobacion/', {
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+      
+      if (res.ok) {
+        const data = await res.json();
+        setAprobacionesPendientes(data.length);
+      }
+    } catch (error) {
+      console.error('Error contando aprobaciones:', error);
+    }
+  };
+
+  // ========== NUEVO: EFECTO PARA CARGAR EL CONTADOR ==========
+  useEffect(() => {
+    contarAprobacionesPendientes();
+    // Actualizar cada 30 segundos
+    const interval = setInterval(contarAprobacionesPendientes, 30000);
+    return () => clearInterval(interval);
+  }, []);
 
   const menuItems = useMemo(() => {
     switch (role) {
@@ -50,13 +78,11 @@ const Sidebar = ({ isOpen, setIsOpen }) => {
           { path: '/admin?tab=pedidos', label: 'Pedidos', icon: ClipboardList, description: 'Aprobaciones' },
           { path: '/usuarios', label: 'Usuarios', icon: Users, description: 'Gestión de usuarios' },
           { path: '/perfil', label: 'Configuración', icon: Settings, description: 'Mi perfil' },
-          // === NUEVOS ENLACES PARA ADMIN ===
           { path: '/sustancias-controladas', label: 'Sustancias Controladas', icon: AlertTriangle, description: 'Reporte de reactivos sensibles' },
           { path: '/programas', label: 'Programas', icon: FileText, description: 'Gestión de programas' },
           { path: '/competencias', label: 'Competencias', icon: FileText, description: 'Gestión de competencias' },
           { path: '/selector-practica', label: 'Generar Solicitud', icon: ClipboardList, description: 'Solicitud automática' },
           { path: '/practicas/gestion', label: 'Gestionar Prácticas', icon: ClipboardList, description: 'CRUD de prácticas' },
-          { path: '/practicas/gestion', label: 'Gestionar Prácticas', icon: ClipboardList, description: 'CRUD de prácticas recurrentes' },
         ];
       case 'jefe':
       case 'jefesuperior':
@@ -78,13 +104,17 @@ const Sidebar = ({ isOpen, setIsOpen }) => {
           { path: '/jefe?tab=pedidos', label: 'Pedidos', icon: FileText, description: 'CRUD completa' },
           { path: '/usuarios', label: 'Usuarios', icon: Users, description: 'Gestión de usuarios' },
           { path: '/perfil', label: 'Configuración', icon: Settings, description: 'Mi perfil' },
-          // === NUEVOS ENLACES PARA JEFE ===
           { path: '/programas', label: 'Programas', icon: FileText, description: 'Gestión de programas' },
           { path: '/competencias', label: 'Competencias', icon: FileText, description: 'Gestión de competencias' },
           { path: '/selector-practica', label: 'Generar Solicitud', icon: ClipboardList, description: 'Solicitud automática' },
           { path: '/practicas/gestion', label: 'Gestionar Prácticas', icon: ClipboardList, description: 'CRUD de prácticas' },
-          { path: '/practicas/gestion', label: 'Gestionar Prácticas', icon: ClipboardList, description: 'CRUD de prácticas recurrentes' },
-          { path: '/aprobaciones-jefe', label: 'Aprobar Excepciones', icon: AlertTriangle, description: 'Pedidos que requieren aprobación' },
+          { 
+            path: '/aprobaciones-jefe', 
+            label: 'Aprobar Excepciones', 
+            icon: AlertTriangle, 
+            description: 'Pedidos que requieren aprobación',
+            badge: aprobacionesPendientes
+          },
         ];
       case 'usuario':
         return [
@@ -102,13 +132,12 @@ const Sidebar = ({ isOpen, setIsOpen }) => {
           { path: '/usuario', label: 'Pedidos', icon: ClipboardList, description: 'Mis solicitudes' },
           { path: '/usuarios', label: 'Usuarios', icon: Users, description: 'Gestión de usuarios' },
           { path: '/perfil', label: 'Configuración', icon: Settings, description: 'Mi perfil' },
-          // === NUEVOS ENLACES PARA USUARIO/INSTRUCTOR ===
           { path: '/selector-practica', label: 'Generar Solicitud', icon: ClipboardList, description: 'Solicitud automática' },
         ];
       default:
         return [];
     }
-  }, [role]);
+  }, [role, aprobacionesPendientes]);
 
   const isRouteActive = (path) => {
     const [pathname, search] = path.split('?');
@@ -249,7 +278,14 @@ const Sidebar = ({ isOpen, setIsOpen }) => {
               >
                 <Icon className="w-5 h-5 flex-shrink-0" />
                 <div className="flex-1 text-left">
-                  <p className="font-semibold text-sm">{item.label}</p>
+                  <div className="flex items-center justify-between">
+                    <p className="font-semibold text-sm">{item.label}</p>
+                    {item.badge > 0 && (
+                      <span className="bg-red-500 text-white text-xs font-bold px-2 py-0.5 rounded-full ml-2">
+                        {item.badge}
+                      </span>
+                    )}
+                  </div>
                   <p className="text-xs text-slate-400 group-hover:text-emerald-400/70 transition-colors">{item.description}</p>
                 </div>
                 {active && <div className="w-2.5 h-2.5 rounded-full bg-gradient-to-r from-emerald-400 to-cyan-400 shadow-lg shadow-emerald-500/50 animate-pulse"></div>}

@@ -1,0 +1,2632 @@
+[
+{
+  "model": "auth.user",
+  "pk": 1,
+  "fields": {
+    "password": "pbkdf2_sha256$600000$o36uBW7UXaPbqcMUYqFDwR$IsLjBhzq1WPxqPx8O/CuBr0pJCg0JME2Rng4wiWXM9k=",
+    "last_login": null,
+    "is_superuser": true,
+    "username": "cesar",
+    "first_name": "",
+    "last_name": "",
+    "email": "cesar1@gmail.com",
+    "is_staff": true,
+    "is_active": true,
+    "date_joined": "2026-05-08T16:03:33.576Z",
+    "groups": [],
+    "user_permissions": []
+  }
+},
+{
+  "model": "auth.user",
+  "pk": 2,
+  "fields": {
+    "password": "pbkdf2_sha256$600000$Pnlv14LPA7YYQ7Kqagf5tL$jmZj96DmaVw1BiE5A0NCzPUEtBD98dxQ8xKmSo6WUaI=",
+    "last_login": null,
+    "is_superuser": true,
+    "username": "admin",
+    "first_name": "",
+    "last_name": "",
+    "email": "admin@example.com",
+    "is_staff": true,
+    "is_active": true,
+    "date_joined": "2026-05-08T16:41:32.843Z",
+    "groups": [],
+    "user_permissions": []
+  }
+},
+{
+  "model": "auth.user",
+  "pk": 3,
+  "fields": {
+    "password": "pbkdf2_sha256$1200000$OfJYMA1D8XmuvFCPThXq7U$/0hvrRfsmoFygFKqzvH2FF/FB4Nsa1iURh9tsIZWcr8=",
+    "last_login": null,
+    "is_superuser": false,
+    "username": "usuario1",
+    "first_name": "",
+    "last_name": "",
+    "email": "usuario1@correo.com",
+    "is_staff": false,
+    "is_active": true,
+    "date_joined": "2026-05-08T17:04:21.200Z",
+    "groups": [],
+    "user_permissions": []
+  }
+},
+{
+  "model": "auth.user",
+  "pk": 4,
+  "fields": {
+    "password": "pbkdf2_sha256$600000$BDjEJxlh0OIYpcYpaPO7mF$a730pXBsuSjz59duCUOXodBIieJI0WU9gpv9K1ZmcN8=",
+    "last_login": null,
+    "is_superuser": false,
+    "username": "jefe",
+    "first_name": "",
+    "last_name": "",
+    "email": "jefe@sigirl.local",
+    "is_staff": true,
+    "is_active": true,
+    "date_joined": "2026-05-08T19:36:46.524Z",
+    "groups": [],
+    "user_permissions": []
+  }
+},
+{
+  "model": "auth.user",
+  "pk": 5,
+  "fields": {
+    "password": "pbkdf2_sha256$600000$8Mru1Lh1f4KQET6yjPj8ka$C60s/vD0BQ5Sdt6KE6NpgunE3FYd22mAeoYC+1eNkqY=",
+    "last_login": null,
+    "is_superuser": false,
+    "username": "usuario",
+    "first_name": "",
+    "last_name": "",
+    "email": "usuario@example.com",
+    "is_staff": false,
+    "is_active": true,
+    "date_joined": "2026-05-08T20:23:58.135Z",
+    "groups": [],
+    "user_permissions": []
+  }
+},
+{
+  "model": "auth.user",
+  "pk": 6,
+  "fields": {
+    "password": "pbkdf2_sha256$600000$aQbl3gqcvd1KUZdkxHeoLh$RGeuQHPMa1tk7vvOB4LO9YdJM5cKOiBnqbi8fKSf7IU=",
+    "last_login": null,
+    "is_superuser": false,
+    "username": "testuser",
+    "first_name": "",
+    "last_name": "",
+    "email": "test@example.com",
+    "is_staff": true,
+    "is_active": true,
+    "date_joined": "2026-05-11T14:18:33.785Z",
+    "groups": [],
+    "user_permissions": []
+  }
+},
+{
+  "model": "auth.user",
+  "pk": 7,
+  "fields": {
+    "password": "pbkdf2_sha256$600000$xBGtit2sg6CppMxHOSueVx$4on/1zHUC0kW81wUEG+RohvtA12ANFosFibwXTf9724=",
+    "last_login": null,
+    "is_superuser": false,
+    "username": "amandaas",
+    "first_name": "amanda",
+    "last_name": "amanda",
+    "email": "amanda@gamail.com",
+    "is_staff": false,
+    "is_active": true,
+    "date_joined": "2026-05-11T19:01:28.247Z",
+    "groups": [],
+    "user_permissions": []
+  }
+},
+{
+  "model": "auth.user",
+  "pk": 8,
+  "fields": {
+    "password": "pbkdf2_sha256$600000$IvRTia4tjfGp4jZbMYSa7b$hd6y5nUNJX1/nVd+ILm5cNMIOBe3SGLAh+8eur2o3fQ=",
+    "last_login": null,
+    "is_superuser": false,
+    "username": "arnol",
+    "first_name": "arnol",
+    "last_name": "arnol",
+    "email": "samir_dmahecha@gmail.com",
+    "is_staff": false,
+    "is_active": true,
+    "date_joined": "2026-05-11T19:02:36.109Z",
+    "groups": [],
+    "user_permissions": []
+  }
+},
+{
+  "model": "auth.user",
+  "pk": 9,
+  "fields": {
+    "password": "",
+    "last_login": null,
+    "is_superuser": false,
+    "username": "instructor1",
+    "first_name": "",
+    "last_name": "",
+    "email": "instructor1@email.com",
+    "is_staff": false,
+    "is_active": true,
+    "date_joined": "2026-05-14T15:35:30.851Z",
+    "groups": [],
+    "user_permissions": []
+  }
+},
+{
+  "model": "auth.user",
+  "pk": 10,
+  "fields": {
+    "password": "pbkdf2_sha256$600000$NXv61relShIrLrWrXamkXY$6uA5IOy0RRN1U12BKPyEWgm3XlEzoGM38ZaqcS5ygU8=",
+    "last_login": null,
+    "is_superuser": false,
+    "username": "gabi",
+    "first_name": "marlon",
+    "last_name": "gabriel",
+    "email": "gabi@gmail.com",
+    "is_staff": false,
+    "is_active": true,
+    "date_joined": "2026-05-14T20:08:26.108Z",
+    "groups": [],
+    "user_permissions": []
+  }
+},
+{
+  "model": "auth.user",
+  "pk": 11,
+  "fields": {
+    "password": "pbkdf2_sha256$600000$KDuPIGt31oH5LVyBl69U0O$v2GOA+axr4p6zmcnxMz5pcTdNGCczExq5dOvz9fGpuY=",
+    "last_login": null,
+    "is_superuser": false,
+    "username": "jymi",
+    "first_name": "jymi",
+    "last_name": "jymi",
+    "email": "jymi@gmail.com",
+    "is_staff": false,
+    "is_active": true,
+    "date_joined": "2026-05-20T14:22:56.827Z",
+    "groups": [],
+    "user_permissions": []
+  }
+},
+{
+  "model": "inventario.pedidohistorial",
+  "pk": 1,
+  "fields": {
+    "pedido": 4,
+    "estado": "aprobado",
+    "fecha": "2026-05-14T16:56:06.681Z",
+    "usuario_modificador": 1,
+    "comentario": "Comentario de prueba"
+  }
+},
+{
+  "model": "inventario.pedidohistorial",
+  "pk": 2,
+  "fields": {
+    "pedido": 4,
+    "estado": "aprobado",
+    "fecha": "2026-05-14T20:51:45.889Z",
+    "usuario_modificador": 1,
+    "comentario": "Comentario de prueba 1"
+  }
+},
+{
+  "model": "inventario.pedidohistorial",
+  "pk": 3,
+  "fields": {
+    "pedido": 4,
+    "estado": "aprobado",
+    "fecha": "2026-05-14T20:51:45.896Z",
+    "usuario_modificador": 1,
+    "comentario": "Comentario de prueba 2"
+  }
+},
+{
+  "model": "inventario.pedidohistorial",
+  "pk": 4,
+  "fields": {
+    "pedido": 4,
+    "estado": "aprobado",
+    "fecha": "2026-05-14T20:51:45.902Z",
+    "usuario_modificador": 1,
+    "comentario": "Comentario de prueba 3"
+  }
+},
+{
+  "model": "inventario.pedidohistorial",
+  "pk": 5,
+  "fields": {
+    "pedido": 4,
+    "estado": "aprobado",
+    "fecha": "2026-05-14T20:51:45.907Z",
+    "usuario_modificador": 1,
+    "comentario": "Comentario de prueba 4"
+  }
+},
+{
+  "model": "inventario.pedidohistorial",
+  "pk": 6,
+  "fields": {
+    "pedido": 4,
+    "estado": "aprobado",
+    "fecha": "2026-05-14T20:51:45.913Z",
+    "usuario_modificador": 1,
+    "comentario": "Comentario de prueba 5"
+  }
+},
+{
+  "model": "inventario.pedidohistorial",
+  "pk": 7,
+  "fields": {
+    "pedido": 4,
+    "estado": "aprobado",
+    "fecha": "2026-05-14T20:51:45.918Z",
+    "usuario_modificador": 1,
+    "comentario": "Comentario de prueba 6"
+  }
+},
+{
+  "model": "inventario.pedidohistorial",
+  "pk": 8,
+  "fields": {
+    "pedido": 4,
+    "estado": "aprobado",
+    "fecha": "2026-05-14T20:51:45.923Z",
+    "usuario_modificador": 1,
+    "comentario": "Comentario de prueba 7"
+  }
+},
+{
+  "model": "inventario.pedidohistorial",
+  "pk": 9,
+  "fields": {
+    "pedido": 4,
+    "estado": "aprobado",
+    "fecha": "2026-05-14T20:51:45.928Z",
+    "usuario_modificador": 1,
+    "comentario": "Comentario de prueba 8"
+  }
+},
+{
+  "model": "inventario.pedidohistorial",
+  "pk": 10,
+  "fields": {
+    "pedido": 4,
+    "estado": "aprobado",
+    "fecha": "2026-05-14T20:51:45.933Z",
+    "usuario_modificador": 1,
+    "comentario": "Comentario de prueba 9"
+  }
+},
+{
+  "model": "inventario.pedidohistorial",
+  "pk": 11,
+  "fields": {
+    "pedido": 4,
+    "estado": "aprobado",
+    "fecha": "2026-05-14T20:51:45.938Z",
+    "usuario_modificador": 1,
+    "comentario": "Comentario de prueba 10"
+  }
+},
+{
+  "model": "inventario.pedidohistorial",
+  "pk": 12,
+  "fields": {
+    "pedido": 4,
+    "estado": "aprobado",
+    "fecha": "2026-05-14T20:51:45.943Z",
+    "usuario_modificador": 1,
+    "comentario": "Comentario de prueba 11"
+  }
+},
+{
+  "model": "inventario.pedidohistorial",
+  "pk": 13,
+  "fields": {
+    "pedido": 4,
+    "estado": "aprobado",
+    "fecha": "2026-05-14T20:51:46.109Z",
+    "usuario_modificador": 1,
+    "comentario": "Comentario de prueba 12"
+  }
+},
+{
+  "model": "inventario.pedidohistorial",
+  "pk": 14,
+  "fields": {
+    "pedido": 4,
+    "estado": "aprobado",
+    "fecha": "2026-05-14T20:51:46.118Z",
+    "usuario_modificador": 1,
+    "comentario": "Comentario de prueba 13"
+  }
+},
+{
+  "model": "inventario.pedidohistorial",
+  "pk": 15,
+  "fields": {
+    "pedido": 4,
+    "estado": "aprobado",
+    "fecha": "2026-05-14T20:51:46.125Z",
+    "usuario_modificador": 1,
+    "comentario": "Comentario de prueba 14"
+  }
+},
+{
+  "model": "inventario.pedidohistorial",
+  "pk": 16,
+  "fields": {
+    "pedido": 4,
+    "estado": "aprobado",
+    "fecha": "2026-05-14T20:51:46.130Z",
+    "usuario_modificador": 1,
+    "comentario": "Comentario de prueba 15"
+  }
+},
+{
+  "model": "inventario.pdfdocumento",
+  "pk": 2,
+  "fields": {
+    "archivo": "/ruta/ficticia/manual_1.pdf",
+    "fecha": "2026-05-14T20:51:55.712Z",
+    "usuario": 1,
+    "tipo": "manual",
+    "referencia": "Referencia de prueba 1"
+  }
+},
+{
+  "model": "inventario.pdfdocumento",
+  "pk": 3,
+  "fields": {
+    "archivo": "/ruta/ficticia/manual_2.pdf",
+    "fecha": "2026-05-14T20:51:55.719Z",
+    "usuario": 1,
+    "tipo": "manual",
+    "referencia": "Referencia de prueba 2"
+  }
+},
+{
+  "model": "inventario.pdfdocumento",
+  "pk": 4,
+  "fields": {
+    "archivo": "/ruta/ficticia/manual_3.pdf",
+    "fecha": "2026-05-14T20:51:55.724Z",
+    "usuario": 1,
+    "tipo": "manual",
+    "referencia": "Referencia de prueba 3"
+  }
+},
+{
+  "model": "inventario.pdfdocumento",
+  "pk": 5,
+  "fields": {
+    "archivo": "/ruta/ficticia/manual_4.pdf",
+    "fecha": "2026-05-14T20:51:55.728Z",
+    "usuario": 1,
+    "tipo": "manual",
+    "referencia": "Referencia de prueba 4"
+  }
+},
+{
+  "model": "inventario.pdfdocumento",
+  "pk": 6,
+  "fields": {
+    "archivo": "/ruta/ficticia/manual_5.pdf",
+    "fecha": "2026-05-14T20:51:55.733Z",
+    "usuario": 1,
+    "tipo": "manual",
+    "referencia": "Referencia de prueba 5"
+  }
+},
+{
+  "model": "inventario.pdfdocumento",
+  "pk": 7,
+  "fields": {
+    "archivo": "/ruta/ficticia/manual_6.pdf",
+    "fecha": "2026-05-14T20:51:55.737Z",
+    "usuario": 1,
+    "tipo": "manual",
+    "referencia": "Referencia de prueba 6"
+  }
+},
+{
+  "model": "inventario.pdfdocumento",
+  "pk": 8,
+  "fields": {
+    "archivo": "/ruta/ficticia/manual_7.pdf",
+    "fecha": "2026-05-14T20:51:55.741Z",
+    "usuario": 1,
+    "tipo": "manual",
+    "referencia": "Referencia de prueba 7"
+  }
+},
+{
+  "model": "inventario.pdfdocumento",
+  "pk": 10,
+  "fields": {
+    "archivo": "/ruta/ficticia/manual_9.pdf",
+    "fecha": "2026-05-14T20:51:55.749Z",
+    "usuario": 1,
+    "tipo": "manual",
+    "referencia": "Referencia de prueba 9"
+  }
+},
+{
+  "model": "inventario.pdfdocumento",
+  "pk": 11,
+  "fields": {
+    "archivo": "/ruta/ficticia/manual_10.pdf",
+    "fecha": "2026-05-14T20:51:55.753Z",
+    "usuario": 1,
+    "tipo": "manual",
+    "referencia": "Referencia de prueba 10"
+  }
+},
+{
+  "model": "inventario.pdfdocumento",
+  "pk": 12,
+  "fields": {
+    "archivo": "/ruta/ficticia/manual_11.pdf",
+    "fecha": "2026-05-14T20:51:55.757Z",
+    "usuario": 1,
+    "tipo": "manual",
+    "referencia": "Referencia de prueba 11"
+  }
+},
+{
+  "model": "inventario.pdfdocumento",
+  "pk": 13,
+  "fields": {
+    "archivo": "/ruta/ficticia/manual_12.pdf",
+    "fecha": "2026-05-14T20:51:55.762Z",
+    "usuario": 1,
+    "tipo": "manual",
+    "referencia": "Referencia de prueba 12"
+  }
+},
+{
+  "model": "inventario.pdfdocumento",
+  "pk": 14,
+  "fields": {
+    "archivo": "/ruta/ficticia/manual_13.pdf",
+    "fecha": "2026-05-14T20:51:55.766Z",
+    "usuario": 1,
+    "tipo": "manual",
+    "referencia": "Referencia de prueba 13"
+  }
+},
+{
+  "model": "inventario.pdfdocumento",
+  "pk": 15,
+  "fields": {
+    "archivo": "/ruta/ficticia/manual_14.pdf",
+    "fecha": "2026-05-14T20:51:55.771Z",
+    "usuario": 1,
+    "tipo": "manual",
+    "referencia": "Referencia de prueba 14"
+  }
+},
+{
+  "model": "inventario.pdfdocumento",
+  "pk": 16,
+  "fields": {
+    "archivo": "/ruta/ficticia/manual_15.pdf",
+    "fecha": "2026-05-14T20:51:55.776Z",
+    "usuario": 1,
+    "tipo": "manual",
+    "referencia": "Referencia de prueba 15"
+  }
+},
+{
+  "model": "inventario.categoria",
+  "pk": 1,
+  "fields": {
+    "nombre": "Reactivo"
+  }
+},
+{
+  "model": "inventario.categoria",
+  "pk": 2,
+  "fields": {
+    "nombre": "Insumo"
+  }
+},
+{
+  "model": "inventario.categoria",
+  "pk": 3,
+  "fields": {
+    "nombre": "Equipo"
+  }
+},
+{
+  "model": "inventario.categoria",
+  "pk": 4,
+  "fields": {
+    "nombre": "Reactivos"
+  }
+},
+{
+  "model": "inventario.categoria",
+  "pk": 5,
+  "fields": {
+    "nombre": "Insumos"
+  }
+},
+{
+  "model": "inventario.categoria",
+  "pk": 6,
+  "fields": {
+    "nombre": "Equipos"
+  }
+},
+{
+  "model": "inventario.categoria",
+  "pk": 7,
+  "fields": {
+    "nombre": "Reactivo Ácido"
+  }
+},
+{
+  "model": "inventario.categoria",
+  "pk": 8,
+  "fields": {
+    "nombre": "Reactivo Base"
+  }
+},
+{
+  "model": "inventario.categoria",
+  "pk": 9,
+  "fields": {
+    "nombre": "Solvente"
+  }
+},
+{
+  "model": "inventario.categoria",
+  "pk": 10,
+  "fields": {
+    "nombre": "Equipo de Medición"
+  }
+},
+{
+  "model": "inventario.categoria",
+  "pk": 11,
+  "fields": {
+    "nombre": "Equipo de Seguridad"
+  }
+},
+{
+  "model": "inventario.categoria",
+  "pk": 12,
+  "fields": {
+    "nombre": "Insumo Laboratorio"
+  }
+},
+{
+  "model": "inventario.categoria",
+  "pk": 13,
+  "fields": {
+    "nombre": "Material de Vidrio"
+  }
+},
+{
+  "model": "inventario.categoria",
+  "pk": 14,
+  "fields": {
+    "nombre": "Reactivo Biológico"
+  }
+},
+{
+  "model": "inventario.producto",
+  "pk": 1,
+  "fields": {
+    "nombre": "Ácido Sulfúrico",
+    "tipo": "reactivo",
+    "categoria": 1,
+    "cantidad": 45,
+    "minimo": 10,
+    "ubicacion": "Estante A-1",
+    "fecha_vencimiento": "2025-12-31",
+    "ultima_actualizacion": "2026-05-28T19:49:47.332Z",
+    "unidad": "litros",
+    "es_sensible": true
+  }
+},
+{
+  "model": "inventario.producto",
+  "pk": 2,
+  "fields": {
+    "nombre": "Guantes de nitrilo",
+    "tipo": "insumo",
+    "categoria": 2,
+    "cantidad": 187,
+    "minimo": 30,
+    "ubicacion": "Gaveta 3",
+    "fecha_vencimiento": null,
+    "ultima_actualizacion": "2026-05-12T19:04:57.218Z",
+    "unidad": "pares",
+    "es_sensible": false
+  }
+},
+{
+  "model": "inventario.producto",
+  "pk": 3,
+  "fields": {
+    "nombre": "Microscopio binocular",
+    "tipo": "equipo",
+    "categoria": 3,
+    "cantidad": 4,
+    "minimo": 1,
+    "ubicacion": "Laboratorio 2",
+    "fecha_vencimiento": null,
+    "ultima_actualizacion": "2026-05-08T17:01:26.721Z",
+    "unidad": "unidades",
+    "es_sensible": false
+  }
+},
+{
+  "model": "inventario.producto",
+  "pk": 4,
+  "fields": {
+    "nombre": "Ácido Clorhídrico",
+    "tipo": "reactivo",
+    "categoria": 4,
+    "cantidad": 45,
+    "minimo": 10,
+    "ubicacion": null,
+    "fecha_vencimiento": null,
+    "ultima_actualizacion": "2026-05-13T16:08:47.132Z",
+    "unidad": "unidades",
+    "es_sensible": false
+  }
+},
+{
+  "model": "inventario.producto",
+  "pk": 5,
+  "fields": {
+    "nombre": "Guantes de látex",
+    "tipo": "insumo",
+    "categoria": 5,
+    "cantidad": 180,
+    "minimo": 50,
+    "ubicacion": null,
+    "fecha_vencimiento": null,
+    "ultima_actualizacion": "2026-05-13T16:08:47.136Z",
+    "unidad": "unidades",
+    "es_sensible": false
+  }
+},
+{
+  "model": "inventario.producto",
+  "pk": 6,
+  "fields": {
+    "nombre": "Microscopio",
+    "tipo": "equipo",
+    "categoria": 6,
+    "cantidad": 5,
+    "minimo": 1,
+    "ubicacion": null,
+    "fecha_vencimiento": null,
+    "ultima_actualizacion": "2026-05-08T17:04:22.034Z",
+    "unidad": "unidades",
+    "es_sensible": false
+  }
+},
+{
+  "model": "inventario.producto",
+  "pk": 7,
+  "fields": {
+    "nombre": "Bata de Laboratorio",
+    "tipo": "insumo",
+    "categoria": 12,
+    "cantidad": 87,
+    "minimo": 34,
+    "ubicacion": "Estante F-5",
+    "fecha_vencimiento": null,
+    "ultima_actualizacion": "2026-05-08T19:29:40.686Z",
+    "unidad": "caja",
+    "es_sensible": false
+  }
+},
+{
+  "model": "inventario.producto",
+  "pk": 8,
+  "fields": {
+    "nombre": "Termociclador",
+    "tipo": "equipo",
+    "categoria": 11,
+    "cantidad": 7,
+    "minimo": 1,
+    "ubicacion": "Estante E-10",
+    "fecha_vencimiento": null,
+    "ultima_actualizacion": "2026-05-08T19:29:40.691Z",
+    "unidad": "unid",
+    "es_sensible": false
+  }
+},
+{
+  "model": "inventario.producto",
+  "pk": 9,
+  "fields": {
+    "nombre": "Puntas para Pipeta",
+    "tipo": "insumo",
+    "categoria": 12,
+    "cantidad": 194,
+    "minimo": 92,
+    "ubicacion": "Estante B-9",
+    "fecha_vencimiento": null,
+    "ultima_actualizacion": "2026-05-08T19:29:40.694Z",
+    "unidad": "par",
+    "es_sensible": false
+  }
+},
+{
+  "model": "inventario.producto",
+  "pk": 10,
+  "fields": {
+    "nombre": "Autoclave",
+    "tipo": "equipo",
+    "categoria": 10,
+    "cantidad": 1,
+    "minimo": 1,
+    "ubicacion": "Estante F-8",
+    "fecha_vencimiento": null,
+    "ultima_actualizacion": "2026-05-08T19:29:40.697Z",
+    "unidad": "unid",
+    "es_sensible": false
+  }
+},
+{
+  "model": "inventario.producto",
+  "pk": 11,
+  "fields": {
+    "nombre": "Papel pH",
+    "tipo": "insumo",
+    "categoria": 12,
+    "cantidad": 171,
+    "minimo": 80,
+    "ubicacion": "Estante B-2",
+    "fecha_vencimiento": "2026-12-10",
+    "ultima_actualizacion": "2026-05-08T19:29:40.700Z",
+    "unidad": "unid",
+    "es_sensible": false
+  }
+},
+{
+  "model": "inventario.producto",
+  "pk": 12,
+  "fields": {
+    "nombre": "Ácido Nítrico",
+    "tipo": "reactivo",
+    "categoria": 14,
+    "cantidad": 477,
+    "minimo": 9,
+    "ubicacion": "Estante D-1",
+    "fecha_vencimiento": "2027-05-11",
+    "ultima_actualizacion": "2026-05-08T19:29:40.703Z",
+    "unidad": "mg",
+    "es_sensible": false
+  }
+},
+{
+  "model": "inventario.producto",
+  "pk": 13,
+  "fields": {
+    "nombre": "Microscopio",
+    "tipo": "equipo",
+    "categoria": 11,
+    "cantidad": 1,
+    "minimo": 1,
+    "ubicacion": "Estante E-1",
+    "fecha_vencimiento": null,
+    "ultima_actualizacion": "2026-05-08T19:29:40.707Z",
+    "unidad": "caja",
+    "es_sensible": false
+  }
+},
+{
+  "model": "inventario.producto",
+  "pk": 14,
+  "fields": {
+    "nombre": "Guantes de Látex",
+    "tipo": "insumo",
+    "categoria": 12,
+    "cantidad": 227,
+    "minimo": 90,
+    "ubicacion": "Estante B-8",
+    "fecha_vencimiento": null,
+    "ultima_actualizacion": "2026-05-08T19:29:40.711Z",
+    "unidad": "frasco",
+    "es_sensible": false
+  }
+},
+{
+  "model": "inventario.producto",
+  "pk": 15,
+  "fields": {
+    "nombre": "Acetona",
+    "tipo": "reactivo",
+    "categoria": 14,
+    "cantidad": 344,
+    "minimo": 42,
+    "ubicacion": "Estante A-3",
+    "fecha_vencimiento": "2028-04-25",
+    "ultima_actualizacion": "2026-05-08T19:29:40.714Z",
+    "unidad": "L",
+    "es_sensible": false
+  }
+},
+{
+  "model": "inventario.producto",
+  "pk": 16,
+  "fields": {
+    "nombre": "Ácido Sulfúrico",
+    "tipo": "reactivo",
+    "categoria": 8,
+    "cantidad": 39,
+    "minimo": 36,
+    "ubicacion": "Estante C-2",
+    "fecha_vencimiento": "2027-12-10",
+    "ultima_actualizacion": "2026-05-08T19:29:40.716Z",
+    "unidad": "mg",
+    "es_sensible": false
+  }
+},
+{
+  "model": "inventario.producto",
+  "pk": 17,
+  "fields": {
+    "nombre": "Amoníaco",
+    "tipo": "reactivo",
+    "categoria": 9,
+    "cantidad": 0,
+    "minimo": 29,
+    "ubicacion": "Estante C-8",
+    "fecha_vencimiento": "2026-06-29",
+    "ultima_actualizacion": "2026-05-11T16:16:38.339Z",
+    "unidad": "ml",
+    "es_sensible": false
+  }
+},
+{
+  "model": "inventario.producto",
+  "pk": 18,
+  "fields": {
+    "nombre": "Glutaraldehído",
+    "tipo": "reactivo",
+    "categoria": 7,
+    "cantidad": 205,
+    "minimo": 9,
+    "ubicacion": "Estante B-4",
+    "fecha_vencimiento": "2026-10-31",
+    "ultima_actualizacion": "2026-05-08T19:29:40.723Z",
+    "unidad": "L",
+    "es_sensible": false
+  }
+},
+{
+  "model": "inventario.producto",
+  "pk": 19,
+  "fields": {
+    "nombre": "Espectrómetro",
+    "tipo": "equipo",
+    "categoria": 11,
+    "cantidad": 4,
+    "minimo": 3,
+    "ubicacion": "Estante C-10",
+    "fecha_vencimiento": null,
+    "ultima_actualizacion": "2026-05-08T19:29:40.727Z",
+    "unidad": "caja",
+    "es_sensible": false
+  }
+},
+{
+  "model": "inventario.producto",
+  "pk": 20,
+  "fields": {
+    "nombre": "Caseína",
+    "tipo": "reactivo",
+    "categoria": 7,
+    "cantidad": 40,
+    "minimo": 19,
+    "ubicacion": "Estante D-3",
+    "fecha_vencimiento": "2026-12-05",
+    "ultima_actualizacion": "2026-05-08T19:29:40.731Z",
+    "unidad": "ml",
+    "es_sensible": false
+  }
+},
+{
+  "model": "inventario.producto",
+  "pk": 21,
+  "fields": {
+    "nombre": "Pipeta Graduada",
+    "tipo": "insumo",
+    "categoria": 12,
+    "cantidad": 202,
+    "minimo": 18,
+    "ubicacion": "Estante B-2",
+    "fecha_vencimiento": "2026-12-21",
+    "ultima_actualizacion": "2026-05-08T19:29:40.734Z",
+    "unidad": "frasco",
+    "es_sensible": false
+  }
+},
+{
+  "model": "inventario.producto",
+  "pk": 22,
+  "fields": {
+    "nombre": "Parafilm",
+    "tipo": "insumo",
+    "categoria": 12,
+    "cantidad": 718,
+    "minimo": 84,
+    "ubicacion": "Estante D-1",
+    "fecha_vencimiento": null,
+    "ultima_actualizacion": "2026-05-08T19:29:40.737Z",
+    "unidad": "unid",
+    "es_sensible": false
+  }
+},
+{
+  "model": "inventario.producto",
+  "pk": 23,
+  "fields": {
+    "nombre": "Mascarilla N95",
+    "tipo": "insumo",
+    "categoria": 12,
+    "cantidad": 739,
+    "minimo": 32,
+    "ubicacion": "Estante D-7",
+    "fecha_vencimiento": "2027-03-21",
+    "ultima_actualizacion": "2026-05-08T19:29:40.741Z",
+    "unidad": "frasco",
+    "es_sensible": false
+  }
+},
+{
+  "model": "inventario.producto",
+  "pk": 24,
+  "fields": {
+    "nombre": "Electroencefalógrafo",
+    "tipo": "equipo",
+    "categoria": 10,
+    "cantidad": 3,
+    "minimo": 2,
+    "ubicacion": "Estante E-10",
+    "fecha_vencimiento": null,
+    "ultima_actualizacion": "2026-05-08T19:29:40.744Z",
+    "unidad": "unid",
+    "es_sensible": false
+  }
+},
+{
+  "model": "inventario.producto",
+  "pk": 25,
+  "fields": {
+    "nombre": "Tubos Eppendorf",
+    "tipo": "insumo",
+    "categoria": 12,
+    "cantidad": 193,
+    "minimo": 44,
+    "ubicacion": "Estante A-9",
+    "fecha_vencimiento": "2026-09-20",
+    "ultima_actualizacion": "2026-05-08T19:29:40.747Z",
+    "unidad": "caja",
+    "es_sensible": false
+  }
+},
+{
+  "model": "inventario.producto",
+  "pk": 26,
+  "fields": {
+    "nombre": "Campana de Flujo",
+    "tipo": "equipo",
+    "categoria": 11,
+    "cantidad": 8,
+    "minimo": 1,
+    "ubicacion": "Estante C-5",
+    "fecha_vencimiento": null,
+    "ultima_actualizacion": "2026-05-08T19:29:40.750Z",
+    "unidad": "unid",
+    "es_sensible": false
+  }
+},
+{
+  "model": "inventario.producto",
+  "pk": 27,
+  "fields": {
+    "nombre": "Vaso de Precipitado",
+    "tipo": "insumo",
+    "categoria": 12,
+    "cantidad": 604,
+    "minimo": 71,
+    "ubicacion": "Estante C-7",
+    "fecha_vencimiento": null,
+    "ultima_actualizacion": "2026-05-08T19:29:40.753Z",
+    "unidad": "frasco",
+    "es_sensible": false
+  }
+},
+{
+  "model": "inventario.producto",
+  "pk": 28,
+  "fields": {
+    "nombre": "Hidróxido de Sodio",
+    "tipo": "reactivo",
+    "categoria": 9,
+    "cantidad": 104,
+    "minimo": 35,
+    "ubicacion": "Estante B-10",
+    "fecha_vencimiento": "2027-09-08",
+    "ultima_actualizacion": "2026-05-08T19:29:40.758Z",
+    "unidad": "L",
+    "es_sensible": false
+  }
+},
+{
+  "model": "inventario.producto",
+  "pk": 29,
+  "fields": {
+    "nombre": "Autoclave 23",
+    "tipo": "equipo",
+    "categoria": 11,
+    "cantidad": 9,
+    "minimo": 2,
+    "ubicacion": "Estante A-3",
+    "fecha_vencimiento": null,
+    "ultima_actualizacion": "2026-05-08T19:29:40.761Z",
+    "unidad": "unid",
+    "es_sensible": false
+  }
+},
+{
+  "model": "inventario.producto",
+  "pk": 30,
+  "fields": {
+    "nombre": "Ácido Clorhídrico",
+    "tipo": "reactivo",
+    "categoria": 8,
+    "cantidad": 137,
+    "minimo": 43,
+    "ubicacion": "Estante D-5",
+    "fecha_vencimiento": "2027-09-22",
+    "ultima_actualizacion": "2026-05-08T19:29:40.765Z",
+    "unidad": "mg",
+    "es_sensible": false
+  }
+},
+{
+  "model": "inventario.producto",
+  "pk": 31,
+  "fields": {
+    "nombre": "Rojo de Fenol",
+    "tipo": "reactivo",
+    "categoria": 9,
+    "cantidad": 358,
+    "minimo": 15,
+    "ubicacion": "Estante F-1",
+    "fecha_vencimiento": "2028-02-22",
+    "ultima_actualizacion": "2026-05-08T19:29:40.769Z",
+    "unidad": "mg",
+    "es_sensible": false
+  }
+},
+{
+  "model": "inventario.producto",
+  "pk": 32,
+  "fields": {
+    "nombre": "Vaso de Precipitado 26",
+    "tipo": "insumo",
+    "categoria": 12,
+    "cantidad": 198,
+    "minimo": 17,
+    "ubicacion": "Estante D-9",
+    "fecha_vencimiento": null,
+    "ultima_actualizacion": "2026-05-08T19:29:40.773Z",
+    "unidad": "par",
+    "es_sensible": false
+  }
+},
+{
+  "model": "inventario.producto",
+  "pk": 33,
+  "fields": {
+    "nombre": "Etanol",
+    "tipo": "reactivo",
+    "categoria": 7,
+    "cantidad": 397,
+    "minimo": 26,
+    "ubicacion": "Estante C-1",
+    "fecha_vencimiento": "2028-01-11",
+    "ultima_actualizacion": "2026-05-08T19:29:40.777Z",
+    "unidad": "g",
+    "es_sensible": false
+  }
+},
+{
+  "model": "inventario.producto",
+  "pk": 34,
+  "fields": {
+    "nombre": "Puntas para Pipeta 28",
+    "tipo": "insumo",
+    "categoria": 12,
+    "cantidad": 121,
+    "minimo": 86,
+    "ubicacion": "Estante A-3",
+    "fecha_vencimiento": "2026-11-01",
+    "ultima_actualizacion": "2026-05-08T19:29:40.780Z",
+    "unidad": "par",
+    "es_sensible": false
+  }
+},
+{
+  "model": "inventario.producto",
+  "pk": 35,
+  "fields": {
+    "nombre": "Peróxido de Hidrógeno",
+    "tipo": "reactivo",
+    "categoria": 7,
+    "cantidad": 358,
+    "minimo": 30,
+    "ubicacion": "Estante C-4",
+    "fecha_vencimiento": "2028-03-12",
+    "ultima_actualizacion": "2026-05-08T19:29:40.783Z",
+    "unidad": "g",
+    "es_sensible": false
+  }
+},
+{
+  "model": "inventario.producto",
+  "pk": 36,
+  "fields": {
+    "nombre": "pH-metro",
+    "tipo": "equipo",
+    "categoria": 11,
+    "cantidad": 9,
+    "minimo": 1,
+    "ubicacion": "Estante F-4",
+    "fecha_vencimiento": null,
+    "ultima_actualizacion": "2026-05-08T19:29:40.786Z",
+    "unidad": "caja",
+    "es_sensible": false
+  }
+},
+{
+  "model": "inventario.producto",
+  "pk": 37,
+  "fields": {
+    "nombre": "Autoclave 31",
+    "tipo": "equipo",
+    "categoria": 11,
+    "cantidad": 1,
+    "minimo": 3,
+    "ubicacion": "Estante E-1",
+    "fecha_vencimiento": null,
+    "ultima_actualizacion": "2026-05-08T19:29:40.790Z",
+    "unidad": "caja",
+    "es_sensible": false
+  }
+},
+{
+  "model": "inventario.producto",
+  "pk": 38,
+  "fields": {
+    "nombre": "Bureta",
+    "tipo": "insumo",
+    "categoria": 12,
+    "cantidad": 250,
+    "minimo": 16,
+    "ubicacion": "Estante A-8",
+    "fecha_vencimiento": null,
+    "ultima_actualizacion": "2026-05-08T19:29:40.795Z",
+    "unidad": "caja",
+    "es_sensible": false
+  }
+},
+{
+  "model": "inventario.producto",
+  "pk": 39,
+  "fields": {
+    "nombre": "Formaldehído",
+    "tipo": "reactivo",
+    "categoria": 14,
+    "cantidad": 90,
+    "minimo": 13,
+    "ubicacion": "Estante E-6",
+    "fecha_vencimiento": "2027-07-07",
+    "ultima_actualizacion": "2026-05-08T19:29:40.799Z",
+    "unidad": "g",
+    "es_sensible": false
+  }
+},
+{
+  "model": "inventario.producto",
+  "pk": 40,
+  "fields": {
+    "nombre": "Papel Filtro",
+    "tipo": "insumo",
+    "categoria": 12,
+    "cantidad": 936,
+    "minimo": 19,
+    "ubicacion": "Estante D-6",
+    "fecha_vencimiento": null,
+    "ultima_actualizacion": "2026-05-08T19:29:40.803Z",
+    "unidad": "caja",
+    "es_sensible": false
+  }
+},
+{
+  "model": "inventario.producto",
+  "pk": 41,
+  "fields": {
+    "nombre": "Agitador Magnético",
+    "tipo": "equipo",
+    "categoria": 11,
+    "cantidad": 9,
+    "minimo": 2,
+    "ubicacion": "Estante F-9",
+    "fecha_vencimiento": null,
+    "ultima_actualizacion": "2026-05-08T19:29:40.808Z",
+    "unidad": "caja",
+    "es_sensible": false
+  }
+},
+{
+  "model": "inventario.producto",
+  "pk": 42,
+  "fields": {
+    "nombre": "Azul de Metileno",
+    "tipo": "reactivo",
+    "categoria": 8,
+    "cantidad": 439,
+    "minimo": 27,
+    "ubicacion": "Estante A-8",
+    "fecha_vencimiento": "2026-06-18",
+    "ultima_actualizacion": "2026-05-08T19:29:40.812Z",
+    "unidad": "mg",
+    "es_sensible": false
+  }
+},
+{
+  "model": "inventario.producto",
+  "pk": 43,
+  "fields": {
+    "nombre": "Agitador Magnético 37",
+    "tipo": "equipo",
+    "categoria": 11,
+    "cantidad": 8,
+    "minimo": 2,
+    "ubicacion": "Estante C-1",
+    "fecha_vencimiento": null,
+    "ultima_actualizacion": "2026-05-08T19:29:40.816Z",
+    "unidad": "unid",
+    "es_sensible": false
+  }
+},
+{
+  "model": "inventario.producto",
+  "pk": 44,
+  "fields": {
+    "nombre": "Solución Salina",
+    "tipo": "reactivo",
+    "categoria": 7,
+    "cantidad": 393,
+    "minimo": 5,
+    "ubicacion": "Estante D-6",
+    "fecha_vencimiento": "2027-08-14",
+    "ultima_actualizacion": "2026-05-08T19:29:40.820Z",
+    "unidad": "mg",
+    "es_sensible": false
+  }
+},
+{
+  "model": "inventario.producto",
+  "pk": 45,
+  "fields": {
+    "nombre": "Puntas para Pipeta 39",
+    "tipo": "insumo",
+    "categoria": 12,
+    "cantidad": 286,
+    "minimo": 58,
+    "ubicacion": "Estante C-7",
+    "fecha_vencimiento": null,
+    "ultima_actualizacion": "2026-05-08T19:29:40.824Z",
+    "unidad": "caja",
+    "es_sensible": false
+  }
+},
+{
+  "model": "inventario.producto",
+  "pk": 46,
+  "fields": {
+    "nombre": "Espectrómetro 40",
+    "tipo": "equipo",
+    "categoria": 11,
+    "cantidad": 6,
+    "minimo": 1,
+    "ubicacion": "Estante D-2",
+    "fecha_vencimiento": null,
+    "ultima_actualizacion": "2026-05-08T19:29:40.828Z",
+    "unidad": "caja",
+    "es_sensible": false
+  }
+},
+{
+  "model": "inventario.producto",
+  "pk": 47,
+  "fields": {
+    "nombre": "Guantes de Látex 41",
+    "tipo": "insumo",
+    "categoria": 12,
+    "cantidad": 975,
+    "minimo": 99,
+    "ubicacion": "Estante E-2",
+    "fecha_vencimiento": null,
+    "ultima_actualizacion": "2026-05-08T19:29:40.831Z",
+    "unidad": "par",
+    "es_sensible": false
+  }
+},
+{
+  "model": "inventario.producto",
+  "pk": 48,
+  "fields": {
+    "nombre": "Autoclave 42",
+    "tipo": "equipo",
+    "categoria": 10,
+    "cantidad": 8,
+    "minimo": 3,
+    "ubicacion": "Estante F-5",
+    "fecha_vencimiento": null,
+    "ultima_actualizacion": "2026-05-08T19:29:40.835Z",
+    "unidad": "unid",
+    "es_sensible": false
+  }
+},
+{
+  "model": "inventario.producto",
+  "pk": 49,
+  "fields": {
+    "nombre": "Microscopio 43",
+    "tipo": "equipo",
+    "categoria": 10,
+    "cantidad": 3,
+    "minimo": 3,
+    "ubicacion": "Estante E-9",
+    "fecha_vencimiento": null,
+    "ultima_actualizacion": "2026-05-08T19:29:40.838Z",
+    "unidad": "caja",
+    "es_sensible": false
+  }
+},
+{
+  "model": "inventario.producto",
+  "pk": 50,
+  "fields": {
+    "nombre": "Matraz Erlenmeyer",
+    "tipo": "insumo",
+    "categoria": 12,
+    "cantidad": 343,
+    "minimo": 18,
+    "ubicacion": "Estante C-4",
+    "fecha_vencimiento": "2026-09-28",
+    "ultima_actualizacion": "2026-05-08T19:29:40.843Z",
+    "unidad": "par",
+    "es_sensible": false
+  }
+},
+{
+  "model": "inventario.producto",
+  "pk": 51,
+  "fields": {
+    "nombre": "Papel pH 45",
+    "tipo": "insumo",
+    "categoria": 12,
+    "cantidad": 843,
+    "minimo": 85,
+    "ubicacion": "Estante D-1",
+    "fecha_vencimiento": null,
+    "ultima_actualizacion": "2026-05-08T19:29:40.847Z",
+    "unidad": "caja",
+    "es_sensible": false
+  }
+},
+{
+  "model": "inventario.producto",
+  "pk": 52,
+  "fields": {
+    "nombre": "Glutaraldehído 46",
+    "tipo": "reactivo",
+    "categoria": 14,
+    "cantidad": 488,
+    "minimo": 9,
+    "ubicacion": "Estante A-9",
+    "fecha_vencimiento": "2026-12-15",
+    "ultima_actualizacion": "2026-05-08T19:29:40.850Z",
+    "unidad": "mg",
+    "es_sensible": false
+  }
+},
+{
+  "model": "inventario.producto",
+  "pk": 53,
+  "fields": {
+    "nombre": "Mascarilla N95 47",
+    "tipo": "insumo",
+    "categoria": 12,
+    "cantidad": 577,
+    "minimo": 53,
+    "ubicacion": "Estante A-7",
+    "fecha_vencimiento": "2027-01-22",
+    "ultima_actualizacion": "2026-05-08T19:29:40.854Z",
+    "unidad": "unid",
+    "es_sensible": false
+  }
+},
+{
+  "model": "inventario.producto",
+  "pk": 54,
+  "fields": {
+    "nombre": "Electroencefalógrafo 48",
+    "tipo": "equipo",
+    "categoria": 11,
+    "cantidad": 10,
+    "minimo": 3,
+    "ubicacion": "Estante F-10",
+    "fecha_vencimiento": null,
+    "ultima_actualizacion": "2026-05-08T19:29:40.858Z",
+    "unidad": "caja",
+    "es_sensible": false
+  }
+},
+{
+  "model": "inventario.producto",
+  "pk": 55,
+  "fields": {
+    "nombre": "Placas de Petri",
+    "tipo": "insumo",
+    "categoria": 12,
+    "cantidad": 81,
+    "minimo": 18,
+    "ubicacion": "Estante E-6",
+    "fecha_vencimiento": null,
+    "ultima_actualizacion": "2026-05-08T19:29:40.861Z",
+    "unidad": "unid",
+    "es_sensible": false
+  }
+},
+{
+  "model": "inventario.producto",
+  "pk": 56,
+  "fields": {
+    "nombre": "Buffer pH 7",
+    "tipo": "reactivo",
+    "categoria": 7,
+    "cantidad": 306,
+    "minimo": 26,
+    "ubicacion": "Estante A-6",
+    "fecha_vencimiento": "2027-12-18",
+    "ultima_actualizacion": "2026-05-08T19:29:40.864Z",
+    "unidad": "mg",
+    "es_sensible": false
+  }
+},
+{
+  "model": "inventario.producto",
+  "pk": 57,
+  "fields": {
+    "nombre": "Ácido Sulfúrico",
+    "tipo": "reactivo",
+    "categoria": 7,
+    "cantidad": 1572,
+    "minimo": 94,
+    "ubicacion": "Estante Reactivos - Reactivo Á - A4",
+    "fecha_vencimiento": "2028-04-10",
+    "ultima_actualizacion": "2026-05-08T19:40:45.811Z",
+    "unidad": "ml",
+    "es_sensible": false
+  }
+},
+{
+  "model": "inventario.producto",
+  "pk": 58,
+  "fields": {
+    "nombre": "Ácido Clorhídrico",
+    "tipo": "reactivo",
+    "categoria": 7,
+    "cantidad": 290,
+    "minimo": 81,
+    "ubicacion": "Estante Reactivos - Reactivo Á - A3",
+    "fecha_vencimiento": "2028-10-14",
+    "ultima_actualizacion": "2026-05-08T19:40:45.816Z",
+    "unidad": "L",
+    "es_sensible": false
+  }
+},
+{
+  "model": "inventario.producto",
+  "pk": 59,
+  "fields": {
+    "nombre": "Ácido Nítrico",
+    "tipo": "reactivo",
+    "categoria": 7,
+    "cantidad": 1717,
+    "minimo": 95,
+    "ubicacion": "Estante Reactivos - Reactivo Á - C1",
+    "fecha_vencimiento": "2028-06-27",
+    "ultima_actualizacion": "2026-05-08T19:40:45.822Z",
+    "unidad": "L",
+    "es_sensible": false
+  }
+},
+{
+  "model": "inventario.producto",
+  "pk": 60,
+  "fields": {
+    "nombre": "Ácido Acético",
+    "tipo": "reactivo",
+    "categoria": 7,
+    "cantidad": 222,
+    "minimo": 79,
+    "ubicacion": "Estante Reactivos - Reactivo Á - B2",
+    "fecha_vencimiento": "2026-11-18",
+    "ultima_actualizacion": "2026-05-08T19:40:45.827Z",
+    "unidad": "ml",
+    "es_sensible": false
+  }
+},
+{
+  "model": "inventario.producto",
+  "pk": 61,
+  "fields": {
+    "nombre": "Ácido Fosfórico",
+    "tipo": "reactivo",
+    "categoria": 7,
+    "cantidad": 117,
+    "minimo": 75,
+    "ubicacion": "Estante Reactivos - Reactivo Á - C4",
+    "fecha_vencimiento": "2027-06-07",
+    "ultima_actualizacion": "2026-05-08T19:40:45.832Z",
+    "unidad": "L",
+    "es_sensible": false
+  }
+},
+{
+  "model": "inventario.producto",
+  "pk": 62,
+  "fields": {
+    "nombre": "Ácido Bórico",
+    "tipo": "reactivo",
+    "categoria": 7,
+    "cantidad": 1392,
+    "minimo": 52,
+    "ubicacion": "Estante Reactivos - Reactivo Á - B3",
+    "fecha_vencimiento": "2027-10-15",
+    "ultima_actualizacion": "2026-05-08T19:40:45.835Z",
+    "unidad": "L",
+    "es_sensible": false
+  }
+},
+{
+  "model": "inventario.producto",
+  "pk": 63,
+  "fields": {
+    "nombre": "Ácido Cítrico",
+    "tipo": "reactivo",
+    "categoria": 7,
+    "cantidad": 1603,
+    "minimo": 91,
+    "ubicacion": "Estante Reactivos - Reactivo Á - B3",
+    "fecha_vencimiento": "2027-03-11",
+    "ultima_actualizacion": "2026-05-08T19:40:45.840Z",
+    "unidad": "L",
+    "es_sensible": false
+  }
+},
+{
+  "model": "inventario.producto",
+  "pk": 64,
+  "fields": {
+    "nombre": "Ácido Láctico",
+    "tipo": "reactivo",
+    "categoria": 7,
+    "cantidad": 1719,
+    "minimo": 10,
+    "ubicacion": "Estante Reactivos - Reactivo Á - C5",
+    "fecha_vencimiento": "2028-09-30",
+    "ultima_actualizacion": "2026-05-08T19:40:45.844Z",
+    "unidad": "ml",
+    "es_sensible": false
+  }
+},
+{
+  "model": "inventario.producto",
+  "pk": 65,
+  "fields": {
+    "nombre": "Hidróxido de Sodio",
+    "tipo": "reactivo",
+    "categoria": 8,
+    "cantidad": 1875,
+    "minimo": 76,
+    "ubicacion": "Estante Reactivos - Reactivo B - A3",
+    "fecha_vencimiento": "2028-09-23",
+    "ultima_actualizacion": "2026-05-08T19:40:45.847Z",
+    "unidad": "ml",
+    "es_sensible": false
+  }
+},
+{
+  "model": "inventario.producto",
+  "pk": 66,
+  "fields": {
+    "nombre": "Hidróxido de Potasio",
+    "tipo": "reactivo",
+    "categoria": 8,
+    "cantidad": 1167,
+    "minimo": 70,
+    "ubicacion": "Estante Reactivos - Reactivo B - B4",
+    "fecha_vencimiento": "2028-04-26",
+    "ultima_actualizacion": "2026-05-08T19:40:45.850Z",
+    "unidad": "ml",
+    "es_sensible": false
+  }
+},
+{
+  "model": "inventario.producto",
+  "pk": 67,
+  "fields": {
+    "nombre": "Hidróxido de Amonio",
+    "tipo": "reactivo",
+    "categoria": 8,
+    "cantidad": 142,
+    "minimo": 39,
+    "ubicacion": "Estante Reactivos - Reactivo B - D4",
+    "fecha_vencimiento": "2027-06-25",
+    "ultima_actualizacion": "2026-05-08T19:40:45.854Z",
+    "unidad": "L",
+    "es_sensible": false
+  }
+},
+{
+  "model": "inventario.producto",
+  "pk": 68,
+  "fields": {
+    "nombre": "Carbonato de Sodio",
+    "tipo": "reactivo",
+    "categoria": 8,
+    "cantidad": 54,
+    "minimo": 21,
+    "ubicacion": "Estante Reactivos - Reactivo B - D1",
+    "fecha_vencimiento": "2027-03-31",
+    "ultima_actualizacion": "2026-05-08T19:40:45.859Z",
+    "unidad": "mg",
+    "es_sensible": false
+  }
+},
+{
+  "model": "inventario.producto",
+  "pk": 69,
+  "fields": {
+    "nombre": "Bicarbonato de Sodio",
+    "tipo": "reactivo",
+    "categoria": 8,
+    "cantidad": 900,
+    "minimo": 37,
+    "ubicacion": "Estante Reactivos - Reactivo B - D1",
+    "fecha_vencimiento": "2027-02-26",
+    "ultima_actualizacion": "2026-05-08T19:40:45.862Z",
+    "unidad": "g",
+    "es_sensible": false
+  }
+},
+{
+  "model": "inventario.producto",
+  "pk": 70,
+  "fields": {
+    "nombre": "Hidróxido de Calcio",
+    "tipo": "reactivo",
+    "categoria": 8,
+    "cantidad": 1064,
+    "minimo": 51,
+    "ubicacion": "Estante Reactivos - Reactivo B - C2",
+    "fecha_vencimiento": "2029-04-05",
+    "ultima_actualizacion": "2026-05-08T19:40:45.865Z",
+    "unidad": "ml",
+    "es_sensible": false
+  }
+},
+{
+  "model": "inventario.producto",
+  "pk": 71,
+  "fields": {
+    "nombre": "Tris Base",
+    "tipo": "reactivo",
+    "categoria": 8,
+    "cantidad": 974,
+    "minimo": 17,
+    "ubicacion": "Estante Reactivos - Reactivo B - A2",
+    "fecha_vencimiento": "2029-01-18",
+    "ultima_actualizacion": "2026-05-08T19:40:45.869Z",
+    "unidad": "kg",
+    "es_sensible": false
+  }
+},
+{
+  "model": "inventario.producto",
+  "pk": 72,
+  "fields": {
+    "nombre": "Amoníaco Concentrado",
+    "tipo": "reactivo",
+    "categoria": 8,
+    "cantidad": 427,
+    "minimo": 57,
+    "ubicacion": "Estante Reactivos - Reactivo B - A4",
+    "fecha_vencimiento": "2028-05-25",
+    "ultima_actualizacion": "2026-05-08T19:40:45.873Z",
+    "unidad": "g",
+    "es_sensible": false
+  }
+},
+{
+  "model": "inventario.producto",
+  "pk": 73,
+  "fields": {
+    "nombre": "Etanol Absoluto",
+    "tipo": "reactivo",
+    "categoria": 9,
+    "cantidad": 838,
+    "minimo": 37,
+    "ubicacion": "Estante Reactivos - Solvente - C5",
+    "fecha_vencimiento": "2029-03-06",
+    "ultima_actualizacion": "2026-05-08T19:40:45.877Z",
+    "unidad": "ml",
+    "es_sensible": false
+  }
+},
+{
+  "model": "inventario.producto",
+  "pk": 74,
+  "fields": {
+    "nombre": "Metanol",
+    "tipo": "reactivo",
+    "categoria": 9,
+    "cantidad": 643,
+    "minimo": 20,
+    "ubicacion": "Estante Reactivos - Solvente - C2",
+    "fecha_vencimiento": "2027-02-08",
+    "ultima_actualizacion": "2026-05-08T19:40:45.881Z",
+    "unidad": "ml",
+    "es_sensible": false
+  }
+},
+{
+  "model": "inventario.producto",
+  "pk": 75,
+  "fields": {
+    "nombre": "Acetona",
+    "tipo": "reactivo",
+    "categoria": 9,
+    "cantidad": 1616,
+    "minimo": 13,
+    "ubicacion": "Estante Reactivos - Solvente - C5",
+    "fecha_vencimiento": "2026-12-08",
+    "ultima_actualizacion": "2026-05-08T19:40:45.884Z",
+    "unidad": "ml",
+    "es_sensible": false
+  }
+},
+{
+  "model": "inventario.producto",
+  "pk": 76,
+  "fields": {
+    "nombre": "Cloroformo",
+    "tipo": "reactivo",
+    "categoria": 9,
+    "cantidad": 182,
+    "minimo": 72,
+    "ubicacion": "Estante Reactivos - Solvente - C2",
+    "fecha_vencimiento": "2026-12-02",
+    "ultima_actualizacion": "2026-05-08T19:40:45.889Z",
+    "unidad": "kg",
+    "es_sensible": false
+  }
+},
+{
+  "model": "inventario.producto",
+  "pk": 77,
+  "fields": {
+    "nombre": "Hexano",
+    "tipo": "reactivo",
+    "categoria": 9,
+    "cantidad": 566,
+    "minimo": 89,
+    "ubicacion": "Estante Reactivos - Solvente - C4",
+    "fecha_vencimiento": "2028-01-18",
+    "ultima_actualizacion": "2026-05-08T19:40:45.893Z",
+    "unidad": "mg",
+    "es_sensible": false
+  }
+},
+{
+  "model": "inventario.producto",
+  "pk": 78,
+  "fields": {
+    "nombre": "Tolueno",
+    "tipo": "reactivo",
+    "categoria": 9,
+    "cantidad": 167,
+    "minimo": 80,
+    "ubicacion": "Estante Reactivos - Solvente - A4",
+    "fecha_vencimiento": "2027-11-01",
+    "ultima_actualizacion": "2026-05-08T19:40:45.896Z",
+    "unidad": "mg",
+    "es_sensible": false
+  }
+},
+{
+  "model": "inventario.producto",
+  "pk": 79,
+  "fields": {
+    "nombre": "Éter de Petróleo",
+    "tipo": "reactivo",
+    "categoria": 9,
+    "cantidad": 159,
+    "minimo": 36,
+    "ubicacion": "Estante Reactivos - Solvente - B1",
+    "fecha_vencimiento": "2027-07-01",
+    "ultima_actualizacion": "2026-05-08T19:40:45.900Z",
+    "unidad": "kg",
+    "es_sensible": false
+  }
+},
+{
+  "model": "inventario.producto",
+  "pk": 80,
+  "fields": {
+    "nombre": "Diclorometano",
+    "tipo": "reactivo",
+    "categoria": 9,
+    "cantidad": 717,
+    "minimo": 19,
+    "ubicacion": "Estante Reactivos - Solvente - A1",
+    "fecha_vencimiento": "2028-09-20",
+    "ultima_actualizacion": "2026-05-08T19:40:45.903Z",
+    "unidad": "mg",
+    "es_sensible": false
+  }
+},
+{
+  "model": "inventario.producto",
+  "pk": 81,
+  "fields": {
+    "nombre": "Albúmina Sérica",
+    "tipo": "reactivo",
+    "categoria": 14,
+    "cantidad": 3182,
+    "minimo": 28,
+    "ubicacion": "Estante Reactivos - Reactivo B - D3",
+    "fecha_vencimiento": "2029-01-10",
+    "ultima_actualizacion": "2026-05-08T19:40:45.907Z",
+    "unidad": "kg",
+    "es_sensible": false
+  }
+},
+{
+  "model": "inventario.producto",
+  "pk": 82,
+  "fields": {
+    "nombre": "Glucosa Anhidra",
+    "tipo": "reactivo",
+    "categoria": 14,
+    "cantidad": 4256,
+    "minimo": 40,
+    "ubicacion": "Estante Reactivos - Reactivo B - D5",
+    "fecha_vencimiento": "2028-03-13",
+    "ultima_actualizacion": "2026-05-08T19:40:45.910Z",
+    "unidad": "kg",
+    "es_sensible": false
+  }
+},
+{
+  "model": "inventario.producto",
+  "pk": 83,
+  "fields": {
+    "nombre": "Caseína",
+    "tipo": "reactivo",
+    "categoria": 14,
+    "cantidad": 159,
+    "minimo": 74,
+    "ubicacion": "Estante Reactivos - Reactivo B - B3",
+    "fecha_vencimiento": "2028-10-04",
+    "ultima_actualizacion": "2026-05-08T19:40:45.913Z",
+    "unidad": "g",
+    "es_sensible": false
+  }
+},
+{
+  "model": "inventario.producto",
+  "pk": 84,
+  "fields": {
+    "nombre": "Agar Bacteriológico",
+    "tipo": "reactivo",
+    "categoria": 14,
+    "cantidad": 3393,
+    "minimo": 74,
+    "ubicacion": "Estante Reactivos - Reactivo B - D2",
+    "fecha_vencimiento": "2028-02-01",
+    "ultima_actualizacion": "2026-05-08T19:40:45.916Z",
+    "unidad": "g",
+    "es_sensible": false
+  }
+},
+{
+  "model": "inventario.producto",
+  "pk": 85,
+  "fields": {
+    "nombre": "Caldo Nutritivo",
+    "tipo": "reactivo",
+    "categoria": 14,
+    "cantidad": 3330,
+    "minimo": 44,
+    "ubicacion": "Estante Reactivos - Reactivo B - C4",
+    "fecha_vencimiento": "2027-10-11",
+    "ultima_actualizacion": "2026-05-08T19:40:45.919Z",
+    "unidad": "kg",
+    "es_sensible": false
+  }
+},
+{
+  "model": "inventario.producto",
+  "pk": 86,
+  "fields": {
+    "nombre": "Solución Salina",
+    "tipo": "reactivo",
+    "categoria": 14,
+    "cantidad": 561,
+    "minimo": 73,
+    "ubicacion": "Estante Reactivos - Reactivo B - D4",
+    "fecha_vencimiento": "2027-10-20",
+    "ultima_actualizacion": "2026-05-08T19:40:45.924Z",
+    "unidad": "g",
+    "es_sensible": false
+  }
+},
+{
+  "model": "inventario.producto",
+  "pk": 87,
+  "fields": {
+    "nombre": "Buffer PBS",
+    "tipo": "reactivo",
+    "categoria": 14,
+    "cantidad": 948,
+    "minimo": 55,
+    "ubicacion": "Estante Reactivos - Reactivo B - D1",
+    "fecha_vencimiento": "2028-07-13",
+    "ultima_actualizacion": "2026-05-08T19:40:45.928Z",
+    "unidad": "mg",
+    "es_sensible": false
+  }
+},
+{
+  "model": "inventario.producto",
+  "pk": 88,
+  "fields": {
+    "nombre": "Tampón Tris-EDTA",
+    "tipo": "reactivo",
+    "categoria": 14,
+    "cantidad": 572,
+    "minimo": 68,
+    "ubicacion": "Estante Reactivos - Reactivo B - C5",
+    "fecha_vencimiento": "2028-10-26",
+    "ultima_actualizacion": "2026-05-08T19:40:45.931Z",
+    "unidad": "mg",
+    "es_sensible": false
+  }
+},
+{
+  "model": "inventario.producto",
+  "pk": 89,
+  "fields": {
+    "nombre": "Peróxido de Hidrógeno",
+    "tipo": "reactivo",
+    "categoria": 1,
+    "cantidad": 562,
+    "minimo": 31,
+    "ubicacion": "Estante Reactivos - Reactivo - C3",
+    "fecha_vencimiento": "2028-09-10",
+    "ultima_actualizacion": "2026-05-08T19:40:45.934Z",
+    "unidad": "mg",
+    "es_sensible": false
+  }
+},
+{
+  "model": "inventario.producto",
+  "pk": 90,
+  "fields": {
+    "nombre": "Formaldehído",
+    "tipo": "reactivo",
+    "categoria": 1,
+    "cantidad": 607,
+    "minimo": 63,
+    "ubicacion": "Estante Reactivos - Reactivo - D3",
+    "fecha_vencimiento": "2026-12-29",
+    "ultima_actualizacion": "2026-05-08T19:40:45.938Z",
+    "unidad": "kg",
+    "es_sensible": false
+  }
+},
+{
+  "model": "inventario.producto",
+  "pk": 91,
+  "fields": {
+    "nombre": "Glutaraldehído",
+    "tipo": "reactivo",
+    "categoria": 1,
+    "cantidad": 113,
+    "minimo": 93,
+    "ubicacion": "Estante Reactivos - Reactivo - A3",
+    "fecha_vencimiento": "2028-11-02",
+    "ultima_actualizacion": "2026-05-08T19:40:45.942Z",
+    "unidad": "kg",
+    "es_sensible": false
+  }
+},
+{
+  "model": "inventario.producto",
+  "pk": 92,
+  "fields": {
+    "nombre": "Azul de Metileno",
+    "tipo": "reactivo",
+    "categoria": 1,
+    "cantidad": 303,
+    "minimo": 21,
+    "ubicacion": "Estante Reactivos - Reactivo - D2",
+    "fecha_vencimiento": "2026-12-06",
+    "ultima_actualizacion": "2026-05-08T19:40:45.945Z",
+    "unidad": "kg",
+    "es_sensible": false
+  }
+},
+{
+  "model": "inventario.producto",
+  "pk": 93,
+  "fields": {
+    "nombre": "Rojo de Fenol",
+    "tipo": "reactivo",
+    "categoria": 1,
+    "cantidad": 741,
+    "minimo": 30,
+    "ubicacion": "Estante Reactivos - Reactivo - D5",
+    "fecha_vencimiento": "2029-02-15",
+    "ultima_actualizacion": "2026-05-28T19:49:37.165Z",
+    "unidad": "g",
+    "es_sensible": true
+  }
+},
+{
+  "model": "inventario.producto",
+  "pk": 94,
+  "fields": {
+    "nombre": "Indicador Universal",
+    "tipo": "reactivo",
+    "categoria": 1,
+    "cantidad": 425,
+    "minimo": 44,
+    "ubicacion": "Estante Reactivos - Reactivo - B4",
+    "fecha_vencimiento": "2028-03-26",
+    "ultima_actualizacion": "2026-05-08T19:40:45.951Z",
+    "unidad": "mg",
+    "es_sensible": false
+  }
+},
+{
+  "model": "inventario.producto",
+  "pk": 95,
+  "fields": {
+    "nombre": "Yodo",
+    "tipo": "reactivo",
+    "categoria": 1,
+    "cantidad": 528,
+    "minimo": 92,
+    "ubicacion": "Estante Reactivos - Reactivo - D3",
+    "fecha_vencimiento": "2028-08-13",
+    "ultima_actualizacion": "2026-05-08T19:40:45.955Z",
+    "unidad": "g",
+    "es_sensible": false
+  }
+},
+{
+  "model": "inventario.producto",
+  "pk": 96,
+  "fields": {
+    "nombre": "Tiosulfato de Sodio",
+    "tipo": "reactivo",
+    "categoria": 1,
+    "cantidad": 960,
+    "minimo": 77,
+    "ubicacion": "Estante Reactivos - Reactivo - B1",
+    "fecha_vencimiento": "2028-06-08",
+    "ultima_actualizacion": "2026-05-08T19:40:45.960Z",
+    "unidad": "mg",
+    "es_sensible": false
+  }
+},
+{
+  "model": "inventario.producto",
+  "pk": 97,
+  "fields": {
+    "nombre": "Yoduro de Potasio",
+    "tipo": "reactivo",
+    "categoria": 4,
+    "cantidad": 468,
+    "minimo": 62,
+    "ubicacion": "Estante Reactivos - Reactivos - C5",
+    "fecha_vencimiento": "2027-02-18",
+    "ultima_actualizacion": "2026-05-08T19:40:45.963Z",
+    "unidad": "g",
+    "es_sensible": false
+  }
+},
+{
+  "model": "inventario.producto",
+  "pk": 98,
+  "fields": {
+    "nombre": "Permanganato de Potasio",
+    "tipo": "reactivo",
+    "categoria": 4,
+    "cantidad": 584,
+    "minimo": 64,
+    "ubicacion": "Estante Reactivos - Reactivos - A2",
+    "fecha_vencimiento": "2027-10-28",
+    "ultima_actualizacion": "2026-05-08T19:40:45.966Z",
+    "unidad": "mg",
+    "es_sensible": false
+  }
+},
+{
+  "model": "inventario.producto",
+  "pk": 99,
+  "fields": {
+    "nombre": "Dicromato de Potasio",
+    "tipo": "reactivo",
+    "categoria": 4,
+    "cantidad": 169,
+    "minimo": 59,
+    "ubicacion": "Estante Reactivos - Reactivos - D2",
+    "fecha_vencimiento": "2028-08-31",
+    "ultima_actualizacion": "2026-05-08T19:40:45.970Z",
+    "unidad": "g",
+    "es_sensible": false
+  }
+},
+{
+  "model": "inventario.producto",
+  "pk": 100,
+  "fields": {
+    "nombre": "Sulfato de Cobre",
+    "tipo": "reactivo",
+    "categoria": 4,
+    "cantidad": 543,
+    "minimo": 36,
+    "ubicacion": "Estante Reactivos - Reactivos - B3",
+    "fecha_vencimiento": "2028-03-27",
+    "ultima_actualizacion": "2026-05-08T19:40:45.975Z",
+    "unidad": "g",
+    "es_sensible": false
+  }
+},
+{
+  "model": "inventario.producto",
+  "pk": 101,
+  "fields": {
+    "nombre": "Cloruro de Sodio",
+    "tipo": "reactivo",
+    "categoria": 4,
+    "cantidad": 811,
+    "minimo": 29,
+    "ubicacion": "Estante Reactivos - Reactivos - A4",
+    "fecha_vencimiento": "2029-02-25",
+    "ultima_actualizacion": "2026-05-08T19:40:45.979Z",
+    "unidad": "g",
+    "es_sensible": false
+  }
+},
+{
+  "model": "inventario.producto",
+  "pk": 102,
+  "fields": {
+    "nombre": "Sulfato de Magnesio",
+    "tipo": "reactivo",
+    "categoria": 4,
+    "cantidad": 111,
+    "minimo": 48,
+    "ubicacion": "Estante Reactivos - Reactivos - B5",
+    "fecha_vencimiento": "2027-01-08",
+    "ultima_actualizacion": "2026-05-08T19:40:45.982Z",
+    "unidad": "g",
+    "es_sensible": false
+  }
+},
+{
+  "model": "inventario.producto",
+  "pk": 103,
+  "fields": {
+    "nombre": "Espectrofotómetro UV-Vis",
+    "tipo": "equipo",
+    "categoria": 10,
+    "cantidad": 8,
+    "minimo": 1,
+    "ubicacion": "Laboratorio 1 - Estante E3",
+    "fecha_vencimiento": null,
+    "ultima_actualizacion": "2026-05-08T19:40:46.009Z",
+    "unidad": "unid",
+    "es_sensible": false
+  }
+},
+{
+  "model": "inventario.producto",
+  "pk": 104,
+  "fields": {
+    "nombre": "Cromatógrafo de Gases",
+    "tipo": "equipo",
+    "categoria": 10,
+    "cantidad": 10,
+    "minimo": 3,
+    "ubicacion": "Laboratorio 2 - Estante A3",
+    "fecha_vencimiento": null,
+    "ultima_actualizacion": "2026-05-08T19:40:46.013Z",
+    "unidad": "unid",
+    "es_sensible": false
+  }
+},
+{
+  "model": "inventario.producto",
+  "pk": 105,
+  "fields": {
+    "nombre": "pH-metro Digital",
+    "tipo": "equipo",
+    "categoria": 10,
+    "cantidad": 7,
+    "minimo": 1,
+    "ubicacion": "Laboratorio 2 - Estante E2",
+    "fecha_vencimiento": null,
+    "ultima_actualizacion": "2026-05-08T19:40:46.016Z",
+    "unidad": "unid",
+    "es_sensible": false
+  }
+},
+{
+  "model": "inventario.producto",
+  "pk": 106,
+  "fields": {
+    "nombre": "Balanza Analítica 0.1mg",
+    "tipo": "equipo",
+    "categoria": 10,
+    "cantidad": 8,
+    "minimo": 3,
+    "ubicacion": "Laboratorio 1 - Estante F3",
+    "fecha_vencimiento": null,
+    "ultima_actualizacion": "2026-05-08T19:40:46.020Z",
+    "unidad": "unid",
+    "es_sensible": false
+  }
+},
+{
+  "model": "inventario.producto",
+  "pk": 107,
+  "fields": {
+    "nombre": "Conductímetro",
+    "tipo": "equipo",
+    "categoria": 10,
+    "cantidad": 9,
+    "minimo": 1,
+    "ubicacion": "Laboratorio 4 - Estante A3",
+    "fecha_vencimiento": null,
+    "ultima_actualizacion": "2026-05-08T19:40:46.025Z",
+    "unidad": "unid",
+    "es_sensible": false
+  }
+},
+{
+  "model": "inventario.producto",
+  "pk": 108,
+  "fields": {
+    "nombre": "Espectrómetro de Masas",
+    "tipo": "equipo",
+    "categoria": 10,
+    "cantidad": 1,
+    "minimo": 2,
+    "ubicacion": "Laboratorio 4 - Estante C2",
+    "fecha_vencimiento": null,
+    "ultima_actualizacion": "2026-05-08T19:40:46.028Z",
+    "unidad": "unid",
+    "es_sensible": false
+  }
+},
+{
+  "model": "inventario.producto",
+  "pk": 109,
+  "fields": {
+    "nombre": "HPLC",
+    "tipo": "equipo",
+    "categoria": 10,
+    "cantidad": 1,
+    "minimo": 2,
+    "ubicacion": "Laboratorio 2 - Estante F1",
+    "fecha_vencimiento": null,
+    "ultima_actualizacion": "2026-05-08T19:40:46.032Z",
+    "unidad": "unid",
+    "es_sensible": false
+  }
+},
+{
+  "model": "inventario.producto",
+  "pk": 110,
+  "fields": {
+    "nombre": "Refractómetro",
+    "tipo": "equipo",
+    "categoria": 10,
+    "cantidad": 8,
+    "minimo": 3,
+    "ubicacion": "Laboratorio 5 - Estante F2",
+    "fecha_vencimiento": null,
+    "ultima_actualizacion": "2026-05-08T19:40:46.035Z",
+    "unidad": "unid",
+    "es_sensible": false
+  }
+},
+{
+  "model": "inventario.producto",
+  "pk": 111,
+  "fields": {
+    "nombre": "Polarímetro",
+    "tipo": "equipo",
+    "categoria": 10,
+    "cantidad": 8,
+    "minimo": 3,
+    "ubicacion": "Laboratorio 2 - Estante F2",
+    "fecha_vencimiento": null,
+    "ultima_actualizacion": "2026-05-08T19:40:46.038Z",
+    "unidad": "unid",
+    "es_sensible": false
+  }
+},
+{
+  "model": "inventario.producto",
+  "pk": 112,
+  "fields": {
+    "nombre": "Campana de Flujo Laminar",
+    "tipo": "equipo",
+    "categoria": 11,
+    "cantidad": 3,
+    "minimo": 1,
+    "ubicacion": "Laboratorio 5 - Estante A2",
+    "fecha_vencimiento": null,
+    "ultima_actualizacion": "2026-05-08T19:40:46.041Z",
+    "unidad": "unid",
+    "es_sensible": false
+  }
+},
+{
+  "model": "inventario.producto",
+  "pk": 113,
+  "fields": {
+    "nombre": "Autoclave de Esterilización",
+    "tipo": "equipo",
+    "categoria": 11,
+    "cantidad": 9,
+    "minimo": 2,
+    "ubicacion": "Laboratorio 3 - Estante F1",
+    "fecha_vencimiento": null,
+    "ultima_actualizacion": "2026-05-08T19:40:46.044Z",
+    "unidad": "unid",
+    "es_sensible": false
+  }
+},
+{
+  "model": "inventario.producto",
+  "pk": 114,
+  "fields": {
+    "nombre": "Ducha de Emergencia",
+    "tipo": "equipo",
+    "categoria": 11,
+    "cantidad": 3,
+    "minimo": 2,
+    "ubicacion": "Laboratorio 4 - Estante F3",
+    "fecha_vencimiento": null,
+    "ultima_actualizacion": "2026-05-08T19:40:46.048Z",
+    "unidad": "unid",
+    "es_sensible": false
+  }
+},
+{
+  "model": "inventario.producto",
+  "pk": 115,
+  "fields": {
+    "nombre": "Lavaojos Portátil",
+    "tipo": "equipo",
+    "categoria": 11,
+    "cantidad": 4,
+    "minimo": 1,
+    "ubicacion": "Laboratorio 2 - Estante B3",
+    "fecha_vencimiento": null,
+    "ultima_actualizacion": "2026-05-08T19:40:46.051Z",
+    "unidad": "unid",
+    "es_sensible": false
+  }
+},
+{
+  "model": "inventario.producto",
+  "pk": 116,
+  "fields": {
+    "nombre": "Extintor CO2",
+    "tipo": "equipo",
+    "categoria": 11,
+    "cantidad": 3,
+    "minimo": 2,
+    "ubicacion": "Laboratorio 5 - Estante A1",
+    "fecha_vencimiento": null,
+    "ultima_actualizacion": "2026-05-08T19:40:46.055Z",
+    "unidad": "unid",
+    "es_sensible": false
+  }
+},
+{
+  "model": "inventario.producto",
+  "pk": 117,
+  "fields": {
+    "nombre": "Gabinete de Bioseguridad",
+    "tipo": "equipo",
+    "categoria": 11,
+    "cantidad": 4,
+    "minimo": 1,
+    "ubicacion": "Laboratorio 2 - Estante C3",
+    "fecha_vencimiento": null,
+    "ultima_actualizacion": "2026-05-08T19:40:46.058Z",
+    "unidad": "unid",
+    "es_sensible": false
+  }
+},
+{
+  "model": "inventario.producto",
+  "pk": 118,
+  "fields": {
+    "nombre": "Centrífuga de Alta Velocidad",
+    "tipo": "equipo",
+    "categoria": 3,
+    "cantidad": 5,
+    "minimo": 2,
+    "ubicacion": "Laboratorio 5 - Estante C2",
+    "fecha_vencimiento": null,
+    "ultima_actualizacion": "2026-05-08T19:40:46.062Z",
+    "unidad": "unid",
+    "es_sensible": false
+  }
+},
+{
+  "model": "inventario.producto",
+  "pk": 119,
+  "fields": {
+    "nombre": "Incubadora de Cultivos",
+    "tipo": "equipo",
+    "categoria": 3,
+    "cantidad": 9,
+    "minimo": 1,
+    "ubicacion": "Laboratorio 4 - Estante E3",
+    "fecha_vencimiento": null,
+    "ultima_actualizacion": "2026-05-08T19:40:46.065Z",
+    "unidad": "unid",
+    "es_sensible": false
+  }
+},
+{
+  "model": "inventario.producto",
+  "pk": 120,
+  "fields": {
+    "nombre": "Agitador Magnético",
+    "tipo": "equipo",
+    "categoria": 3,
+    "cantidad": 4,
+    "minimo": 3,
+    "ubicacion": "Laboratorio 4 - Estante F3",
+    "fecha_vencimiento": null,
+    "ultima_actualizacion": "2026-05-08T19:40:46.068Z",
+    "unidad": "unid",
+    "es_sensible": false
+  }
+},
+{
+  "model": "inventario.producto",
+  "pk": 121,
+  "fields": {
+    "nombre": "Bomba de Vacío",
+    "tipo": "equipo",
+    "categoria": 3,
+    "cantidad": 2,
+    "minimo": 2,
+    "ubicacion": "Laboratorio 1 - Estante A1",
+    "fecha_vencimiento": null,
+    "ultima_actualizacion": "2026-05-08T19:40:46.072Z",
+    "unidad": "unid",
+    "es_sensible": false
+  }
+},
+{
+  "model": "inventario.producto",
+  "pk": 122,
+  "fields": {
+    "nombre": "Termociclador PCR",
+    "tipo": "equipo",
+    "categoria": 3,
+    "cantidad": 7,
+    "minimo": 2,
+    "ubicacion": "Laboratorio 4 - Estante B3",
+    "fecha_vencimiento": null,
+    "ultima_actualizacion": "2026-05-08T19:40:46.075Z",
+    "unidad": "unid",
+    "es_sensible": false
+  }
+},
+{
+  "model": "inventario.producto",
+  "pk": 123,
+  "fields": {
+    "nombre": "Electroencefalógrafo",
+    "tipo": "equipo",
+    "categoria": 3,
+    "cantidad": 6,
+    "minimo": 1,
+    "ubicacion": "Laboratorio 5 - Estante D1",
+    "fecha_vencimiento": null,
+    "ultima_actualizacion": "2026-05-08T19:40:46.078Z",
+    "unidad": "unid",
+    "es_sensible": false
+  }
+},
+{
+  "model": "inventario.producto",
+  "pk": 124,
+  "fields": {
+    "nombre": "Microscopio Invertido",
+    "tipo": "equipo",
+    "categoria": 3,
+    "cantidad": 7,
+    "minimo": 2,
+    "ubicacion": "Laboratorio 1 - Estante A1",
+    "fecha_vencimiento": null,
+    "ultima_actualizacion": "2026-05-08T19:40:46.081Z",
+    "unidad": "unid",
+    "es_sensible": false
+  }
+},
+{
+  "model": "inventario.producto",
+  "pk": 125,
+  "fields": {
+    "nombre": "Baño Termostático",
+    "tipo": "equipo",
+    "categoria": 3,
+    "cantidad": 7,
+    "minimo": 1,
+    "ubicacion": "Laboratorio 4 - Estante E2",
+    "fecha_vencimiento": null,
+    "ultima_actualizacion": "2026-05-08T19:40:46.085Z",
+    "unidad": "unid",
+    "es_sensible": false
+  }
+},
+{
+  "model": "inventario.producto",
+  "pk": 126,
+  "fields": {
+    "nombre": 

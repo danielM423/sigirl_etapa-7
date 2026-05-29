@@ -37,6 +37,7 @@ from .serializers import UserManagementSerializer
 User = get_user_model()
 from .views import reporte_sustancias_controladas
 from .views import toggle_reactivo_sensible, crear_reactivo_sensible
+from .views import FormularioPlantillaViewSet, CampoFormularioViewSet, FormularioRespuestaViewSet, mis_formularios
 
 # ============================================================
 # ROUTER
@@ -44,6 +45,10 @@ from .views import toggle_reactivo_sensible, crear_reactivo_sensible
 router = DefaultRouter()
 
 # Routers existentes
+# Formularios
+router.register(r'formularios-plantilla', FormularioPlantillaViewSet)
+router.register(r'formularios-campos', CampoFormularioViewSet)
+router.register(r'formularios-respuesta', FormularioRespuestaViewSet)
 router.register(r'practicas', PracticaViewSet)
 router.register(r'productos', ProductoViewSet)
 router.register(r'categorias', CategoriaViewSet)
@@ -75,9 +80,10 @@ urlpatterns = [
     # JWT (Public)
     path('token/', PublicTokenObtainPairView.as_view(), name='token_obtain_pair'),
     path('token/refresh/', PublicTokenRefreshView.as_view(), name='token_refresh'),
-path('reporte-sustancias-controladas/', reporte_sustancias_controladas, name='reporte_sustancias_controladas'),
-path('toggle-reactivo-sensible/<int:reactivo_id>/', toggle_reactivo_sensible, name='toggle_reactivo_sensible'),
-path('crear-reactivo-sensible/', crear_reactivo_sensible, name='crear_reactivo_sensible'),
+    path('reporte-sustancias-controladas/', reporte_sustancias_controladas, name='reporte_sustancias_controladas'),
+    path('toggle-reactivo-sensible/<int:reactivo_id>/', toggle_reactivo_sensible, name='toggle_reactivo_sensible'),
+    path('crear-reactivo-sensible/', crear_reactivo_sensible, name='crear_reactivo_sensible'),
+    path('mis-formularios/', mis_formularios, name='mis_formularios'),
     # Auth (Public)
     path('register/', register, name='register'),
     path('verify-email/<str:uidb64>/<str:token>/', verify_email, name='verify_email'),

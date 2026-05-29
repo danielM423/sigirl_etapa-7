@@ -4,10 +4,7 @@ import 'react-toastify/dist/ReactToastify.css';
 import { UserProvider } from './context/UserContext';
 import ProtectedRouteByRole from './components/ProtectedRouteByRole';
 import ProtectedRoute from './components/ProtectedRoute';
-import GestionProgramas from './pages/GestionProgramas';
-import GestionCompetencias from './pages/GestionCompetencias';
-import SelectorPractica from './pages/SelectorPractica';  // ← IMPORTANTE: agregado
-import GestionPracticas from './pages/GestionPracticas';
+
 // Páginas de autenticación
 import Login from './pages/Login';
 import Register from './pages/Register';
@@ -27,14 +24,19 @@ import Reportes from './pages/Reportes';
 // Páginas de prácticas
 import PracticaNueva from './pages/PracticaNueva';
 import RFsDemo from './pages/RFsDemo';
+import GestionProgramas from './pages/GestionProgramas';
+import GestionCompetencias from './pages/GestionCompetencias';
+import GestionPracticas from './pages/GestionPracticas';
+import SelectorPractica from './pages/SelectorPractica';
+import AprobacionesJefe from './pages/AprobacionesJefe';
+import SustanciasControladas from './pages/SustanciasControladas';
+import GestionFormularios from './pages/GestionFormularios';
+import DiligenciarFormularios from './pages/DiligenciarFormularios';
 
 // Páginas antiguas (mantener compatibilidad)
 import Dashboard from './pages/Dashboard';
 import Inventario from './pages/Inventario';
 import Pedidos from './pages/pedidos';
-import AprobacionesJefe from './pages/AprobacionesJefe';
- import SustanciasControladas from './pages/SustanciasControladas';
-
 
 function App() {
   return (
@@ -45,14 +47,7 @@ function App() {
           <Route path="/login" element={<Login />} />
           <Route path="/register" element={<Register />} />
           <Route path="/verify-email/:uid/:token" element={<VerifyEmail />} />
-          import AprobacionesJefe from './pages/AprobacionesJefe';
-
           
-          <Route path="/aprobaciones-jefe" element={
-            <ProtectedRouteByRole requiredRoles={['jefe', 'admin']}>
-              <AprobacionesJefe />
-            </ProtectedRouteByRole>
-          } />
           {/* Dashboards por rol */}
           <Route path="/usuario" element={
             <ProtectedRouteByRole requiredRoles={['usuario']}>
@@ -77,10 +72,51 @@ function App() {
             </ProtectedRouteByRole>
           } />
           <Route path="/practicas/gestion" element={
-  <ProtectedRouteByRole requiredRoles={['admin', 'jefe']}>
-    <GestionPracticas />
-  </ProtectedRouteByRole>
-} />
+            <ProtectedRouteByRole requiredRoles={['admin', 'jefe']}>
+              <GestionPracticas />
+            </ProtectedRouteByRole>
+          } />
+          
+          {/* Rutas de gestión académica */}
+          <Route path="/programas" element={
+            <ProtectedRouteByRole requiredRoles={['admin', 'jefe']}>
+              <GestionProgramas />
+            </ProtectedRouteByRole>
+          } />
+          <Route path="/competencias" element={
+            <ProtectedRouteByRole requiredRoles={['admin', 'jefe']}>
+              <GestionCompetencias />
+            </ProtectedRouteByRole>
+          } />
+          <Route path="/selector-practica" element={
+            <ProtectedRouteByRole requiredRoles={['admin', 'jefe', 'usuario']}>
+              <SelectorPractica />
+            </ProtectedRouteByRole>
+          } />
+          
+          {/* Rutas de aprobaciones y control */}
+          <Route path="/aprobaciones-jefe" element={
+            <ProtectedRouteByRole requiredRoles={['jefe', 'admin']}>
+              <AprobacionesJefe />
+            </ProtectedRouteByRole>
+          } />
+          <Route path="/sustancias-controladas" element={
+            <ProtectedRouteByRole requiredRoles={['admin', 'jefe']}>
+              <SustanciasControladas />
+            </ProtectedRouteByRole>
+          } />
+          
+          {/* Rutas de formularios */}
+          <Route path="/formularios/gestion" element={
+            <ProtectedRouteByRole requiredRoles={['admin', 'jefe']}>
+              <GestionFormularios />
+            </ProtectedRouteByRole>
+          } />
+          <Route path="/formularios/diligenciar" element={
+            <ProtectedRouteByRole requiredRoles={['admin', 'jefe', 'usuario']}>
+              <DiligenciarFormularios />
+            </ProtectedRouteByRole>
+          } />
           
           {/* Rutas antiguas (compatibilidad) */}
           <Route path="/dashboard" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
@@ -102,38 +138,10 @@ function App() {
               <Reportes />
             </ProtectedRouteByRole>
           } />
-          <Route path="/programas" element={
-            <ProtectedRouteByRole requiredRoles={['admin', 'jefe']}>
-              <GestionProgramas />
-            </ProtectedRouteByRole>
-          } />
-          <Route path="/competencias" element={
-            <ProtectedRouteByRole requiredRoles={['admin', 'jefe']}>
-              <GestionCompetencias />
-            </ProtectedRouteByRole>
-          } />
           
-          {/* RUTA NUEVA: Selector de Prácticas */}
-          <Route path="/selector-practica" element={
-            <ProtectedRouteByRole requiredRoles={['admin', 'jefe', 'usuario']}>
-              <SelectorPractica />
-            </ProtectedRouteByRole>
-          } />
-         
-
-// Dentro de Routes
-<Route path="/sustancias-controladas" element={
-  <ProtectedRouteByRole requiredRoles={['admin', 'jefe']}>
-    <SustanciasControladas />
-  </ProtectedRouteByRole>
-} />
-          {/* Ruta demo para los RFs implementados */}
+          {/* Ruta demo */}
           <Route path="/rfs-demo" element={<ProtectedRoute><RFsDemo /></ProtectedRoute>} />
-          <Route path="/practicas/gestion" element={
-              <ProtectedRouteByRole requiredRoles={['admin', 'jefe']}>
-                <GestionPracticas />
-              </ProtectedRouteByRole>
-            } />
+          
           {/* Redirección por defecto */}
           <Route path="/" element={<Navigate to="/login" replace />} />
         </Routes>

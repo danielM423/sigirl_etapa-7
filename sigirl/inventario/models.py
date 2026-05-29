@@ -372,3 +372,65 @@ class PracticaEquipo(models.Model):
 
     def __str__(self):
         return f"{self.equipo} ({self.tiempo_uso_min} min)"
+    
+    # ============================================================
+# FORMULARIOS DE LABORATORIO
+# ============================================================
+
+class FormularioPlantilla(models.Model):
+    """Plantilla de formulario de laboratorio"""
+    TIPOS_CAMPO = [
+        ('text', 'Texto corto'),
+        ('textarea', 'Texto largo'),
+        ('number', 'Número'),
+        ('date', 'Fecha'),
+        ('checkbox', 'Checkbox'),
+        ('select', 'Selección'),
+    ]
+    
+    nombre = models.CharField(max_length=200)
+    descripcion = models.TextField(blank=True, null=True)
+    activo = models.BooleanField(default=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+    
+    class Meta:
+        verbose_name = "Formulario"
+        verbose_name_plural = "Formularios"
+        ordering = ['-created_at']
+    
+    def __str__(self):
+        return self.nombre
+
+
+class CampoFormulario(models.Model):
+    """Campos del formulario"""
+    plantilla = models.ForeignKey('FormularioPlantilla', on_delete=models.CASCADE, related_name='campos')
+    nombre = models.CharField(max_length=100, help_text="Identificador interno")
+    etiqueta = models.CharField(max_length=200, help_text="Texto visible para el usuario")
+    tipo = models.CharField(max_length=20, choices=FormularioPlantilla.TIPOS_CAMPO)
+    obligatorio = models.BooleanField(default=False)
+    opciones = models.TextField(blank=True, null=True, help_text="Para select: opción1,opción2,opción3")
+    orden = models.IntegerField(default=0)
+    
+    class Meta:
+        ordering = ['orden']
+    
+    def __str__(self):
+        return f"{self.plantilla.nombre} - {self.etiqueta}"
+
+
+class FormularioRespuesta(models.Model):
+    """Respuestas de formularios diligenciados"""
+    plantilla = models.ForeignKey('FormularioPlantilla', on_delete=models.CASCADE, related_name='respuestas')
+    usuario = models.ForeignKey('auth.User', on_delete=models.CASCADE, related_name='formularios_respuestas')
+    fecha = models.DateTimeField(auto_now_add=True)
+    datos = models.JSONField(default=dict, help_text="Diccionario con respuestas: {'campo_id': 'valor'}")
+    
+    class Meta:
+        verbose_name = "Respuesta de formulario"
+        verbose_name_plural = "Respuestas de formularios"
+        ordering = ['-fecha']
+    
+    def __str__(self):
+        return f"{self.plantilla.nombre} - {self.usuario.username} - {self.fecha.strftime('%Y-%m-%d')}"

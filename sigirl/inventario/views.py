@@ -4,7 +4,8 @@ from rest_framework import viewsets, permissions
 from .models import Competencia, PedidoHistorial, PDFDocumento, Asistencia, ListadoDiario, Programa
 from .serializers import CompetenciaSerializer, PedidoHistorialSerializer, PDFDocumentoSerializer, AsistenciaSerializer, ListadoDiarioSerializer, ProgramaSerializer
 from rest_framework.parsers import MultiPartParser, FormParser
-
+from .permissions import IsAdminOrJefe, IsAdminOrReadOnly, IsStaffOrSuperuser, IsInventoryManagerOrReadOnly
+from .permissions import IsAdminOrJefe, IsAdminOrReadOnly, IsStaffOrSuperuser, IsInventoryManagerOrReadOnly
 class PedidoHistorialViewSet(viewsets.ModelViewSet):
     queryset = PedidoHistorial.objects.none()
     serializer_class = PedidoHistorialSerializer
@@ -1798,3 +1799,75 @@ def crear_reactivo_sensible(request):
         'es_sensible': reactivo.es_sensible,
         'mensaje': f'Reactivo sensible "{nombre}" creado exitosamente'
     }, status=201)
+
+
+# ============================================================
+# FORMULARIOS DE LABORATORIO
+# ============================================================
+
+from .models import FormularioPlantilla, CampoFormulario, FormularioRespuesta
+from .serializers import FormularioPlantillaSerializer, CampoFormularioSerializer, FormularioRespuestaSerializer
+
+class FormularioPlantillaViewSet(viewsets.ModelViewSet):
+    queryset = FormularioPlantilla.objects.all()
+    serializer_class = FormularioPlantillaSerializer
+    
+    def get_permissions(self):
+        if self.action in ['create', 'update', 'partial_update', 'destroy']:
+            return [IsAuthenticated(), IsAdminOrJefe()] # type: ignore
+        return [IsAuthenticated()]
+
+
+class CampoFormularioViewSet(viewsets.ModelViewSet):
+    queryset = CampoFormulario.objects.all()
+    serializer_class = CampoFormularioSerializer
+    permission_classes = [IsAuthenticated, IsAdminOrJefe] # type: ignore
+
+
+class FormularioRespuestaViewSet(viewsets.ModelViewSet):
+    queryset = FormularioRespuesta.objects.all()
+    serializer_class = FormularioRespuestaSerializer
+    
+    def get_permissions(self):
+        if self.action in ['create']:
+            return [IsAuthenticated()]
+        return [IsAuthenticated(), IsAdminOrJefe()] # type: ignore
+    
+    def get_queryset(self):
+        user = self.request.user
+        if user.is_staff or user.is_superuser:
+            return FormularioRespuesta.objects.all()
+        return FormularioRespuesta.objects.filter(usuario=user)
+    
+    def perform_create(self, serializer):
+        serializer.save(usuario=self.request.user)
+
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def mis_formularios(request):
+    """Obtener formularios disponibles para el usuario actual"""
+    plantillas = FormularioPlantilla.objects.filter(activo=True)
+    
+    data = []
+    for p in plantillas:
+        ultima_respuesta = FormularioRespuesta.objects.filter(
+            plantilla=p, 
+            usuario=request.user
+        ).first()
+        
+        data.append({
+            'id': p.id,
+            'nombre': p.nombre,
+            'descripcion': p.descripcion,
+            'campos_count': p.campos.count(),
+            'ya_respondio': ultima_respuesta is not None,
+            'fecha_ultima': ultima_respuesta.fecha if ultima_respuesta else None
+        })
+    
+    return Response(data)
+class IsStaffOrSuperuser(permissions.BasePermission):
+    def has_permission(self, request, view):
+        if not request.user or not request.user.is_authenticated:
+            return False
+        return request.user.is_staff or request.user.is_superuser
