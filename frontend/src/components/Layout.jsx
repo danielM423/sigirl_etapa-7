@@ -15,7 +15,9 @@ import {
   X,
   FlaskConical,
   Search,
-  Bell
+  Bell,
+  BarChart3,
+  Calendar
 } from 'lucide-react';
 
 const Layout = ({ children }) => {
@@ -29,30 +31,43 @@ const Layout = ({ children }) => {
   // ========== CONTADOR DE APROBACIONES PENDIENTES (BADGE) ==========
   const [aprobacionesPendientes, setAprobacionesPendientes] = useState(0);
 
-  const contarAprobacionesPendientes = async () => {
-    try {
-      const token = localStorage.getItem('access_token');
-      if (!token) return;
-      
-      const res = await fetch('http://127.0.0.1:8000/api/pedidos-requieren-aprobacion/', {
-        headers: { 'Authorization': `Bearer ${token}` }
-      });
-      
-      if (res.ok) {
-        const data = await res.json();
-        setAprobacionesPendientes(data.length);
-      }
-    } catch (error) {
-      console.error('Error contando aprobaciones:', error);
+const contarAprobacionesPendientes = async () => {
+  try {
+    const token = localStorage.getItem('access_token');
+    if (!token) {
+      setAprobacionesPendientes(0);
+      return;
     }
-  };
+    
+    const res = await fetch('http://127.0.0.1:8000/api/pedidos-requieren-aprobacion/', {
+      headers: { 'Authorization': `Bearer ${token}` }
+    });
+    
+    // ✅ Si es 403 (usuario no autorizado), silenciosamente no mostrar badge
+    if (res.status === 403 || res.status === 401) {
+      setAprobacionesPendientes(0);
+      return;
+    }
+    
+    if (res.ok) {
+      const data = await res.json();
+      setAprobacionesPendientes(data.length);
+    } else {
+      setAprobacionesPendientes(0);
+    }
+  } catch (error) {
+    // ✅ Ignorar errores silenciosamente
+    setAprobacionesPendientes(0);
+  }
+};
 
   // Cargar al inicio y actualizar cada 30 segundos
-  useEffect(() => {
-    contarAprobacionesPendientes();
-    const interval = setInterval(contarAprobacionesPendientes, 30000);
-    return () => clearInterval(interval);
-  }, []);
+  // Cargar al inicio y actualizar cada 30 segundos
+useEffect(() => {
+  contarAprobacionesPendientes();
+  const interval = setInterval(contarAprobacionesPendientes, 30000);
+  return () => clearInterval(interval);
+}, []);
 
   // Reloj en tiempo real
   useEffect(() => {
@@ -88,19 +103,60 @@ const Layout = ({ children }) => {
   };
 
   // ========== MENÚ SUPERIOR CON BADGE ==========
-  const navItems = [
-    { path: '/dashboard', label: 'Dashboard', icon: <LayoutDashboard className="w-4 h-4" />, roles: ['admin', 'jefe', 'usuario'] },
-    { path: '/inventario', label: 'Inventario', icon: <Package className="w-4 h-4" />, roles: ['admin', 'jefe', 'usuario'] },
-    { path: '/pedidos', label: 'Pedidos', icon: <ClipboardList className="w-4 h-4" />, roles: ['admin', 'jefe', 'usuario'] },
-    { path: '/aprobaciones-jefe', label: 'Aprobar Excepciones', icon: <AlertTriangle className="w-4 h-4" />, roles: ['admin', 'jefe'], badge: true },
-    { path: '/usuarios', label: 'Usuarios', icon: <Users className="w-4 h-4" />, roles: ['admin', 'jefe'] },
-    { path: '/alertas', label: 'Alertas', icon: <AlertTriangle className="w-4 h-4" />, roles: ['admin', 'jefe'] },
-    { path: '/reportes', label: 'Reportes', icon: <FileText className="w-4 h-4" />, roles: ['admin', 'jefe'] },
-    { path: '/perfil', label: 'Perfil', icon: <User className="w-4 h-4" />, roles: ['admin', 'jefe', 'usuario'] },
-    { path: '/selector-practica', label: 'Generar Solicitud', icon: <ClipboardList className="w-4 h-4" />, roles: ['usuario'] },
+const navItems = [
+  // ============================================================
+  // 1. DASHBOARD
+  // ============================================================
+  { path: '/dashboard', label: 'Dashboard', icon: <LayoutDashboard className="w-4 h-4" />, roles: ['admin', 'jefe', 'usuario'] },
 
-    
-  ];
+  // ============================================================
+  // 2. INVENTARIO
+  // ============================================================
+  { path: '/inventario', label: 'Inventario', icon: <Package className="w-4 h-4" />, roles: ['admin', 'jefe', 'usuario'] },
+
+  // ============================================================
+  // 3. PRÁCTICAS Y SOLICITUDES
+  // ============================================================
+  { path: '/selector-practica', label: 'Generar Solicitud', icon: <ClipboardList className="w-4 h-4" />, roles: ['usuario'] },
+
+  // ============================================================
+  // 4. PEDIDOS Y APROBACIONES
+  // ============================================================
+  { path: '/aprobaciones-jefe', label: 'Aprobar Excepciones', icon: <AlertTriangle className="w-4 h-4" />, roles: ['admin', 'jefe'], badge: true },
+
+  // ============================================================
+  // 5. FORMULARIOS
+  // ============================================================
+  { path: '/formularios/diligenciar', label: 'Formularios', icon: <FileText className="w-4 h-4" />, roles: ['admin', 'jefe', 'usuario'] },
+
+  // ============================================================
+  // 6. PROGRAMACIÓN
+  // ============================================================
+  { path: '/programacion-laboratorios', label: 'Programación', icon: <Calendar className="w-4 h-4" />, roles: ['admin', 'jefe', 'usuario'] },
+
+  // ============================================================
+  // 7. GESTIÓN DE EQUIPOS Y SUSTANCIAS
+  // ============================================================
+  { path: '/hoja-vida-equipos', label: 'Hoja de Vida Equipos', icon: <Package className="w-4 h-4" />, roles: ['admin', 'jefe'] },
+
+  // ============================================================
+  // 8. GESTIÓN DE FORMULARIOS (Admin/Jefe)
+  // ============================================================
+  { path: '/formularios/gestion', label: 'Gestionar Formularios', icon: <FileText className="w-4 h-4" />, roles: ['admin', 'jefe'] },
+  { path: '/reportes-formularios', label: 'Reportes Formularios', icon: <BarChart3 className="w-4 h-4" />, roles: ['admin', 'jefe'] },
+
+  // ============================================================
+  // 9. ADMINISTRACIÓN DEL SISTEMA
+  // ============================================================
+  { path: '/usuarios', label: 'Usuarios', icon: <Users className="w-4 h-4" />, roles: ['admin', 'jefe'] },
+  { path: '/alertas', label: 'Alertas', icon: <AlertTriangle className="w-4 h-4" />, roles: ['admin', 'jefe'] },
+  { path: '/reportes', label: 'Reportes', icon: <FileText className="w-4 h-4" />, roles: ['admin', 'jefe'] },
+
+  // ============================================================
+  // 10. PERFIL (SIEMPRE AL FINAL)
+  // ============================================================
+  { path: '/perfil', label: 'Perfil', icon: <User className="w-4 h-4" />, roles: ['admin', 'jefe', 'usuario'] },
+];
 
   const filteredNav = navItems.filter(item => item.roles.includes(normalizedRole));
 

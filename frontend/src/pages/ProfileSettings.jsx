@@ -1,33 +1,27 @@
-﻿// Configuración de perfil del usuario - Estilo Laboratorio Oscuro
-import { useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react';
+﻿import { useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react';
 import { toast } from 'react-toastify';
 import { useNavigate } from 'react-router-dom';
-import {
-  ArrowLeft, BarChart3, Bell, Briefcase, Building2, Camera,
-  IdCard, Mail, Phone, RefreshCw, Save, Shield, Trash2,
-} from 'lucide-react';
+import { ArrowLeft, BarChart3, Bell, Briefcase, Building2, Camera, IdCard, Mail, Phone, RefreshCw, Save, Shield, Trash2 } from 'lucide-react';
 import { ResponsiveContainer, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip } from 'recharts';
 import Layout from '../components/Layout';
 import { UserContext } from '../context/UserContext';
 import api, { getPedidos } from '../services/api';
 
-// ─── Constants ───────────────────────────────────────────────────
 const EMPTY_FORM = { username:'', first_name:'', last_name:'', email:'', institution:'', department:'', phone:'', cargo:'', bio:'', avatar:'' };
 const DEFAULT_PREFS = { emailAlerts: true, compactView: false, stockReminders: true };
 const PREFS_STORAGE_KEY = 'sigirl_profile_preferences';
 
 const getDashboardPath = (role) => role==='admin'?'/admin':role==='jefe'||role==='jefe_superior'?'/jefe':'/usuario';
-const getRoleLabel    = (role) => role==='admin'?'Administrador':role==='jefe'||role==='jefe_superior'?'Jefe Superior':'Usuario';
+const getRoleLabel = (role) => role==='admin'?'Administrador':role==='jefe'||role==='jefe_superior'?'Jefe Superior':'Usuario';
 
-// ─── Design helpers ──────────────────────────────────────────────
-const inputCls = 'w-full bg-stone-50 border border-[#E0E0E0] rounded-md px-3 py-2.5 text-sm font-mono text-stone-700 placeholder-stone-400 focus:outline-none focus:border-emerald-500 transition-colors';
+const inputCls = 'w-full bg-stone-50 border border-stone-200 rounded-md px-3 py-2.5 text-sm font-mono text-stone-700 placeholder-stone-400 focus:outline-none focus:border-emerald-500 transition-colors';
 
 const Section = ({ title, subtitle, icon, children }) => (
-  <div className="bg-white border border-[#E0E0E0] rounded-lg overflow-hidden">
-    <div className="flex items-center gap-3 px-5 py-4 border-b border-[#E0E0E0]">
-      {icon && <div className="p-1.5 rounded bg-[#E8F5F0] border border-emerald-500/20">{icon}</div>}
+  <div className="bg-white border border-stone-200 rounded-lg overflow-hidden">
+    <div className="flex items-center gap-3 px-5 py-4 border-b border-stone-200">
+      {icon && <div className="p-1.5 rounded bg-emerald-50 border border-emerald-500/20">{icon}</div>}
       <div>
-        <h2 className="text-xs font-mono font-bold text-[#1FA971] uppercase tracking-wider">{title}</h2>
+        <h2 className="text-xs font-mono font-bold text-emerald-600 uppercase tracking-wider">{title}</h2>
         {subtitle && <p className="text-[10px] font-mono text-stone-500 mt-0.5">{subtitle}</p>}
       </div>
     </div>
@@ -36,16 +30,13 @@ const Section = ({ title, subtitle, icon, children }) => (
 );
 
 const ToggleItem = ({ title, description, checked, onToggle }) => (
-  <div className="flex items-center justify-between gap-4 rounded-lg border border-[#E0E0E0] bg-stone-50 px-4 py-3 hover:border-[#1FA971]/25 transition-colors">
+  <div className="flex items-center justify-between gap-4 rounded-lg border border-stone-200 bg-stone-50 px-4 py-3 hover:border-emerald-500/25 transition-colors">
     <div>
       <p className="text-sm font-mono text-stone-700">{title}</p>
       <p className="text-[10px] font-mono text-stone-500">{description}</p>
     </div>
-    <button
-      type="button"
-      onClick={onToggle}
-      className={`relative h-6 w-11 rounded-full transition-colors ${checked ? 'bg-[#1FA971] shadow-sm' : 'bg-stone-300'}`}
-    >
+    <button type="button" onClick={onToggle}
+      className={`relative h-6 w-11 rounded-full transition-colors ${checked ? 'bg-emerald-600 shadow-sm' : 'bg-stone-300'}`}>
       <span className={`absolute top-1 h-4 w-4 rounded-full bg-white transition-all ${checked ? 'left-6' : 'left-1'}`} />
     </button>
   </div>
@@ -54,9 +45,9 @@ const ToggleItem = ({ title, description, checked, onToggle }) => (
 const CustomTooltip = ({ active, payload, label }) => {
   if (!active || !payload?.length) return null;
   return (
-    <div className="bg-white border border-[#E0E0E0] rounded-md p-2 shadow-xl">
-      <p className="font-mono font-bold text-[#1FA971] text-[10px]">{label}</p>
-      <p className="text-[10px] font-mono text-stone-500">Actividad: <span className="font-bold text-[#1FA971]">{payload[0].value}</span></p>
+    <div className="bg-white border border-stone-200 rounded-md p-2 shadow-xl">
+      <p className="font-mono font-bold text-emerald-600 text-[10px]">{label}</p>
+      <p className="text-[10px] font-mono text-stone-500">Actividad: <span className="font-bold text-emerald-600">{payload[0].value}</span></p>
     </div>
   );
 };
@@ -65,36 +56,32 @@ const ProfileSettings = () => {
   const navigate = useNavigate();
   const { user, role, setUser, setRole, logout } = useContext(UserContext);
 
-  const [form,      setForm]     = useState(EMPTY_FORM);
+  const [form, setForm] = useState(EMPTY_FORM);
   const [savedProfile, setSavedProfile] = useState(null);
-  const [loading,   setLoading]  = useState(true);
-  const [saving,    setSaving]   = useState(false);
-  const [deleting,  setDeleting] = useState(false);
-  const [chartReady,setChartReady] = useState(false);
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
+  const [deleting, setDeleting] = useState(false);
+  const [chartReady, setChartReady] = useState(false);
   const chartContainerRef = useRef(null);
   const [confirmText, setConfirmText] = useState('');
   const [preferences, setPreferences] = useState(DEFAULT_PREFS);
   const [actividadPedidos, setActividadPedidos] = useState([]);
 
   const dashboardPath = getDashboardPath(role);
-  const roleLabel     = getRoleLabel(role);
+  const roleLabel = getRoleLabel(role);
 
   const initials = useMemo(() => {
-    const first  = form.first_name?.[0] || form.username?.[0] || 'U';
-    const second = form.last_name?.[0]  || form.username?.[1] || '';
+    const first = form.first_name?.[0] || form.username?.[0] || 'U';
+    const second = form.last_name?.[0] || form.username?.[1] || '';
     return `${first}${second}`.toUpperCase();
   }, [form.first_name, form.last_name, form.username]);
 
   const activityData = useMemo(() => {
-    const months   = ['Ene','Feb','Mar','Abr','May','Jun'];
-    const DEMO = {
-      jefe:    [82, 97, 115, 108, 130, 144],
-      admin:   [54, 68,  91,  85, 102, 118],
-      usuario: [12, 20,  35,  28,  42,  50],
-    };
+    const months = ['Ene','Feb','Mar','Abr','May','Jun'];
+    const DEMO = { jefe: [82, 97, 115, 108, 130, 144], admin: [54, 68, 91, 85, 102, 118], usuario: [12, 20, 35, 28, 42, 50] };
     const fallback = DEMO[role] || DEMO.usuario;
     const username = (user?.username || form.username || '').toLowerCase();
-    const propios  = actividadPedidos.filter(p => {
+    const propios = actividadPedidos.filter(p => {
       const candidates = [p.solicitante, p.usuario_username].filter(Boolean).map(v=>String(v).toLowerCase());
       return username && candidates.includes(username);
     });
@@ -108,7 +95,6 @@ const ProfileSettings = () => {
 
   const applyProfileData = useCallback((data) => {
     const avatar = data.profile?.avatar || '';
-    // Persistir avatar en localStorage para que el navbar lo lea
     const uname = data.username || '';
     if (uname) localStorage.setItem(`sigirl_avatar:${uname}`, avatar);
     setForm({
@@ -181,9 +167,9 @@ const ProfileSettings = () => {
       const image = new Image();
       image.onload = () => {
         const maxSide = 320;
-        const ratio   = Math.min(maxSide / image.width, maxSide / image.height, 1);
-        const canvas  = document.createElement('canvas');
-        canvas.width  = Math.round(image.width * ratio);
+        const ratio = Math.min(maxSide / image.width, maxSide / image.height, 1);
+        const canvas = document.createElement('canvas');
+        canvas.width = Math.round(image.width * ratio);
         canvas.height = Math.round(image.height * ratio);
         const ctx = canvas.getContext('2d');
         ctx.fillStyle = '#FFFFFF';
@@ -229,7 +215,6 @@ const ProfileSettings = () => {
         },
       });
       applyProfileData(data);
-      // Guardar avatar en localStorage para que el navbar lo lea
       const avatarKey = `sigirl_avatar:${form.username.trim()}`;
       localStorage.setItem(avatarKey, form.avatar || '');
       toast.success('Perfil actualizado correctamente');
@@ -268,31 +253,21 @@ const ProfileSettings = () => {
 
   return (
     <Layout>
-      <div className="max-w-4xl mx-auto space-y-5">
-
-        {/* Header */}
-        <div className="bg-white border border-[#E0E0E0] rounded-lg p-5">
-          <div className="flex items-center justify-between gap-4 flex-wrap">
+      <div className="p-6 max-w-4xl mx-auto space-y-5">
+        {/* Encabezado */}
+        <div className="mb-8">
+          <div className="flex items-center gap-3">
+            <span className="text-4xl">👤</span>
             <div>
-              <div className="flex items-center gap-2 mb-1">
-                <span className="text-[10px] font-mono font-bold text-[#1FA971] uppercase tracking-wider">CONFIGURACIÓN DE PERFIL</span>
-                <span className="w-2 h-2 rounded-full bg-emerald-400 shadow-[0_0_6px_#22c55e] animate-pulse" />
-              </div>
-              <h1 className="text-xl font-bold font-mono text-stone-700">Mi Perfil</h1>
-              <p className="text-[10px] font-mono text-stone-500 mt-1">Administra tu información personal y preferencias</p>
+              <h1 className="text-3xl font-bold text-stone-800">Mi Perfil</h1>
+              <p className="text-stone-500 text-sm mt-1">Gestiona tu información personal y preferencias</p>
             </div>
-            <button
-              onClick={() => navigate(dashboardPath)}
-              className="flex items-center gap-1.5 px-4 py-2 rounded text-xs font-mono font-bold border border-[#E0E0E0] text-stone-500 hover:text-stone-700 hover:border-slate-500 transition-colors"
-            >
-              <ArrowLeft className="w-3.5 h-3.5" /> Volver
-            </button>
           </div>
         </div>
 
         {/* Activity chart */}
-        <Section title="TU ACTIVIDAD" subtitle="Nivel de actividad en los últimos 6 meses" icon={<BarChart3 className="w-3.5 h-3.5 text-[#1FA971]" />}>
-          <div ref={chartContainerRef} className="h-52 rounded-lg border border-[#E0E0E0] bg-stone-50 p-3">
+        <Section title="TU ACTIVIDAD" subtitle="Nivel de actividad en los últimos 6 meses" icon={<BarChart3 className="w-3.5 h-3.5 text-emerald-600" />}>
+          <div ref={chartContainerRef} className="h-52 rounded-lg border border-stone-200 bg-stone-50 p-3">
             {chartReady && (
               <ResponsiveContainer width="99%" height={180} debounce={120}>
                 <BarChart data={activityData}>
@@ -310,12 +285,12 @@ const ProfileSettings = () => {
         {/* Personal info */}
         <Section title="INFORMACIÓN PERSONAL" subtitle="Actualiza tus datos personales">
           {/* Avatar */}
-          <div className="flex flex-col sm:flex-row items-start sm:items-center gap-5 mb-6 pb-5 border-b border-[#E0E0E0]">
+          <div className="flex flex-col sm:flex-row items-start sm:items-center gap-5 mb-6 pb-5 border-b border-stone-200">
             <div className="relative group flex-shrink-0">
               {form.avatar ? (
-                <img src={form.avatar} alt="Avatar" className="w-16 h-16 rounded-full object-cover border-2 border-[#1FA971]/35 shadow-[0_0_15px_rgba(34,197,94,0.15)]" />
+                <img src={form.avatar} alt="Avatar" className="w-16 h-16 rounded-full object-cover border-2 border-emerald-500/35 shadow-[0_0_15px_rgba(34,197,94,0.15)]" />
               ) : (
-                <div className="w-16 h-16 rounded-full bg-[#E8F5F0] border-2 border-[#1FA971]/35 flex items-center justify-center text-[#1FA971] font-bold font-mono text-xl shadow-[0_0_15px_rgba(34,197,94,0.1)]">
+                <div className="w-16 h-16 rounded-full bg-emerald-50 border-2 border-emerald-500/35 flex items-center justify-center text-emerald-600 font-bold font-mono text-xl shadow-[0_0_15px_rgba(34,197,94,0.1)]">
                   {initials}
                 </div>
               )}
@@ -323,21 +298,19 @@ const ProfileSettings = () => {
                 <Camera className="w-4 h-4 text-white" />
               </div>
             </div>
-
             <div className="flex-1 min-w-0">
               <p className="text-base font-bold font-mono text-stone-700 truncate">
                 {user?.full_name || `${form.first_name} ${form.last_name}`.trim() || form.username}
               </p>
               <p className="text-xs font-mono text-stone-500 truncate">{form.email || 'Sin correo registrado'}</p>
-              <span className="inline-block mt-1 px-2 py-0.5 rounded text-[9px] font-mono font-bold bg-[#E8F5F0] text-[#1FA971] border border-[#1FA971]/25">{roleLabel}</span>
+              <span className="inline-block mt-1 px-2 py-0.5 rounded text-[9px] font-mono font-bold bg-emerald-50 text-emerald-600 border border-emerald-500/25">{roleLabel}</span>
             </div>
-
             <div className="flex gap-2 flex-shrink-0">
-              <label className="flex items-center gap-1.5 px-3 py-2 rounded text-xs font-mono font-bold bg-[#1FA971] text-white hover:bg-[#157A55] transition-colors cursor-pointer">
+              <label className="flex items-center gap-1.5 px-3 py-2 rounded text-xs font-mono font-bold bg-emerald-600 text-white hover:bg-emerald-700 transition-colors cursor-pointer">
                 <Camera className="w-3 h-3" /> Foto
                 <input type="file" accept="image/*" className="hidden" onChange={handleAvatarChange} />
               </label>
-              <button onClick={handleRemovePhoto} className="flex items-center gap-1.5 px-3 py-2 rounded text-xs font-mono font-bold border border-[#E0E0E0] text-stone-500 hover:text-rose-400 hover:border-rose-500/40 transition-colors">
+              <button onClick={handleRemovePhoto} className="flex items-center gap-1.5 px-3 py-2 rounded text-xs font-mono font-bold border border-stone-200 text-stone-500 hover:text-rose-400 hover:border-rose-500/40 transition-colors">
                 <Trash2 className="w-3 h-3" /> Quitar
               </button>
             </div>
@@ -400,11 +373,11 @@ const ProfileSettings = () => {
           </div>
 
           <div className="mt-5 flex flex-wrap gap-3">
-            <button onClick={handleSave} disabled={saving} className="flex items-center gap-1.5 px-4 py-2 rounded text-xs font-mono font-bold bg-[#1FA971] text-white hover:bg-[#157A55] transition-colors shadow-sm disabled:opacity-50 disabled:cursor-not-allowed">
+            <button onClick={handleSave} disabled={saving} className="flex items-center gap-1.5 px-4 py-2 rounded text-xs font-mono font-bold bg-emerald-600 text-white hover:bg-emerald-700 transition-colors shadow-sm disabled:opacity-50 disabled:cursor-not-allowed">
               {saving ? <RefreshCw className="w-3.5 h-3.5 animate-spin" /> : <Save className="w-3.5 h-3.5" />}
               {saving ? 'Guardando...' : 'Guardar Cambios'}
             </button>
-            <button onClick={handleReset} className="flex items-center gap-1.5 px-4 py-2 rounded text-xs font-mono font-bold border border-[#E0E0E0] text-stone-500 hover:text-stone-700 hover:border-slate-500 transition-colors">
+            <button onClick={handleReset} className="flex items-center gap-1.5 px-4 py-2 rounded text-xs font-mono font-bold border border-stone-200 text-stone-500 hover:text-stone-700 hover:border-slate-500 transition-colors">
               <RefreshCw className="w-3.5 h-3.5" /> Cancelar
             </button>
           </div>
@@ -413,28 +386,16 @@ const ProfileSettings = () => {
         {/* Preferences */}
         <Section title="PREFERENCIAS" subtitle="Configura las opciones de la aplicación">
           <div className="space-y-3">
-            <ToggleItem
-              title="Notificaciones por Email"
-              description="Recibe actualizaciones importantes por correo"
-              checked={preferences.emailAlerts}
-              onToggle={() => setPreferences(prev => ({ ...prev, emailAlerts: !prev.emailAlerts }))}
-            />
-            <ToggleItem
-              title="Vista Compacta"
-              description="Muestra tarjetas en formato más condensado"
-              checked={preferences.compactView}
-              onToggle={() => setPreferences(prev => ({ ...prev, compactView: !prev.compactView }))}
-            />
-            <ToggleItem
-              title="Recordatorios de Stock"
-              description="Avisos automáticos cuando hay niveles críticos de reactivos"
-              checked={preferences.stockReminders}
-              onToggle={() => setPreferences(prev => ({ ...prev, stockReminders: !prev.stockReminders }))}
-            />
+            <ToggleItem title="Notificaciones por Email" description="Recibe actualizaciones importantes por correo"
+              checked={preferences.emailAlerts} onToggle={() => setPreferences(prev => ({ ...prev, emailAlerts: !prev.emailAlerts }))} />
+            <ToggleItem title="Vista Compacta" description="Muestra tarjetas en formato más condensado"
+              checked={preferences.compactView} onToggle={() => setPreferences(prev => ({ ...prev, compactView: !prev.compactView }))} />
+            <ToggleItem title="Recordatorios de Stock" description="Avisos automáticos cuando hay niveles críticos de reactivos"
+              checked={preferences.stockReminders} onToggle={() => setPreferences(prev => ({ ...prev, stockReminders: !prev.stockReminders }))} />
           </div>
         </Section>
 
-        {/* Security / Delete account */}
+        {/* Security */}
         <Section title="SEGURIDAD Y CUENTA" icon={<Shield className="w-3.5 h-3.5 text-rose-400" />}>
           <p className="text-[11px] font-mono text-stone-500 mb-4">Para eliminar tu cuenta, escribe exactamente tu nombre de usuario y confirma la acción. Esta operación es irreversible.</p>
           <div className="flex flex-col sm:flex-row gap-3 items-end">
@@ -442,25 +403,17 @@ const ProfileSettings = () => {
               <label className="block text-[9px] font-mono font-bold text-stone-500 uppercase tracking-wider mb-1.5">Confirma tu usuario</label>
               <div className="relative">
                 <Bell className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-stone-400" />
-                <input
-                  value={confirmText}
-                  onChange={e => setConfirmText(e.target.value)}
-                  className={`${inputCls} pl-9`}
-                  placeholder={form.username || 'tu_usuario'}
-                />
+                <input value={confirmText} onChange={e => setConfirmText(e.target.value)}
+                  className={`${inputCls} pl-9`} placeholder={form.username || 'tu_usuario'} />
               </div>
             </div>
-            <button
-              onClick={handleDeleteAccount}
-              disabled={deleting}
-              className="flex items-center gap-1.5 px-4 py-2 rounded text-xs font-mono font-bold bg-rose-500/15 text-rose-400 border border-rose-500/40 hover:bg-rose-500/25 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-            >
+            <button onClick={handleDeleteAccount} disabled={deleting}
+              className="flex items-center gap-1.5 px-4 py-2 rounded text-xs font-mono font-bold bg-rose-500/15 text-rose-400 border border-rose-500/40 hover:bg-rose-500/25 transition-colors disabled:opacity-50 disabled:cursor-not-allowed">
               {deleting ? <RefreshCw className="w-3.5 h-3.5 animate-spin" /> : <Trash2 className="w-3.5 h-3.5" />}
               {deleting ? 'Eliminando...' : 'Eliminar Cuenta'}
             </button>
           </div>
         </Section>
-
       </div>
     </Layout>
   );

@@ -32,11 +32,14 @@ import AprobacionesJefe from './pages/AprobacionesJefe';
 import SustanciasControladas from './pages/SustanciasControladas';
 import GestionFormularios from './pages/GestionFormularios';
 import DiligenciarFormularios from './pages/DiligenciarFormularios';
+import HojaVidaEquipos from './pages/HojaVidaEquipos';
+import ReportesFormularios from './pages/ReportesFormularios';
+import ProgramacionLaboratorios from './pages/ProgramacionLaboratorios';
 
 // Páginas antiguas (mantener compatibilidad)
 import Dashboard from './pages/Dashboard';
 import Inventario from './pages/Inventario';
-import Pedidos from './pages/pedidos';
+// import Pedidos from './pages/pedidos';  // ← ELIMINADO
 
 function App() {
   return (
@@ -47,7 +50,7 @@ function App() {
           <Route path="/login" element={<Login />} />
           <Route path="/register" element={<Register />} />
           <Route path="/verify-email/:uid/:token" element={<VerifyEmail />} />
-          
+
           {/* Dashboards por rol */}
           <Route path="/usuario" element={
             <ProtectedRouteByRole requiredRoles={['usuario']}>
@@ -100,9 +103,19 @@ function App() {
               <AprobacionesJefe />
             </ProtectedRouteByRole>
           } />
+          <Route path="/hoja-vida-equipos" element={
+            <ProtectedRouteByRole requiredRoles={['admin', 'jefe']}>
+              <HojaVidaEquipos />
+            </ProtectedRouteByRole>
+          } />
           <Route path="/sustancias-controladas" element={
             <ProtectedRouteByRole requiredRoles={['admin', 'jefe']}>
               <SustanciasControladas />
+            </ProtectedRouteByRole>
+          } />
+          <Route path="/reportes-formularios" element={
+            <ProtectedRouteByRole requiredRoles={['admin', 'jefe']}>
+              <ReportesFormularios />
             </ProtectedRouteByRole>
           } />
           
@@ -118,10 +131,17 @@ function App() {
             </ProtectedRouteByRole>
           } />
           
+          {/* Ruta de programación de laboratorios */}
+          <Route path="/programacion-laboratorios" element={
+            <ProtectedRouteByRole requiredRoles={['admin', 'jefe', 'usuario']}>
+              <ProgramacionLaboratorios />
+            </ProtectedRouteByRole>
+          } />
+          
           {/* Rutas antiguas (compatibilidad) */}
           <Route path="/dashboard" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
           <Route path="/inventario" element={<ProtectedRoute><Inventario /></ProtectedRoute>} />
-          <Route path="/pedidos" element={<ProtectedRoute><Pedidos /></ProtectedRoute>} />
+          {/* <Route path="/pedidos" element={<ProtectedRoute><Pedidos /></ProtectedRoute>} /> */}  {/* ← COMENTADO */}
           <Route path="/perfil" element={<ProtectedRoute><Perfil /></ProtectedRoute>} />
           <Route path="/usuarios" element={
             <ProtectedRouteByRole requiredRoles={['admin', 'jefe', 'usuario']}>

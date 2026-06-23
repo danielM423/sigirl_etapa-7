@@ -1,11 +1,18 @@
 # --- IMPORTS PRINCIPALES ---
+from .models import *
 from rest_framework import viewsets, permissions
+from django.db.models.signals import post_save
+from django.dispatch import receiver
+from .models import ProgramacionLaboratorio, Ambiente, FranjaHoraria
 # === RF-034: Historial de pedidos ===
-from .models import Competencia, PedidoHistorial, PDFDocumento, Asistencia, ListadoDiario, Programa
-from .serializers import CompetenciaSerializer, PedidoHistorialSerializer, PDFDocumentoSerializer, AsistenciaSerializer, ListadoDiarioSerializer, ProgramaSerializer
+from .models import Competencia, PedidoHistorial, PDFDocumento, Asistencia, ListadoDiario, Programa, ProgramacionLaboratorio
+from .serializers import CompetenciaSerializer, FranjaHorariaSerializer, PedidoHistorialSerializer, PDFDocumentoSerializer, AsistenciaSerializer, ListadoDiarioSerializer, ProgramaSerializer, ProgramacionLaboratorioSerializer,AmbienteSerializer,FranjaHorariaSerializer,ProgramacionLaboratorioSerializer
 from rest_framework.parsers import MultiPartParser, FormParser
 from .permissions import IsAdminOrJefe, IsAdminOrReadOnly, IsStaffOrSuperuser, IsInventoryManagerOrReadOnly
 from .permissions import IsAdminOrJefe, IsAdminOrReadOnly, IsStaffOrSuperuser, IsInventoryManagerOrReadOnly
+
+
+
 class PedidoHistorialViewSet(viewsets.ModelViewSet):
     queryset = PedidoHistorial.objects.none()
     serializer_class = PedidoHistorialSerializer
@@ -1377,6 +1384,7 @@ def generar_pedido(request):
     practica_id = request.data.get('practica_id')
     numero_grupos = request.data.get('numero_grupos', 1)
     observaciones = request.data.get('observaciones', '')
+    franja_nombre = request.data.get('franja', 'Mañana')  # ← NUEVO: recibir franja
     
     try:
         practica = Practica.objects.get(id=practica_id)
@@ -1405,6 +1413,48 @@ def generar_pedido(request):
             if not stock_suficiente:
                 requiere_aprobacion = True
     
+    # ========== GUARDAR EN PROGRAMACIÓN CON LA FRANJA SELECCIONADA ==========
+    try:
+        # Obtener ambiente
+        ambiente = Ambiente.objects.first()
+        if not ambiente:
+            ambiente = Ambiente.objects.create(nombre="TOC 501")
+        
+        # Obtener la franja seleccionada
+        franja = FranjaHoraria.objects.filter(nombre=franja_nombre).first()
+        if not franja:
+            # Si no existe, usar Mañana por defecto
+            franja = FranjaHoraria.objects.first()
+            if not franja:
+                franja = FranjaHoraria.objects.create(
+                    nombre="Mañana",
+                    hora_inicio="06:00",
+                    hora_fin="12:00"
+                )
+        
+        # Crear programación
+        programacion, created = ProgramacionLaboratorio.objects.get_or_create(
+            practica=practica,
+            fecha=practica.fecha or date.today(),
+            ambiente=ambiente,
+            franja=franja,
+            defaults={
+                'instructor': practica.instructor,
+                'grupo': practica.ficha,
+                'observaciones': f"Pedido generado automáticamente. IDs: {pedidos_creados}"
+            }
+        )
+        
+        if created:
+            print(f"✅ Programación creada para {practica.nombre} en {franja.nombre}")
+        else:
+            programacion.observaciones = f"{programacion.observaciones}\nNuevo pedido: {pedidos_creados}"
+            programacion.save()
+            print(f"✅ Programación actualizada para {practica.nombre} en {franja.nombre}")
+            
+    except Exception as e:
+        print(f"⚠️ Error al crear programación: {e}")
+    
     return Response({
         'success': True,
         'solicitud_id': practica.id,
@@ -1412,7 +1462,6 @@ def generar_pedido(request):
         'requiere_aprobacion': requiere_aprobacion,
         'mensaje': f'Se generaron {len(pedidos_creados)} pedidos. {"Requiere aprobación del Jefe" if requiere_aprobacion else "Todo en stock"}'
     }, status=status.HTTP_201_CREATED)
-
 
 @api_view(['POST'])
 @permission_classes([IsAuthenticated])
@@ -1871,3 +1920,216 @@ class IsStaffOrSuperuser(permissions.BasePermission):
         if not request.user or not request.user.is_authenticated:
             return False
         return request.user.is_staff or request.user.is_superuser
+    
+    # ============================================================
+# VIEWSET PARA MANTENIMIENTOS (DÍA 6)
+# ============================================================
+
+from .models import MantenimientoEquipo
+from .serializers import MantenimientoEquipoSerializer
+
+class MantenimientoEquipoViewSet(viewsets.ModelViewSet):
+    queryset = MantenimientoEquipo.objects.all()
+    serializer_class = MantenimientoEquipoSerializer
+    permission_classes = [IsAuthenticated, IsAdminOrJefe]
+    
+    def get_queryset(self):
+        queryset = super().get_queryset()
+        equipo_id = self.request.query_params.get('equipo')
+        if equipo_id:
+            queryset = queryset.filter(equipo_id=equipo_id)
+        return queryset
+
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated, IsAdminOrJefe])
+def reporte_equipos(request):
+    """Reporte de equipos con su información básica"""
+    equipos = Producto.objects.filter(tipo='equipo')
+    
+    data = []
+    for e in equipos:
+        data.append({
+            'id': e.id,
+            'nombre': e.nombre,
+            'tipo': e.tipo,
+            'cantidad': e.cantidad,
+            'ubicacion': e.ubicacion,
+            'ultimo_mantenimiento': e.mantenimientos.first().fecha if e.mantenimientos.first() else None,
+            'total_mantenimientos': e.mantenimientos.count(),
+        })
+    
+    return Response(data)
+
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated, IsAdminOrJefe])
+def reporte_equipos(request):
+    """Reporte de equipos con su información básica"""
+    equipos = Producto.objects.filter(tipo='equipo')
+    
+    data = []
+    for e in equipos:
+        data.append({
+            'id': e.id,
+            'nombre': e.nombre,
+            'tipo': e.tipo,
+            'cantidad': e.cantidad,
+            'ubicacion': e.ubicacion,
+            'ultimo_mantenimiento': e.mantenimientos.first().fecha if e.mantenimientos.first() else None,
+            'total_mantenimientos': e.mantenimientos.count(),
+        })
+    
+    return Response(data)
+# ViewSets
+class AmbienteViewSet(viewsets.ModelViewSet):
+    queryset = Ambiente.objects.all() # type: ignore
+    serializer_class = AmbienteSerializer # type: ignore
+    permission_classes = [IsAuthenticated]
+
+class FranjaHorariaViewSet(viewsets.ModelViewSet):
+    queryset = FranjaHoraria.objects.all() # type: ignore
+    serializer_class = FranjaHorariaSerializer # type: ignore
+    permission_classes = [IsAuthenticated]
+
+class ProgramacionLaboratorioViewSet(viewsets.ModelViewSet):
+    queryset = ProgramacionLaboratorio.objects.all()
+    serializer_class = ProgramacionLaboratorioSerializer
+    permission_classes = [IsAuthenticated]  # ← CAMBIAR A IsAuthenticated
+
+    def get_permissions(self):
+        if self.action in ['create', 'update', 'partial_update', 'destroy']:
+            return [IsAuthenticated(), IsAdminOrJefe()]
+        return [IsAuthenticated()]
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def programacion_semanal(request):
+    """Obtener programación de la semana actual"""
+    from datetime import datetime, timedelta
+    
+    hoy = datetime.now().date()
+    inicio_semana = hoy - timedelta(days=hoy.weekday())
+    fin_semana = inicio_semana + timedelta(days=6)
+    
+    programaciones = ProgramacionLaboratorio.objects.filter( # type: ignore
+        fecha__gte=inicio_semana,
+        fecha__lte=fin_semana
+    ).select_related('practica', 'ambiente', 'franja', 'instructor')
+    
+    # Organizar por día y ambiente
+    resultado = {}
+    for p in programaciones:
+        dia = p.fecha.strftime('%Y-%m-%d')
+        if dia not in resultado:
+            resultado[dia] = {}
+        ambiente = p.ambiente.nombre
+        if ambiente not in resultado[dia]:
+            resultado[dia][ambiente] = []
+        resultado[dia][ambiente].append({
+            'franja': p.franja.nombre,
+            'practica': p.practica.nombre,
+            'instructor': p.instructor.username,
+            'grupo': p.grupo,
+            'observaciones': p.observaciones
+        })
+    
+    return Response(resultado)
+# En views.py - signal al crear práctica
+@receiver(post_save, sender=Practica) # type: ignore
+def programar_practica(sender, instance, created, **kwargs):
+    if created:
+        # Si la práctica tiene fecha, instructor y ambiente, programarla
+        if instance.fecha and instance.instructor:
+            # Buscar o crear programación
+            ProgramacionLaboratorio.objects.get_or_create(
+                practica=instance,
+                fecha=instance.fecha,
+                defaults={
+                    'instructor': instance.instructor,
+                    'grupo': instance.ficha,
+                }
+            )
+            # ============================================================
+# SEÑAL: Programar práctica automáticamente al crear
+# ============================================================
+
+from django.db.models.signals import post_save
+from django.dispatch import receiver
+
+@receiver(post_save, sender=Practica)
+def programar_practica(sender, instance, created, **kwargs):
+    if created:
+        # Si la práctica tiene fecha, instructor y ambiente, programarla
+        if instance.fecha and instance.instructor:
+            # Buscar o crear programación (sin ambiente por defecto)
+            ProgramacionLaboratorio.objects.get_or_create(
+                practica=instance,
+                fecha=instance.fecha,
+                defaults={
+                    'instructor': instance.instructor,
+                    'grupo': instance.ficha,
+                    'ambiente': Ambiente.objects.first(),  # Asigna el primer ambiente disponible
+                    'franja': FranjaHoraria.objects.first(),  # Asigna la primera franja disponible
+                }
+            )
+
+            # ============================================================
+# PROGRAMACIÓN DE LABORATORIOS
+# ============================================================
+
+from .models import Ambiente, FranjaHoraria, ProgramacionLaboratorio
+from .serializers import AmbienteSerializer, FranjaHorariaSerializer, ProgramacionLaboratorioSerializer
+
+class AmbienteViewSet(viewsets.ModelViewSet):
+    queryset = Ambiente.objects.all()
+    serializer_class = AmbienteSerializer
+    permission_classes = [IsAuthenticated]
+
+class FranjaHorariaViewSet(viewsets.ModelViewSet):
+    queryset = FranjaHoraria.objects.all()
+    serializer_class = FranjaHorariaSerializer
+    permission_classes = [IsAuthenticated]
+
+class ProgramacionLaboratorioViewSet(viewsets.ModelViewSet):
+    queryset = ProgramacionLaboratorio.objects.all()
+    serializer_class = ProgramacionLaboratorioSerializer
+    permission_classes = [IsAuthenticated]  # ← TODOS pueden ver
+
+    def get_permissions(self):
+        if self.action in ['create', 'update', 'partial_update', 'destroy']:
+            return [IsAuthenticated(), IsAdminOrJefe()]
+        return [IsAuthenticated()]  # ← TODOS pueden ver (GET)
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])  # ← TODOS pueden ver
+def programacion_semanal(request):
+    from datetime import datetime, timedelta
+    
+    hoy = datetime.now().date()
+    inicio_semana = hoy - timedelta(days=hoy.weekday())
+    fin_semana = inicio_semana + timedelta(days=6)
+    
+    programaciones = ProgramacionLaboratorio.objects.filter(
+        fecha__gte=inicio_semana,
+        fecha__lte=fin_semana
+    ).select_related('practica', 'ambiente', 'franja', 'instructor')
+    
+    resultado = {}
+    for p in programaciones:
+        dia = p.fecha.strftime('%Y-%m-%d')
+        if dia not in resultado:
+            resultado[dia] = {}
+        ambiente = p.ambiente.nombre
+        if ambiente not in resultado[dia]:
+            resultado[dia][ambiente] = []
+        resultado[dia][ambiente].append({
+            'franja': p.franja.nombre,
+            'practica': p.practica.nombre,
+            'instructor': p.instructor.username,
+            'grupo': p.grupo,
+            'observaciones': p.observaciones
+        })
+    
+    return Response(resultado)
+            

@@ -1,339 +1,365 @@
-import React, { useState, useEffect } from 'react';
-import ScrollReveal from '../components/ScrollReveal';
-import { createPractica } from '../services/api';
+import { useState, useEffect } from 'react';
+import Layout from '../components/Layout';
+import api from '../services/api';
+import { motion } from 'framer-motion';
+import { toast, ToastContainer } from 'react-toastify';
+import 'react-toastify/dist/ReactToastify.css';
 
-const PracticaNueva = () => {
-  const [encabezado, setEncabezado] = useState({
-    ficha: '',
-    nombre: '',
-    fecha: '',
-    grupos_trabajo: '1',
-    instructor: '',
-  });
-  
-  const [cantidadGeneral, setCantidadGeneral] = useState('2');
-  const [prioridad, setPrioridad] = useState('alta');
+const SelectorPractica = () => {
+  const [programas, setProgramas] = useState([]);
+  const [competencias, setCompetencias] = useState([]);
+  const [practicas, setPracticas] = useState([]);
+  const [selectedPrograma, setSelectedPrograma] = useState('');
+  const [selectedCompetencia, setSelectedCompetencia] = useState('');
+  const [selectedPractica, setSelectedPractica] = useState('');
+  const [practicaDetalle, setPracticaDetalle] = useState(null);
+  const [numeroGrupos, setNumeroGrupos] = useState(1);
+  const [calculando, setCalculando] = useState(false);
+  const [resultado, setResultado] = useState(null);
   const [observaciones, setObservaciones] = useState('');
-  
-  const [reactivosCatalogo, setReactivosCatalogo] = useState([]);
-  const [equiposCatalogo, setEquiposCatalogo] = useState([]);
-  const [unidadesCatalogo, setUnidadesCatalogo] = useState([]);
-  const [instructores, setInstructores] = useState([]);
-  const [loadingInstructores, setLoadingInstructores] = useState(true);
+  const [alertasSensibles, setAlertasSensibles] = useState([]);
+  const [franjaSeleccionada, setFranjaSeleccionada] = useState('');
+
+  useEffect(() => { cargarProgramas(); }, []);
 
   useEffect(() => {
-    const cargarInstructores = async () => {
-      try {
-        let response = await fetch('/api/instructores/');
-        
-        if (!response.ok) {
-          response = await fetch('/instructores/');
-        }
-        
-        if (response.ok) {
-          const data = await response.json();
-          const instructoresData = Array.isArray(data) ? data : (data.results || []);
-          setInstructores(instructoresData);
-        } else {
-          const usersRes = await fetch('/api/usuarios/');
-          if (usersRes.ok) {
-            const usersData = await usersRes.json();
-            const users = usersData.results || usersData;
-            const instructoresFiltrados = users.filter(u => u.is_staff === true);
-            setInstructores(instructoresFiltrados);
-          } else {
-            setInstructores([
-              { id: 1, username: 'cesar', first_name: 'Cesar' },
-              { id: 2, username: 'admin', first_name: 'Admin' },
-              { id: 4, username: 'jefe', first_name: 'Jefe' },
-              { id: 6, username: 'testuser', first_name: 'Test' },
-              { id: 9, username: 'instructor1', first_name: 'Instructor' },
-            ]);
-          }
-        }
-      } catch (err) {
-        console.error('Error cargando instructores:', err);
-        setInstructores([
-          { id: 1, username: 'cesar', first_name: 'Cesar' },
-          { id: 2, username: 'admin', first_name: 'Admin' },
-          { id: 4, username: 'jefe', first_name: 'Jefe' },
-          { id: 6, username: 'testuser', first_name: 'Test' },
-          { id: 9, username: 'instructor1', first_name: 'Instructor' },
-        ]);
-      } finally {
-        setLoadingInstructores(false);
-      }
-    };
+    if (selectedPrograma) {
+      cargarCompetencias(selectedPrograma);
+      setSelectedCompetencia('');
+      setSelectedPractica('');
+      setPracticas([]);
+      setPracticaDetalle(null);
+      setResultado(null);
+      setAlertasSensibles([]);
+    }
+  }, [selectedPrograma]);
 
-    cargarInstructores();
-    
-    fetch('/api/reactivos/')
-      .then(res => res.json())
-      .then(data => setReactivosCatalogo(data))
-      .catch(err => console.error('Error cargando reactivos:', err));
-    
-    fetch('/api/equipos/')
-      .then(res => res.json())
-      .then(data => setEquiposCatalogo(data))
-      .catch(err => console.error('Error cargando equipos:', err));
-    
-    fetch('/api/unidades-medida/')
-      .then(res => res.json())
-      .then(data => setUnidadesCatalogo(data))
-      .catch(err => console.error('Error cargando unidades:', err));
-  }, []);
+  useEffect(() => {
+    if (selectedCompetencia) {
+      cargarPracticas(selectedCompetencia);
+      setSelectedPractica('');
+      setPracticaDetalle(null);
+      setResultado(null);
+      setAlertasSensibles([]);
+    }
+  }, [selectedCompetencia]);
 
-  const [reactivos, setReactivos] = useState([]);
+  useEffect(() => {
+    if (selectedPractica) {
+      cargarDetallePractica(selectedPractica);
+      setResultado(null);
+      setAlertasSensibles([]);
+    }
+  }, [selectedPractica]);
 
-  const addReactivo = () => setReactivos([...reactivos, { reactivo: '', cantidad: '', unidad: '', es_sensible: false }]);
-
-  const handleArrayChange = (setter, arr, idx, field, value) => {
-    const copy = [...arr];
-    copy[idx][field] = value;
-    setter(copy);
+  const cargarProgramas = async () => {
+    try {
+      const res = await api.get('programas/');
+      setProgramas(res.data);
+    } catch (err) { console.error('Error cargando programas:', err); }
   };
 
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-    
-    console.log("🚀 === FORMULARIO ENVIADO ===");
-    console.log("📝 encabezado:", encabezado);
-    
-    // Validaciones
-    if (!encabezado.ficha) {
-      console.log("❌ FALTA: ficha");
-      alert('Complete el campo FICHA');
-      return;
-    }
-    if (!encabezado.nombre) {
-      console.log("❌ FALTA: nombre");
-      alert('Complete el campo NOMBRE DE LA PRÁCTICA');
-      return;
-    }
-    if (!encabezado.fecha) {
-      console.log("❌ FALTA: fecha");
-      alert('Complete el campo FECHA');
-      return;
-    }
-    if (!encabezado.instructor) {
-      console.log("❌ FALTA: instructor");
-      alert('Seleccione un INSTRUCTOR');
-      return;
-    }
-    
-    const instructorId = parseInt(encabezado.instructor);
-    console.log("🔢 instructorId parseado:", instructorId);
-    
-    if (isNaN(instructorId)) {
-      alert('Seleccione un instructor válido');
-      return;
-    }
-    
-    const payload = {
-      ficha: encabezado.ficha,
-      nombre: encabezado.nombre,
-      fecha: encabezado.fecha,
-      grupos_trabajo: parseInt(encabezado.grupos_trabajo) || 1,
-      instructor: instructorId,
-      estado: "pendiente",
-      requiere_doble_aprobacion: false,
-      observaciones: observaciones || '',
-      reactivos: reactivos.filter(r => r.reactivo && r.cantidad).map(r => ({
-        reactivo: parseInt(r.reactivo),
-        cantidad: parseFloat(r.cantidad) || 0,
-        unidad: r.unidad ? parseInt(r.unidad) : null,
-        es_sensible: r.es_sensible || false
-      })),
-      materiales: [],
-      equipos: []
-    };
-    
-    console.log("📦 PAYLOAD FINAL:", payload);
-    
+  const cargarCompetencias = async (programaId) => {
     try {
-      const response = await createPractica(payload);
-      console.log("✅ RESPUESTA EXITOSA:", response);
-      
-      if (response.data && response.data.id) {
-        alert('✅ Práctica creada con ID: ' + response.data.id);
-        // Limpiar formulario
-        setEncabezado({ ficha: '', nombre: '', fecha: '', grupos_trabajo: '1', instructor: '' });
-        setCantidadGeneral('2');
-        setPrioridad('alta');
-        setObservaciones('');
-        setReactivos([]);
+      const res = await api.get(`competencias/?programa=${programaId}`);
+      setCompetencias(res.data);
+    } catch (err) { console.error('Error cargando competencias:', err); }
+  };
+
+  const cargarPracticas = async (competenciaId) => {
+    try {
+      const res = await api.get(`practicas/?competencia=${competenciaId}`);
+      setPracticas(res.data);
+    } catch (err) { console.error('Error cargando prácticas:', err); }
+  };
+
+  const cargarDetallePractica = async (practicaId) => {
+    try {
+      const res = await api.get(`practicas/${practicaId}/`);
+      setPracticaDetalle(res.data);
+    } catch (err) { console.error('Error cargando detalle:', err); }
+  };
+
+  const verificarReactivosSensibles = async (reactivos) => {
+    const sensiblesEncontrados = [];
+    for (const reactivo of reactivos) {
+      try {
+        const token = localStorage.getItem('access_token');
+        const res = await fetch(`http://127.0.0.1:8000/api/productos/${reactivo.id}/`, {
+          headers: { 'Authorization': `Bearer ${token}` }
+        });
+        if (res.ok) {
+          const data = await res.json();
+          if (data.es_sensible) {
+            sensiblesEncontrados.push({
+              nombre: reactivo.nombre,
+              cantidad: reactivo.cantidad_total,
+              unidad: reactivo.unidad
+            });
+          }
+        }
+      } catch (error) { console.error('Error verificando reactivo:', error); }
+    }
+    setAlertasSensibles(sensiblesEncontrados);
+    return sensiblesEncontrados;
+  };
+
+  const calcularPedido = async () => {
+    if (!selectedPractica || numeroGrupos < 1) {
+      toast.warning('⚠️ Seleccione una práctica y un número válido de grupos');
+      return;
+    }
+    setCalculando(true);
+    try {
+      const res = await api.post('calculo-pedido/calcular/', {
+        practica_id: selectedPractica,
+        numero_grupos: numeroGrupos
+      });
+      setResultado(res.data);
+      if (res.data.reactivos && res.data.reactivos.length > 0) {
+        await verificarReactivosSensibles(res.data.reactivos);
+      }
+      if (!res.data.tiene_stock_suficiente) {
+        toast.info('⚠️ Algunos productos no tienen stock suficiente. El pedido requerirá aprobación del Jefe.');
       } else {
-        alert('❌ Error: ' + JSON.stringify(response.data));
+        toast.success('✅ Cálculo completado. Revise los detalles del pedido.');
       }
     } catch (err) {
-      console.error("❌ ERROR EN CATCH:", err);
-      const errorMsg = err.response?.data?.detail || err.message;
-      alert('Error al guardar: ' + errorMsg);
+      console.error('Error calculando:', err);
+      toast.error('❌ Error al calcular el pedido. Intente nuevamente.');
+    } finally {
+      setCalculando(false);
+    }
+  };
+
+  const generarPedido = async () => {
+    if (!resultado) return;
+    if (!franjaSeleccionada) {
+      toast.warning('⚠️ Por favor seleccione una franja horaria para la programación');
+      return;
+    }
+    const obs = prompt('Observaciones (opcional):', observaciones);
+    try {
+      const res = await api.post('calculo-pedido/generar_pedido/', {
+        practica_id: selectedPractica,
+        numero_grupos: numeroGrupos,
+        observaciones: obs || '',
+        franja: franjaSeleccionada
+      });
+      toast.success(`✅ Pedido generado exitosamente! Solicitud ID: ${res.data.solicitud_id}`);
+      setSelectedPrograma('');
+      setSelectedCompetencia('');
+      setSelectedPractica('');
+      setResultado(null);
+      setPracticaDetalle(null);
+      setAlertasSensibles([]);
+      setFranjaSeleccionada('');
+    } catch (err) {
+      console.error('Error generando pedido:', err);
+      toast.error('❌ Error al generar el pedido');
+    }
+  };
+
+  const generarPDF = async () => {
+    if (!selectedPractica) {
+      toast.warning('⚠️ Primero seleccione una práctica');
+      return;
+    }
+    try {
+      const token = localStorage.getItem('access_token');
+      const response = await fetch('http://127.0.0.1:8000/api/generar-pdf-solicitud/', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+        body: JSON.stringify({
+          practica_id: selectedPractica,
+          numero_grupos: numeroGrupos,
+          observaciones: observaciones || ''
+        })
+      });
+      if (response.ok) {
+        const blob = await response.blob();
+        const url = window.URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `solicitud_${practicaDetalle?.nombre || 'practica'}.pdf`;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        window.URL.revokeObjectURL(url);
+        toast.success('📄 PDF generado exitosamente');
+      } else {
+        const error = await response.json();
+        toast.error('❌ Error al generar PDF: ' + (error.error || 'Error desconocido'));
+      }
+    } catch (err) {
+      console.error('Error:', err);
+      toast.error('❌ Error al generar el PDF');
     }
   };
 
   return (
-    <ScrollReveal direction="up" delay={0.1}>
-      <form onSubmit={handleSubmit} className="max-w-3xl mx-auto p-6 bg-white rounded shadow">
-        <h2 className="text-xl font-bold mb-2">NUEVA PRÁCTICA</h2>
-        <p className="text-sm text-stone-500 mb-4">Registrar una nueva práctica y solicitud de reactivos</p>
-        
-        <div className="grid grid-cols-2 gap-4 mb-4">
-          <div>
-            <label className="block text-xs font-mono font-bold text-stone-500 mb-1">FICHA</label>
-            <input 
-              value={encabezado.ficha} 
-              onChange={e => setEncabezado({ ...encabezado, ficha: e.target.value })} 
-              className="border rounded px-3 py-2 text-sm w-full"
-              placeholder="Ej: 123456"
-            />
+    <Layout>
+      <ToastContainer />
+      <div className="p-6 max-w-4xl mx-auto">
+        {/* Encabezado */}
+        <motion.div initial={{ opacity: 0, y: -20 }} animate={{ opacity: 1, y: 0 }} className="mb-8">
+          <div className="flex items-center gap-3">
+            <span className="text-4xl">🧪</span>
+            <div>
+              <h1 className="text-3xl font-bold text-stone-800">Generar Solicitud</h1>
+              <p className="text-stone-500 text-sm mt-1">Solicitar reactivos, materiales o equipos para tu práctica</p>
+            </div>
           </div>
-          <div>
-            <label className="block text-xs font-mono font-bold text-stone-500 mb-1">NOMBRE DE LA PRÁCTICA</label>
-            <input 
-              value={encabezado.nombre} 
-              onChange={e => setEncabezado({ ...encabezado, nombre: e.target.value })} 
-              className="border rounded px-3 py-2 text-sm w-full"
-              placeholder="Nombre de la práctica"
-            />
-          </div>
-        </div>
+        </motion.div>
 
-        <div className="grid grid-cols-2 gap-4 mb-4">
-          <div>
-            <label className="block text-xs font-mono font-bold text-stone-500 mb-1">FECHA</label>
-            <input 
-              type="date" 
-              value={encabezado.fecha} 
-              onChange={e => setEncabezado({ ...encabezado, fecha: e.target.value })} 
-              className="border rounded px-3 py-2 text-sm w-full"
-            />
-          </div>
-          <div>
-            <label className="block text-xs font-mono font-bold text-stone-500 mb-1">GRUPOS DE TRABAJO</label>
-            <input 
-              value={encabezado.grupos_trabajo} 
-              onChange={e => setEncabezado({ ...encabezado, grupos_trabajo: e.target.value })} 
-              className="border rounded px-3 py-2 text-sm w-full"
-              placeholder="Número de grupos"
-            />
-          </div>
-        </div>
-
-        <div className="mb-4">
-          <label className="block text-xs font-mono font-bold text-stone-500 mb-1">INSTRUCTOR</label>
-          {loadingInstructores ? (
-            <div className="text-sm text-stone-400">Cargando instructores...</div>
-          ) : (
-            <select 
-              value={encabezado.instructor} 
-              onChange={e => setEncabezado({ ...encabezado, instructor: e.target.value })} 
-              className="border rounded px-3 py-2 text-sm w-full"
-            >
-              <option value="">-- Selecciona un instructor --</option>
-              {instructores.map(inst => (
-                <option key={inst.id} value={inst.id}>
-                  {inst.username || inst.first_name || `Instructor ${inst.id}`}
-                </option>
+        {/* Alerta de reactivos sensibles */}
+        {alertasSensibles.length > 0 && (
+          <div className="bg-amber-50 border-l-4 border-amber-500 text-amber-700 px-4 py-3 rounded-lg mb-6">
+            <p className="font-bold">⚠️ Reactivos Sensibles Detectados</p>
+            <ul className="list-disc list-inside text-sm ml-2">
+              {alertasSensibles.map((r, idx) => (
+                <li key={idx}><strong>{r.nombre}</strong> - {r.cantidad} {r.unidad}</li>
               ))}
-            </select>
-          )}
+            </ul>
+          </div>
+        )}
+
+        {/* Paso 1: Programa */}
+        <div className="bg-white rounded-2xl border border-stone-200 shadow-sm p-6 mb-6">
+          <h2 className="text-lg font-semibold mb-4">1. Seleccione Programa</h2>
+          <select value={selectedPrograma} onChange={(e) => setSelectedPrograma(e.target.value)}
+            className="w-full border border-stone-200 rounded-xl px-4 py-2.5 focus:outline-none focus:border-emerald-400 focus:ring-2 focus:ring-emerald-100 transition-all">
+            <option value="">-- Seleccione un programa --</option>
+            {programas.map(p => <option key={p.id} value={p.id}>{p.codigo} - {p.nombre}</option>)}
+          </select>
         </div>
 
-        <h3 className="font-bold mt-6 mb-2">PRODUCTOS Y CANTIDADES</h3>
-        
-        {reactivos.map((r, i) => (
-          <div key={i} className="grid grid-cols-12 gap-2 mb-2 items-center">
-            <select 
-              value={r.reactivo} 
-              onChange={e => handleArrayChange(setReactivos, reactivos, i, 'reactivo', e.target.value)} 
-              className="border rounded px-2 py-1 text-sm col-span-6"
-            >
-              <option value="">Selecciona reactivo</option>
-              {reactivosCatalogo.map(prod => (
-                <option key={prod.id} value={prod.id}>{prod.nombre}</option>
-              ))}
-            </select>
-            <input 
-              placeholder="Cantidad" 
-              value={r.cantidad} 
-              onChange={e => handleArrayChange(setReactivos, reactivos, i, 'cantidad', e.target.value)} 
-              className="border rounded px-2 py-1 text-sm col-span-3"
-            />
-            <button
-              type="button"
-              onClick={() => setReactivos(reactivos.filter((_, idx) => idx !== i))}
-              className="text-red-500 text-sm col-span-3"
-            >
-              Quitar
-            </button>
-          </div>
-        ))}
-        
-        <button type="button" onClick={addReactivo} className="mb-4 text-emerald-600 text-sm">
-          + Agregar producto
-        </button>
-
-        <div className="grid grid-cols-2 gap-4 mb-4">
-          <div>
-            <label className="block text-xs font-mono font-bold text-stone-500 mb-1">CANTIDAD</label>
-            <input 
-              type="number" 
-              min="1"
-              value={cantidadGeneral} 
-              onChange={e => setCantidadGeneral(e.target.value)} 
-              className="border rounded px-3 py-2 text-sm w-full"
-            />
-          </div>
-          <div>
-            <label className="block text-xs font-mono font-bold text-stone-500 mb-1">PRIORIDAD</label>
-            <select 
-              value={prioridad} 
-              onChange={e => setPrioridad(e.target.value)} 
-              className="border rounded px-3 py-2 text-sm w-full"
-            >
-              <option value="baja">Baja</option>
-              <option value="media">Media</option>
-              <option value="alta">Alta</option>
+        {/* Paso 2: Competencia */}
+        {selectedPrograma && (
+          <div className="bg-white rounded-2xl border border-stone-200 shadow-sm p-6 mb-6">
+            <h2 className="text-lg font-semibold mb-4">2. Seleccione Competencia</h2>
+            <select value={selectedCompetencia} onChange={(e) => setSelectedCompetencia(e.target.value)}
+              className="w-full border border-stone-200 rounded-xl px-4 py-2.5 focus:outline-none focus:border-emerald-400 focus:ring-2 focus:ring-emerald-100 transition-all"
+              disabled={competencias.length === 0}>
+              <option value="">-- Seleccione una competencia --</option>
+              {competencias.map(c => <option key={c.id} value={c.id}>{c.codigo} - {c.nombre}</option>)}
             </select>
           </div>
-        </div>
+        )}
 
-        <div className="mb-4">
-          <label className="block text-xs font-mono font-bold text-stone-500 mb-1">OBSERVACIONES</label>
-          <textarea 
-            value={observaciones} 
-            onChange={e => setObservaciones(e.target.value)} 
-            className="border rounded px-3 py-2 text-sm w-full"
-            rows="3"
-            placeholder="Observaciones..."
-          />
-        </div>
+        {/* Paso 3: Práctica */}
+        {selectedCompetencia && (
+          <div className="bg-white rounded-2xl border border-stone-200 shadow-sm p-6 mb-6">
+            <h2 className="text-lg font-semibold mb-4">3. Seleccione Práctica</h2>
+            <select value={selectedPractica} onChange={(e) => setSelectedPractica(e.target.value)}
+              className="w-full border border-stone-200 rounded-xl px-4 py-2.5 focus:outline-none focus:border-emerald-400 focus:ring-2 focus:ring-emerald-100 transition-all"
+              disabled={practicas.length === 0}>
+              <option value="">-- Seleccione una práctica --</option>
+              {practicas.map(p => <option key={p.id} value={p.id}>{p.nombre}</option>)}
+            </select>
+          </div>
+        )}
 
-        <div className="flex gap-3 mt-6">
-          <button 
-            type="button" 
-            onClick={() => {
-              setEncabezado({ ficha: '', nombre: '', fecha: '', grupos_trabajo: '1', instructor: '' });
-              setCantidadGeneral('2');
-              setPrioridad('alta');
-              setObservaciones('');
-              setReactivos([]);
-            }}
-            className="px-4 py-2 border border-stone-300 rounded text-sm hover:bg-stone-50"
-          >
-            Cancelar
-          </button>
-          <button 
-            type="submit" 
-            className="bg-emerald-600 text-white px-4 py-2 rounded text-sm hover:bg-emerald-700"
-          >
-            Crear pedido
-          </button>
-        </div>
-      </form>
-    </ScrollReveal>
+        {/* Detalle de la práctica */}
+        {practicaDetalle && (
+          <div className="bg-white rounded-2xl border border-stone-200 shadow-sm p-6 mb-6">
+            <h2 className="text-lg font-semibold mb-4">Detalle de la Práctica</h2>
+            <p><strong>Nombre:</strong> {practicaDetalle.nombre}</p>
+            <p><strong>Ficha:</strong> {practicaDetalle.ficha}</p>
+            
+            <div className="mt-4">
+              <label className="block text-sm font-medium mb-2">Número de grupos:</label>
+              <div className="flex gap-4 items-center">
+                <input type="number" min="1" value={numeroGrupos} onChange={(e) => setNumeroGrupos(parseInt(e.target.value) || 1)}
+                  className="w-32 border border-stone-200 rounded-xl px-4 py-2 focus:outline-none focus:border-emerald-400 focus:ring-2 focus:ring-emerald-100 transition-all" />
+                <button onClick={calcularPedido} disabled={calculando}
+                  className="bg-emerald-600 text-white px-4 py-2 rounded-xl hover:bg-emerald-700 disabled:opacity-50 transition-all shadow-sm hover:shadow-md">
+                  {calculando ? 'Calculando...' : 'Calcular Cantidades'}
+                </button>
+              </div>
+            </div>
+
+            <div className="mt-4">
+              <label className="block text-sm font-medium mb-2">Observaciones:</label>
+              <textarea value={observaciones} onChange={(e) => setObservaciones(e.target.value)}
+                className="w-full border border-stone-200 rounded-xl px-4 py-2.5 focus:outline-none focus:border-emerald-400 focus:ring-2 focus:ring-emerald-100 transition-all"
+                rows="3" placeholder="Observaciones adicionales..." />
+            </div>
+
+            {/* Franja Horaria */}
+            <div className="mt-4">
+              <label className="block text-sm font-medium mb-2">Franja Horaria *:</label>
+              <select value={franjaSeleccionada} onChange={(e) => setFranjaSeleccionada(e.target.value)}
+                className="w-full border border-stone-200 rounded-xl px-4 py-2.5 focus:outline-none focus:border-emerald-400 focus:ring-2 focus:ring-emerald-100 transition-all">
+                <option value="">-- Seleccione una franja --</option>
+                <option value="Mañana">Mañana (6:00-12:00)</option>
+                <option value="Tarde">Tarde (12:00-18:00)</option>
+                <option value="Noche">Noche (18:00-22:00)</option>
+              </select>
+              <p className="text-xs text-stone-400 mt-1">La práctica se programará en esta franja horaria</p>
+            </div>
+          </div>
+        )}
+
+        {/* Resultado del cálculo */}
+        {resultado && (
+          <div className="bg-white rounded-2xl border border-stone-200 shadow-sm p-6 mb-6">
+            <h2 className="text-lg font-semibold mb-4">Resumen del Pedido</h2>
+            <p><strong>Práctica:</strong> {resultado.practica?.nombre}</p>
+            <p><strong>Grupos:</strong> {resultado.numero_grupos}</p>
+            
+            {resultado.reactivos && resultado.reactivos.length > 0 && (
+              <div className="mt-4">
+                <h3 className="font-semibold mb-2">Reactivos a solicitar:</h3>
+                <div className="overflow-x-auto">
+                  <table className="min-w-full border border-stone-200 rounded-xl overflow-hidden">
+                    <thead className="bg-stone-50">
+                      <tr>
+                        <th className="px-4 py-2 text-left text-xs font-medium text-stone-500 uppercase">Reactivo</th>
+                        <th className="px-4 py-2 text-left text-xs font-medium text-stone-500 uppercase">Cantidad</th>
+                        <th className="px-4 py-2 text-left text-xs font-medium text-stone-500 uppercase">Stock</th>
+                        <th className="px-4 py-2 text-left text-xs font-medium text-stone-500 uppercase">Estado</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-stone-100">
+                      {resultado.reactivos.map((r, i) => (
+                        <tr key={i} className="hover:bg-stone-50">
+                          <td className="px-4 py-2 text-sm">
+                            {r.nombre}
+                            {alertasSensibles.some(s => s.nombre === r.nombre) && (
+                              <span className="ml-2 text-red-500 text-xs font-bold">⚠️ SENSIBLE</span>
+                            )}
+                          </td>
+                          <td className="px-4 py-2 text-sm">{r.cantidad_total} {r.unidad}</td>
+                          <td className="px-4 py-2 text-sm">{r.stock_actual}</td>
+                          <td className="px-4 py-2 text-sm">
+                            {r.suficiente ? (
+                              <span className="text-emerald-600">✅ Suficiente</span>
+                            ) : (
+                              <span className="text-rose-600">⚠️ Insuficiente</span>
+                            )}
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            )}
+
+            <div className="mt-6 flex gap-3">
+              <button onClick={generarPedido} className="flex-1 bg-emerald-600 text-white px-4 py-2 rounded-xl hover:bg-emerald-700 transition-all shadow-sm hover:shadow-md">
+                Confirmar y Generar Pedido
+              </button>
+              <button onClick={generarPDF} className="flex-1 bg-blue-600 text-white px-4 py-2 rounded-xl hover:bg-blue-700 transition-all shadow-sm hover:shadow-md">
+                📄 Generar PDF
+              </button>
+            </div>
+          </div>
+        )}
+      </div>
+    </Layout>
   );
 };
 
-export default PracticaNueva;
+export default SelectorPractica;

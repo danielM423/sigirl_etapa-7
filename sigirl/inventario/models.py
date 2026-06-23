@@ -421,9 +421,9 @@ class CampoFormulario(models.Model):
 
 
 class FormularioRespuesta(models.Model):
-    """Respuestas de formularios diligenciados"""
     plantilla = models.ForeignKey('FormularioPlantilla', on_delete=models.CASCADE, related_name='respuestas')
     usuario = models.ForeignKey('auth.User', on_delete=models.CASCADE, related_name='formularios_respuestas')
+    practica = models.ForeignKey('Practica', on_delete=models.SET_NULL, null=True, blank=True, related_name='formularios')  # ← NUEVO
     fecha = models.DateTimeField(auto_now_add=True)
     datos = models.JSONField(default=dict, help_text="Diccionario con respuestas: {'campo_id': 'valor'}")
     
@@ -434,3 +434,93 @@ class FormularioRespuesta(models.Model):
     
     def __str__(self):
         return f"{self.plantilla.nombre} - {self.usuario.username} - {self.fecha.strftime('%Y-%m-%d')}"
+
+
+
+# ============================================================
+# HOJA DE VIDA DE EQUIPOS - MANTENIMIENTOS (DÍA 6)
+# ============================================================
+
+class MantenimientoEquipo(models.Model):
+    TIPOS_MANTENIMIENTO = [
+        ('preventivo', 'Preventivo'),
+        ('correctivo', 'Correctivo'),
+        ('calibracion', 'Calibración'),
+        ('predictivo', 'Predictivo'),
+    ]
+    
+    equipo = models.ForeignKey('Producto', on_delete=models.CASCADE, related_name='mantenimientos')
+    tipo = models.CharField(max_length=20, choices=TIPOS_MANTENIMIENTO)
+    fecha = models.DateField()
+    descripcion = models.TextField()
+    tecnico = models.CharField(max_length=150, blank=True)
+    costo = models.DecimalField(max_digits=10, decimal_places=2, default=0)
+    observaciones = models.TextField(blank=True, null=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    
+    class Meta:
+        ordering = ['-fecha']
+        verbose_name = "Mantenimiento"
+        verbose_name_plural = "Mantenimientos"
+    
+    def __str__(self):
+        return f"{self.equipo.nombre} - {self.tipo} - {self.fecha}"
+
+
+# ============================================================
+# PROGRAMACIÓN DE LABORATORIOS (NUEVO)
+# ============================================================
+
+class Ambiente(models.Model):
+    """Ambientes de laboratorio (TOC 501, 505, 507, 503)"""
+    nombre = models.CharField(max_length=20, unique=True)
+    descripcion = models.TextField(blank=True, null=True)
+    capacidad = models.IntegerField(default=20)
+    activo = models.BooleanField(default=True)
+    
+    def __str__(self):
+        return self.nombre
+    
+    class Meta:
+        verbose_name = "Ambiente"
+        verbose_name_plural = "Ambientes"
+        ordering = ['nombre']
+
+
+class FranjaHoraria(models.Model):
+    """Franjas horarias (6:00-12:00, 12:00-18:00, 18:00-22:00)"""
+    nombre = models.CharField(max_length=20)
+    hora_inicio = models.TimeField()
+    hora_fin = models.TimeField()
+    
+    def __str__(self):
+        return f"{self.nombre} ({self.hora_inicio.strftime('%H:%M')}-{self.hora_fin.strftime('%H:%M')})"
+    
+    class Meta:
+        verbose_name = "Franja Horaria"
+        verbose_name_plural = "Franjas Horarias"
+        ordering = ['hora_inicio']
+
+
+class ProgramacionLaboratorio(models.Model):
+    """
+    Programación de prácticas en laboratorios
+    """
+    practica = models.ForeignKey('Practica', on_delete=models.CASCADE, related_name='programaciones')
+    ambiente = models.ForeignKey('Ambiente', on_delete=models.CASCADE)
+    franja = models.ForeignKey('FranjaHoraria', on_delete=models.CASCADE)
+    fecha = models.DateField()
+    instructor = models.ForeignKey(User, on_delete=models.CASCADE, related_name='programaciones')
+    grupo = models.CharField(max_length=20, blank=True, null=True)
+    observaciones = models.TextField(blank=True, null=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+    
+    class Meta:
+        unique_together = ['ambiente', 'fecha', 'franja']
+        ordering = ['fecha', 'franja', 'ambiente']
+        verbose_name = "Programación de Laboratorio"
+        verbose_name_plural = "Programaciones de Laboratorio"
+    
+    def __str__(self):
+        return f"{self.practica.nombre} - {self.ambiente.nombre} - {self.fecha} - {self.franja.nombre}"

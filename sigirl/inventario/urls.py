@@ -1,4 +1,6 @@
 from django.urls import path, include
+from .views import programacion_semanal
+from .views import MantenimientoEquipoViewSet, reporte_equipos
 from rest_framework.routers import DefaultRouter
 from .views import (
     register,
@@ -64,7 +66,7 @@ router.register(r'auditoria', AuditoriaViewSet)
 # NUEVOS ROUTERS PARA GESTIÓN ACADÉMICA
 router.register(r'programas', ProgramaViewSet)
 router.register(r'competencias', CompetenciaViewSet)
-
+router.register(r'mantenimientos-equipo', MantenimientoEquipoViewSet)
 # Usuario ViewSet
 class UsuarioViewSet(viewsets.ModelViewSet):
     queryset = User.objects.all()
@@ -106,8 +108,12 @@ urlpatterns = [
     path('calculo-pedido/calcular/', calcular_pedido, name='calcular_pedido'),
     path('calculo-pedido/generar_pedido/', generar_pedido, name='generar_pedido'),
     path('generar-pdf-solicitud/', generar_pdf_solicitud, name='generar_pdf_solicitud'),
+    path('reporte-equipos/', reporte_equipos, name='reporte-equipos'),
     
     # ========== ENDPOINTS DE APROBACIÓN DE EXCEPCIONES ==========
     path('pedidos-requieren-aprobacion/', pedidos_requieren_aprobacion, name='pedidos_requieren_aprobacion'),
     path('aprobar-excepcion-pedido/<int:pedido_id>/', aprobar_excepcion_pedido, name='aprobar_excepcion_pedido'),
+    
+    # ========== PROGRAMACIÓN SEMANAL ==========
+    path('programacion-semanal/', programacion_semanal, name='programacion-semanal'),  # ← AGREGADO
 ]

@@ -1,147 +1,275 @@
-﻿import { useState, useEffect } from 'react';
-import ScrollReveal from '../components/ScrollReveal';
+﻿import { useState, useEffect, useContext } from 'react';
 import Layout from '../components/Layout';
-import PedidoHistorialList from '../components/PedidoHistorialList';
-import { getPracticas, getInventarioPracticasInstructor } from '../services/api';
-
-const LabSection = ({ title, children, action, onAction }) => (
-  <div className="bg-white border border-[#E0E0E0] rounded-lg overflow-hidden">
-    <div className="flex items-center justify-between px-5 py-3 border-b border-[#E0E0E0]">
-      <span className="text-xs font-mono font-bold text-[#1FA971] uppercase tracking-wider">{title}</span>
-      {action && (
-        <button onClick={onAction} className="flex items-center gap-1.5 px-3 py-1.5 rounded text-[10px] font-mono font-bold text-[#1FA971] bg-[#E8F5F0] border border-[#1FA971]/25 hover:bg-[#E8F5F0] transition-colors">
-          {action}
-        </button>
-      )}
-    </div>
-    <div className="p-5">{children}</div>
-  </div>
-);
+import { UserContext } from '../context/UserContext';
+import { motion } from 'framer-motion';
+import { useNavigate } from 'react-router-dom';
+import { 
+  Package, ClipboardList, AlertTriangle, CheckCircle,
+  TrendingUp, Clock, FileText, Calendar, User
+} from 'lucide-react';
+import api from '../services/api';
 
 const UsuarioDashboard = () => {
+  const { user } = useContext(UserContext);
+  const navigate = useNavigate();
+  const [loading, setLoading] = useState(true);
   const [practicas, setPracticas] = useState([]);
-  const [inventario, setInventario] = useState([]);
-  const [loadingInventario, setLoadingInventario] = useState(true);
+  const [pedidos, setPedidos] = useState([]);
+  const [stats, setStats] = useState({
+    totalPracticas: 0,
+    pedidosActivos: 0,
+    pedidosAprobados: 0,
+    pedidosRechazados: 0
+  });
 
   useEffect(() => {
-    getPracticas()
-      .then(res => {
-        if (Array.isArray(res?.data)) setPracticas(res.data);
-        else if (Array.isArray(res?.data?.results)) setPracticas(res.data.results);
-        else if (Array.isArray(res)) setPracticas(res);
-        else setPracticas([]);
-      })
-      .catch(() => setPracticas([]));
-
-    // Intentar cargar inventario de prácticas abiertas (solo para instructores)
-    getInventarioPracticasInstructor()
-      .then(res => {
-        setInventario(Array.isArray(res.data) ? res.data : []);
-        setLoadingInventario(false);
-      })
-      .catch(err => {
-        // Si es 404, significa que no hay prácticas abiertas (es normal)
-        if (err.response?.status === 404) {
-          setInventario([]);
-        } else {
-          console.error('Error cargando inventario:', err);
-        }
-        setLoadingInventario(false);
-      });
+    cargarDatos();
   }, []);
+
+  const cargarDatos = async () => {
+    try {
+      // 1. Cargar prácticas del usuario
+      const practicasRes = await api.get('practicas/');
+      const practicasData = practicasRes.data || [];
+      
+      // Filtrar prácticas del usuario actual
+      const misPracticas = practicasData.filter(p => 
+        p.instructor === user?.id || p.instructor_nombre === user?.username
+      );
+      setPracticas(misPracticas);
+
+      // 2. Cargar pedidos del usuario
+      const pedidosRes = await api.get('pedidos/');
+      const pedidosData = pedidosRes.data || [];
+      
+      // Filtrar pedidos del usuario actual
+      const misPedidos = pedidosData.filter(p => 
+        p.usuario === user?.id || p.usuario_username === user?.username
+      );
+      setPedidos(misPedidos);
+
+      // 3. Calcular estadísticas
+      setStats({
+        totalPracticas: misPracticas.length,
+        pedidosActivos: misPedidos.filter(p => p.estado === 'pendiente').length,
+        pedidosAprobados: misPedidos.filter(p => p.estado === 'aprobado').length,
+        pedidosRechazados: misPedidos.filter(p => p.estado === 'rechazado').length
+      });
+
+    } catch (err) {
+      console.error('Error cargando datos:', err);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const getEstadoColor = (estado) => {
+    const colores = {
+      'pendiente': 'bg-amber-100 text-amber-700',
+      'aprobado': 'bg-emerald-100 text-emerald-700',
+      'aprobada': 'bg-emerald-100 text-emerald-700',
+      'rechazado': 'bg-rose-100 text-rose-700',
+      'rechazada': 'bg-rose-100 text-rose-700',
+      'entregado': 'bg-blue-100 text-blue-700',
+      'finalizada': 'bg-stone-100 text-stone-700'
+    };
+    return colores[estado?.toLowerCase()] || 'bg-stone-100 text-stone-700';
+  };
+
+  const formatDate = (dateStr) => {
+    if (!dateStr) return '-';
+    return new Date(dateStr).toLocaleDateString('es-CO');
+  };
+
+  const statsCards = [
+    { title: 'Mis Prácticas', value: stats.totalPracticas, icon: <ClipboardList className="w-5 h-5" />, bg: 'bg-emerald-50', text: 'text-emerald-600' },
+    { title: 'Pedidos Activos', value: stats.pedidosActivos, icon: <Clock className="w-5 h-5" />, bg: 'bg-amber-50', text: 'text-amber-600' },
+    { title: 'Pedidos Aprobados', value: stats.pedidosAprobados, icon: <CheckCircle className="w-5 h-5" />, bg: 'bg-emerald-50', text: 'text-emerald-600' },
+    { title: 'Pedidos Rechazados', value: stats.pedidosRechazados, icon: <AlertTriangle className="w-5 h-5" />, bg: 'bg-rose-50', text: 'text-rose-600' }
+  ];
+
+  if (loading) {
+    return (
+      <Layout>
+        <div className="p-6 text-center">Cargando tu dashboard...</div>
+      </Layout>
+    );
+  }
 
   return (
     <Layout>
-      <div className="space-y-5">
-        <div className="bg-white border border-[#E0E0E0] rounded-lg p-5">
-          <div className="flex items-center gap-2 mb-1">
-            <span className="text-[10px] font-mono font-bold text-[#1FA971] uppercase tracking-wider">PRÁCTICAS REGISTRADAS</span>
-            <span className="w-2 h-2 rounded-full bg-emerald-400 shadow-[0_0_6px_#22c55e] animate-pulse" />
-          </div>
-          <h1 className="text-xl font-bold font-mono text-stone-700">Listado de Prácticas</h1>
-          <p className="text-[10px] font-mono text-stone-500 mt-1">Consulta todas las prácticas registradas en el sistema</p>
-        </div>
-
-        {/* Inventario de prácticas abiertas para instructores */}
-        <div className="bg-white border border-[#E0E0E0] rounded-lg p-5">
-          <ScrollReveal direction="up" delay={0.1}>
-            <h2 className="text-lg font-bold mb-2 text-emerald-700">Inventario de Prácticas Abiertas (Instructor)</h2>
-            {loadingInventario ? (
-              <div className="text-stone-400 text-xs">Cargando inventario...</div>
-            ) : inventario.length === 0 ? (
-              <div className="text-stone-400 text-xs text-center py-4">
-                No tienes prácticas abiertas asignadas.
-              </div>
-            ) : (
-              <div className="overflow-x-auto mb-4">
-                <table className="min-w-full text-xs font-mono border">
-                  <thead>
-                    <tr className="bg-stone-100">
-                      <th className="px-2 py-1 border">ID</th>
-                      <th className="px-2 py-1 border">Nombre</th>
-                      <th className="px-2 py-1 border">Tipo</th>
-                      <th className="px-2 py-1 border">Cantidad</th>
-                      <th className="px-2 py-1 border">Unidad</th>
-                      <th className="px-2 py-1 border">Ubicación</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {inventario.map(prod => (
-                      <tr key={prod.id} className="border-b">
-                        <td className="px-2 py-1 border">{prod.id}</td>
-                        <td className="px-2 py-1 border">{prod.nombre}</td>
-                        <td className="px-2 py-1 border">{prod.tipo}</td>
-                        <td className="px-2 py-1 border">{prod.cantidad}</td>
-                        <td className="px-2 py-1 border">{prod.unidad}</td>
-                        <td className="px-2 py-1 border">{prod.ubicacion}</td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            )}
-          </ScrollReveal>
-        </div>
-
-        {/* Listado de prácticas */}
-        <div className="bg-white border border-[#E0E0E0] rounded-lg p-5">
-          <ScrollReveal direction="up" delay={0.1}>
-            <div className="overflow-x-auto">
-              <table className="min-w-full text-xs font-mono border">
-                <thead>
-                  <tr className="bg-stone-100">
-                    <th className="px-2 py-1 border">ID</th>
-                    <th className="px-2 py-1 border">Nombre</th>
-                    <th className="px-2 py-1 border">Fecha</th>
-                    <th className="px-2 py-1 border">Instructor</th>
-                    <th className="px-2 py-1 border">Estado</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {practicas.length === 0 && (
-                    <tr><td colSpan="5" className="text-center py-2 text-stone-400">No hay prácticas registradas</td></tr>
-                  )}
-                  {practicas.map(prac => (
-                    <tr key={prac.id} className="border-b">
-                      <td className="px-2 py-1 border">{prac.id}</td>
-                      <td className="px-2 py-1 border">{prac.nombre}</td>
-                      <td className="px-2 py-1 border">{prac.fecha}</td>
-                      <td className="px-2 py-1 border">{prac.instructor_nombre || prac.instructor}</td>
-                      <td className="px-2 py-1 border">{prac.estado || 'pendiente'}</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
+      <div className="p-6 max-w-7xl mx-auto">
+        {/* Encabezado */}
+        <motion.div initial={{ opacity: 0, y: -20 }} animate={{ opacity: 1, y: 0 }} className="mb-8">
+          <div className="flex items-center gap-3">
+            <span className="text-4xl">📊</span>
+            <div>
+              <h1 className="text-3xl font-bold text-stone-800">Mi Dashboard</h1>
+              <p className="text-stone-500 text-sm mt-1">
+                Bienvenido, <span className="font-medium text-stone-700">{user?.nombre || user?.username || 'Usuario'}</span>
+              </p>
             </div>
-          </ScrollReveal>
+          </div>
+        </motion.div>
+
+        {/* Tarjetas de estadísticas */}
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
+          {statsCards.map((stat, idx) => (
+            <motion.div
+              key={idx}
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: idx * 0.08 }}
+              className={`${stat.bg} rounded-2xl p-5 border border-stone-200/50 shadow-sm hover:shadow-md transition-all`}
+            >
+              <div className="flex items-center justify-between">
+                <div className={`${stat.text}`}>{stat.icon}</div>
+                <span className={`text-xs px-2.5 py-1 rounded-full ${stat.text} bg-white/60`}>{stat.title}</span>
+              </div>
+              <div className="mt-4">
+                <span className="text-3xl font-bold text-stone-800">{stat.value}</span>
+              </div>
+            </motion.div>
+          ))}
         </div>
+
+        {/* Mis Prácticas */}
+        <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.2 }} className="mb-8">
+          <div className="bg-white rounded-2xl border border-stone-200 shadow-sm overflow-hidden">
+            <div className="px-5 py-3 border-b border-stone-200 flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <span className="text-sm font-semibold text-stone-700">📋 Mis Prácticas</span>
+                <span className="text-xs text-stone-400">({practicas.length})</span>
+              </div>
+              <button
+                onClick={() => navigate('/practicas/gestion')}
+                className="text-xs text-emerald-600 hover:text-emerald-700 font-medium"
+              >
+                Ver todas →
+              </button>
+            </div>
+            <div className="p-5">
+              {practicas.length === 0 ? (
+                <div className="text-center py-8">
+                  <span className="text-5xl">📋</span>
+                  <p className="text-stone-500 mt-4">No tienes prácticas registradas</p>
+                  <p className="text-sm text-stone-400">Crea una práctica desde el selector</p>
+                </div>
+              ) : (
+                <div className="overflow-x-auto">
+                  <table className="min-w-full text-sm">
+                    <thead className="bg-stone-50">
+                      <tr>
+                        <th className="px-4 py-2 text-left text-xs font-medium text-stone-500 uppercase">Nombre</th>
+                        <th className="px-4 py-2 text-left text-xs font-medium text-stone-500 uppercase">Fecha</th>
+                        <th className="px-4 py-2 text-left text-xs font-medium text-stone-500 uppercase">Estado</th>
+                        <th className="px-4 py-2 text-left text-xs font-medium text-stone-500 uppercase">Acciones</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-stone-100">
+                      {practicas.slice(0, 5).map((p) => (
+                        <tr key={p.id} className="hover:bg-stone-50">
+                          <td className="px-4 py-3 text-sm font-medium text-stone-800">{p.nombre}</td>
+                          <td className="px-4 py-3 text-sm text-stone-600">{formatDate(p.fecha)}</td>
+                          <td className="px-4 py-3 text-sm">
+                            <span className={`px-2.5 py-1 rounded-full text-xs font-medium ${getEstadoColor(p.estado)}`}>
+                              {p.estado || 'pendiente'}
+                            </span>
+                          </td>
+                          <td className="px-4 py-3 text-sm">
+                            <button className="text-emerald-600 hover:text-emerald-700 text-xs font-medium">
+                              Ver detalle
+                            </button>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+            </div>
+          </div>
+        </motion.div>
+
+        {/* Mis Pedidos Recientes */}
+        <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.3 }} className="mb-8">
+          <div className="bg-white rounded-2xl border border-stone-200 shadow-sm overflow-hidden">
+            <div className="px-5 py-3 border-b border-stone-200 flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <span className="text-sm font-semibold text-stone-700">📝 Mis Pedidos Recientes</span>
+                <span className="text-xs text-stone-400">({pedidos.length})</span>
+              </div>
+              <button
+                onClick={() => navigate('/pedidos')}
+                className="text-xs text-emerald-600 hover:text-emerald-700 font-medium"
+              >
+                Ver todos →
+              </button>
+            </div>
+            <div className="p-5">
+              {pedidos.length === 0 ? (
+                <div className="text-center py-8">
+                  <span className="text-5xl">📝</span>
+                  <p className="text-stone-500 mt-4">No tienes pedidos registrados</p>
+                  <p className="text-sm text-stone-400">Genera una solicitud desde el selector de prácticas</p>
+                </div>
+              ) : (
+                <div className="overflow-x-auto">
+                  <table className="min-w-full text-sm">
+                    <thead className="bg-stone-50">
+                      <tr>
+                        <th className="px-4 py-2 text-left text-xs font-medium text-stone-500 uppercase">Código</th>
+                        <th className="px-4 py-2 text-left text-xs font-medium text-stone-500 uppercase">Producto</th>
+                        <th className="px-4 py-2 text-left text-xs font-medium text-stone-500 uppercase">Cantidad</th>
+                        <th className="px-4 py-2 text-left text-xs font-medium text-stone-500 uppercase">Estado</th>
+                        <th className="px-4 py-2 text-left text-xs font-medium text-stone-500 uppercase">Fecha</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-stone-100">
+                      {pedidos.slice(0, 5).map((p) => (
+                        <tr key={p.id} className="hover:bg-stone-50">
+                          <td className="px-4 py-3 text-sm font-medium text-stone-700">{p.codigo || 'N/A'}</td>
+                          <td className="px-4 py-3 text-sm text-stone-600">{p.producto?.nombre || p.producto_nombre || 'N/A'}</td>
+                          <td className="px-4 py-3 text-sm text-stone-700">{p.cantidad}</td>
+                          <td className="px-4 py-3 text-sm">
+                            <span className={`px-2.5 py-1 rounded-full text-xs font-medium ${getEstadoColor(p.estado)}`}>
+                              {p.estado || 'pendiente'}
+                            </span>
+                          </td>
+                          <td className="px-4 py-3 text-sm text-stone-600">{formatDate(p.fecha_solicitud)}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+            </div>
+          </div>
+        </motion.div>
+
+        {/* Resumen rápido */}
+        <motion.div 
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.4 }}
+          className="bg-gradient-to-r from-emerald-50 to-emerald-100/50 rounded-2xl p-4 border border-emerald-200"
+        >
+          <div className="flex items-center justify-between text-sm text-stone-600">
+            <span className="flex items-center gap-2">
+              <CheckCircle className="w-4 h-4 text-emerald-600" />
+              Sistema operativo
+            </span>
+            <span className="flex items-center gap-2">
+              <Clock className="w-4 h-4 text-stone-400" />
+              Última actualización: {new Date().toLocaleString('es-CO')}
+            </span>
+            <span className="flex items-center gap-2">
+              <User className="w-4 h-4 text-emerald-600" />
+              {user?.username || 'Usuario'}
+            </span>
+          </div>
+        </motion.div>
       </div>
-      {/* Solo mostrar pedidos del usuario con animación y estilo admin */}
-      <ScrollReveal direction="up" delay={0.1}>
-        <LabSection title="Mis Pedidos (RF-034)">
-          <PedidoHistorialList />
-        </LabSection>
-      </ScrollReveal>
     </Layout>
   );
 };
