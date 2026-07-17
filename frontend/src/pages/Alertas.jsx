@@ -49,14 +49,26 @@ const Alertas = () => {
 
   useEffect(() => {
     getAlertas()
-      .then(({ data }) => setAlertas(data.results ?? data ?? []))
+      .then(({ data }) => {
+        // ✅ CORREGIDO: Verificar que data sea un array
+        if (Array.isArray(data)) {
+          setAlertas(data);
+        } else if (data?.results && Array.isArray(data.results)) {
+          setAlertas(data.results);
+        } else {
+          setAlertas([]);
+          console.warn('⚠️ Los datos de alertas no son un array:', data);
+        }
+      })
       .catch(() => toast.error('No se pudieron cargar las alertas'))
       .finally(() => setLoading(false));
   }, []);
 
-  const filteredAlertas = useMemo(() =>
-    alertas.filter((a) => priorityFilter === 'todas' || a.prioridad === priorityFilter),
-  [alertas, priorityFilter]);
+  // ✅ CORREGIDO: Verificar que alertas sea un array
+  const filteredAlertas = useMemo(() => {
+    const alertasLista = Array.isArray(alertas) ? alertas : [];
+    return alertasLista.filter((a) => priorityFilter === 'todas' || a.prioridad === priorityFilter);
+  }, [alertas, priorityFilter]);
 
   const handleCreate = async () => {
     if (!formAlerta.titulo.trim()) { toast.error('El título es obligatorio'); return; }

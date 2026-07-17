@@ -4,10 +4,10 @@ Django settings for sigirl project.
 
 import os
 from pathlib import Path
-import dj_database_url
-from celery.schedules import crontab # type: ignore
+import dj_database_url # pyright: ignore[reportMissingImports]
+ # type: ignore
 try:
-    from dotenv import load_dotenv
+    from dotenv import load_dotenv # pyright: ignore[reportMissingImports]
     load_dotenv()
 except ImportError:
     pass  # python-dotenv no instalado, se usan variables de entorno del sistema
@@ -64,14 +64,13 @@ INSTALLED_APPS = [
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
-    'django_extensions',
     'rest_framework',
+    'rest_framework_simplejwt',
     'corsheaders',
-
-    # tus apps
+    'django_extensions',
     'inventario',
+    'users',
 ]
-
 MIDDLEWARE = [
     'corsheaders.middleware.CorsMiddleware',
     'django.middleware.security.SecurityMiddleware',
@@ -195,10 +194,13 @@ WHITENOISE_ROOT = FRONTEND_DIR
 
 # ── CORS ─────────────────────────────────────────────────────────
 # En desarrollo: True  |  En producción: False (usar CORS_ALLOWED_ORIGINS)
-CORS_ALLOW_ALL_ORIGINS = os.environ.get('CORS_ALLOW_ALL_ORIGINS', 'True') == 'True'
+CORS_ALLOW_ALL_ORIGINS = True
 
 _cors_origins = os.environ.get('CORS_ALLOWED_ORIGINS', '')
 if _cors_origins:
     CORS_ALLOWED_ORIGINS = [o.strip() for o in _cors_origins.split(',') if o.strip()]
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
+
+
+AUTH_USER_MODEL = 'users.User'

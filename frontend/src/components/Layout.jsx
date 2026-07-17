@@ -105,57 +105,59 @@ useEffect(() => {
   // ========== MENÚ SUPERIOR CON BADGE ==========
 const navItems = [
   // ============================================================
-  // 1. DASHBOARD
+  // 1. DASHBOARD - TODOS
   // ============================================================
   { path: '/dashboard', label: 'Dashboard', icon: <LayoutDashboard className="w-4 h-4" />, roles: ['admin', 'jefe', 'usuario'] },
 
   // ============================================================
-  // 2. INVENTARIO
+  // 2. INVENTARIO - SOLO ADMIN Y JEFE ⚠️
   // ============================================================
-  { path: '/inventario', label: 'Inventario', icon: <Package className="w-4 h-4" />, roles: ['admin', 'jefe', 'usuario'] },
+  { path: '/inventario', label: 'Inventario', icon: <Package className="w-4 h-4" />, roles: ['admin', 'jefe'] },
 
   // ============================================================
-  // 3. PRÁCTICAS Y SOLICITUDES
+  // 3. PRÁCTICAS Y SOLICITUDES - TODOS
   // ============================================================
-  { path: '/selector-practica', label: 'Generar Solicitud', icon: <ClipboardList className="w-4 h-4" />, roles: ['usuario'] },
+  { path: '/selector-practica', label: 'Generar Solicitud', icon: <ClipboardList className="w-4 h-4" />, roles: ['admin', 'jefe', 'usuario'] },
 
   // ============================================================
-  // 4. PEDIDOS Y APROBACIONES
+  // 4. PEDIDOS Y APROBACIONES - SOLO ADMIN Y JEFE
   // ============================================================
   { path: '/aprobaciones-jefe', label: 'Aprobar Excepciones', icon: <AlertTriangle className="w-4 h-4" />, roles: ['admin', 'jefe'], badge: true },
 
   // ============================================================
-  // 5. FORMULARIOS
+  // 5. FORMULARIOS - TODOS
   // ============================================================
   { path: '/formularios/diligenciar', label: 'Formularios', icon: <FileText className="w-4 h-4" />, roles: ['admin', 'jefe', 'usuario'] },
 
   // ============================================================
-  // 6. PROGRAMACIÓN
+  // 6. PROGRAMACIÓN - TODOS
   // ============================================================
   { path: '/programacion-laboratorios', label: 'Programación', icon: <Calendar className="w-4 h-4" />, roles: ['admin', 'jefe', 'usuario'] },
 
   // ============================================================
-  // 7. GESTIÓN DE EQUIPOS Y SUSTANCIAS
+  // 7. GESTIÓN DE EQUIPOS - SOLO ADMIN Y JEFE
   // ============================================================
   { path: '/hoja-vida-equipos', label: 'Hoja de Vida Equipos', icon: <Package className="w-4 h-4" />, roles: ['admin', 'jefe'] },
 
   // ============================================================
-  // 8. GESTIÓN DE FORMULARIOS (Admin/Jefe)
+  // 8. GESTIÓN DE FORMULARIOS - SOLO ADMIN Y JEFE
   // ============================================================
   { path: '/formularios/gestion', label: 'Gestionar Formularios', icon: <FileText className="w-4 h-4" />, roles: ['admin', 'jefe'] },
   { path: '/reportes-formularios', label: 'Reportes Formularios', icon: <BarChart3 className="w-4 h-4" />, roles: ['admin', 'jefe'] },
 
   // ============================================================
-  // 9. ADMINISTRACIÓN DEL SISTEMA
+  // 9. ADMINISTRACIÓN DEL SISTEMA - SOLO ADMIN Y JEFE
   // ============================================================
   { path: '/usuarios', label: 'Usuarios', icon: <Users className="w-4 h-4" />, roles: ['admin', 'jefe'] },
   { path: '/alertas', label: 'Alertas', icon: <AlertTriangle className="w-4 h-4" />, roles: ['admin', 'jefe'] },
   { path: '/reportes', label: 'Reportes', icon: <FileText className="w-4 h-4" />, roles: ['admin', 'jefe'] },
 
   // ============================================================
-  // 10. PERFIL (SIEMPRE AL FINAL)
+  // 10. PERFIL - TODOS (SIEMPRE AL FINAL)
   // ============================================================
   { path: '/perfil', label: 'Perfil', icon: <User className="w-4 h-4" />, roles: ['admin', 'jefe', 'usuario'] },
+
+  
 ];
 
   const filteredNav = navItems.filter(item => item.roles.includes(normalizedRole));

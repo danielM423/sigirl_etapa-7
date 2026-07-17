@@ -1,0 +1,80 @@
+[33mcommit 693fe912a9fc1d7b704a0c8621851978b7a618ae[m[33m ([m[1;36mHEAD[m[33m -> [m[1;32mmain[m[33m)[m
+Author: daniel <zabalad789@gmail.com>
+Date:   Tue Jun 23 16:19:08 2026 -0500
+
+    Actualización mayor SIGIRL - Limpieza y organización
+    
+    📁 ESTRUCTURA:
+    - Movida documentación a carpeta docs/
+    - Organizados archivos de pruebas y scripts
+    
+    🆕 NUEVAS FUNCIONALIDADES:
+    - Hoja de vida de equipos (HojaVidaEquipos.jsx)
+    - Programación de laboratorios (ProgramacionLaboratorios.jsx)
+    - Reportes de formularios (ReportesFormularios.jsx)
+    
+    🔧 MEJORAS BACKEND:
+    - Nuevos modelos: MantenimientoEquipo, Ambiente, FranjaHoraria, ProgramacionLaboratorio
+    - Nuevas migraciones (0010-0012)
+    - Mejoras en serializers y views
+    
+    🎨 MEJORAS FRONTEND:
+    - Dashboard mejorado (UsuarioDashboard.jsx)
+    - Nuevo componente Layout.jsx
+    - Mejoras en formularios y pedidos
+    
+    🧹 LIMPIEZA:
+    - Script crear_datos_completos.py para pruebas
+    - Eliminación de prácticas duplicadas
+    - Organización de archivos de documentación
+
+ crear_datos_completos.py                           |    0
+ db_sigirl.zip                                      |  Bin [31m32967[m -> [32m0[m bytes
+ db_sigirl_para_amigo.db                            |  Bin [31m376832[m -> [32m0[m bytes
+ .../ANALISIS_EXHAUSTIVO_SIGIRL.md                  |    0
+ CHECKLIST_TECNICO.md => docs/CHECKLIST_TECNICO.md  |    0
+ .../CHECKLIST_VALIDACION.md                        |    0
+ .../DIAGNOSTICO_ACTUALIZADO.md                     |    0
+ .../EXPLICACION_BD_BACKEND.md                      |    0
+ .../EXPLICACION_BD_FRONTEND.md                     |    0
+ .../GUIA_CAMBIOS_PRACTICOS.md                      |    0
+ .../GUIA_CODIGO_COMENTADO_SIGIRL.md                |    0
+ .../GUIA_COMPLETA_EDITAR_ESTETICA_SIGIRL.md        |    0
+ .../GUIA_ESTILOS_AVANZADOS.md                      |    0
+ .../GUIA_IMPORTACION_EXCEL.md                      |    0
+ .../GUIA_IMPORTACION_EXCEL_PASO_A_PASO.md          |    0
+ .../GUIA_MODIFICACIONES.md                         |    0
+ .../GUIA_NAVEGABILIDAD.md                          |    0
+ .../GUIA_RAPIDA_PRUEBA.md                          |    0
+ .../GUIA_ROLES_Y_FLUJOS.md                         |    0
+ .../INDICE_DOCUMENTACION.md                        |    0
+ .../PROMPT_AVANCE_Y_PENDIENTE_15MAY2026.md         |    0
+ PROMPT_PARA_IA.md => docs/PROMPT_PARA_IA.md        |    0
+ frontend/src/App.jsx                               |   26 [32m+[m[31m-[m
+ frontend/src/components/Layout.jsx                 |  124 [32m+[m[31m-[m
+ frontend/src/pages/Dashboard.jsx                   |  595 [32m+++[m[31m--[m
+ frontend/src/pages/DiligenciarFormularios.jsx      |  166 [32m+[m[31m-[m
+ frontend/src/pages/GestionFormularios.jsx          |  303 [32m++[m[31m-[m
+ frontend/src/pages/HojaVidaEquipos.jsx             |  407 [32m+++[m
+ frontend/src/pages/PracticaNueva.jsx               |  620 [32m++[m[31m---[m
+ frontend/src/pages/ProfileSettings.jsx             |  161 [32m+[m[31m-[m
+ frontend/src/pages/ProgramacionLaboratorios.jsx    |  218 [32m++[m
+ frontend/src/pages/ReportesFormularios.jsx         |  244 [32m++[m
+ frontend/src/pages/SelectorPractica.jsx            |  569 [32m++[m[31m---[m
+ frontend/src/pages/UsuarioDashboard.jsx            |  380 [32m++[m[31m-[m
+ frontend/src/pages/pedidos.jsx                     |  552 [31m----[m
+ mis_datos.json                                     | 2632 [31m--------------------[m
+ plantilla_practica.xlsx                            |  Bin [31m44682[m -> [32m0[m bytes
+ practica_generada.xlsx                             |  Bin [31m32647[m -> [32m0[m bytes
+ practicas_sigirl.xlsx                              |  Bin [31m5267[m -> [32m0[m bytes
+ sigirl/crear_datos_completos.py                    |  107 [32m+[m
+ sigirl/inventario/Untitled-1.txt                   |   27 [32m+[m
+ .../migrations/0010_mantenimientoequipo.py         |   33 [32m+[m
+ ...biente_franjahoraria_programacionlaboratorio.py |   66 [32m+[m
+ .../0012_formulariorespuesta_practica.py           |   19 [32m+[m
+ sigirl/inventario/models.py                        |   92 [32m+[m[31m-[m
+ sigirl/inventario/serializers.py                   |  138 [32m+[m[31m-[m
+ sigirl/inventario/urls.py                          |    8 [32m+[m[31m-[m
+ sigirl/inventario/views.py                         |  270 [32m+[m[31m-[m
+ sigirl_etapa-7                                     |    1 [32m+[m
+ 49 files changed, 3325 insertions(+), 4433 deletions(-)

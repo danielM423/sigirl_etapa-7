@@ -1,9 +1,9 @@
-from django.contrib import admin
-from django.urls import path, include, re_path
-from django.views.generic import TemplateView
-from rest_framework.permissions import AllowAny
-from rest_framework.decorators import api_view, permission_classes
-from rest_framework.response import Response
+from django.contrib import admin # pyright: ignore[reportMissingModuleSource]
+from django.urls import path, include, re_path # pyright: ignore[reportMissingModuleSource]
+from django.views.generic import TemplateView # pyright: ignore[reportMissingModuleSource]
+from rest_framework.permissions import AllowAny # pyright: ignore[reportMissingImports]
+from rest_framework.decorators import api_view, permission_classes # pyright: ignore[reportMissingImports]
+from rest_framework.response import Response # pyright: ignore[reportMissingImports]
 from inventario.views import (
     register,
     get_current_user,

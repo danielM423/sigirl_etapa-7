@@ -9,7 +9,7 @@ from .models import Competencia, PedidoHistorial, PDFDocumento, Asistencia, List
 from .serializers import CompetenciaSerializer, FranjaHorariaSerializer, PedidoHistorialSerializer, PDFDocumentoSerializer, AsistenciaSerializer, ListadoDiarioSerializer, ProgramaSerializer, ProgramacionLaboratorioSerializer,AmbienteSerializer,FranjaHorariaSerializer,ProgramacionLaboratorioSerializer
 from rest_framework.parsers import MultiPartParser, FormParser
 from .permissions import IsAdminOrJefe, IsAdminOrReadOnly, IsStaffOrSuperuser, IsInventoryManagerOrReadOnly
-from .permissions import IsAdminOrJefe, IsAdminOrReadOnly, IsStaffOrSuperuser, IsInventoryManagerOrReadOnly
+from users.models import UserProfile
 
 
 
@@ -286,7 +286,8 @@ from io import BytesIO
 import secrets
 
 from django.conf import settings
-from django.contrib.auth.models import User
+from django.contrib.auth import get_user_model
+User = get_user_model()
 from django.contrib.auth.tokens import default_token_generator
 from django.contrib.auth.hashers import make_password, check_password
 from django.core.exceptions import ValidationError
@@ -304,7 +305,8 @@ from rest_framework_simplejwt.views import TokenObtainPairView, TokenRefreshView
 from openpyxl import Workbook
 from openpyxl.styles import Alignment, Font, PatternFill
 
-from .models import Alerta, Categoria, Producto, Movimiento, Pedido, UserProfile
+from .models import Alerta, Categoria, Producto, Movimiento, Pedido
+from users.models import UserProfile
 from .serializers import (
     AlertaSerializer,
     CategoriaSerializer,
@@ -365,10 +367,15 @@ def _validate_registration_email(email: str):
     return normalized_email
 
 
-def _get_role_from_user(user: User) -> str: # pyright: ignore[reportInvalidTypeForm]
-    return 'jefe' if user.is_superuser else 'admin' if user.is_staff else 'usuario'
-
-
+def _get_role_from_user(user: User) -> str: # type: ignore
+    # CORREGIDO: admin = superuser, jefe = staff (pero no superuser)
+    if user.is_superuser:
+        return 'admin'
+    elif user.is_staff:
+        return 'jefe'
+    else:
+        return 'usuario'
+    
 def _profile_existing_fields():
     return {
         field.name
@@ -827,20 +834,31 @@ def resend_verification_email(request):
 @permission_classes([IsAuthenticated])
 def get_current_user(request):
     user = request.user
-    profile, _ = UserProfile.objects.get_or_create(user=user)
-    role = _get_role_from_user(user)
+    
+    # ✅ Asegurar que el perfil existe
+    try:
+        profile = UserProfile.objects.get(user=user)
+    except UserProfile.DoesNotExist:
+        profile = UserProfile.objects.create(user=user)
+    
+    # ✅ Determinar el rol
+    if user.is_superuser:
+        role = 'admin'
+    elif user.is_staff:
+        role = 'jefe'
+    else:
+        role = 'usuario'
+    
     return Response({
-        "id": user.id,
-        "username": user.username,
-        "email": user.email,
-        "email_verified": profile.email_verified,
-        "is_staff": user.is_staff,
-        "is_superuser": user.is_superuser,
-        "first_name": user.first_name,
-        "last_name": user.last_name,
-        "role": role,
+        'id': user.id,
+        'username': user.username,
+        'email': user.email,
+        'first_name': user.first_name,
+        'last_name': user.last_name,
+        'role': role,
+        'is_staff': user.is_staff,
+        'is_superuser': user.is_superuser,
     })
-
 
 # =====================
 # AUTH - Manage Profile
@@ -2133,3 +2151,210 @@ def programacion_semanal(request):
     
     return Response(resultado)
             
+
+
+
+
+            # ============================================================
+# DASHBOARD - ESTADÍSTICAS DE USUARIO
+# ============================================================
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def estadisticas_pedidos(request):
+    """Obtiene estadísticas de pedidos del usuario actual"""
+    user = request.user
+    pedidos = Pedido.objects.filter(usuario=user)
+    
+    return Response({
+        'total': pedidos.count(),
+        'pendientes': pedidos.filter(estado='pendiente').count(),
+        'aprobados': pedidos.filter(estado='aprobado').count(),
+        'rechazados': pedidos.filter(estado='rechazado').count(),
+    })
+
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def mis_pedidos(request):
+    """Obtiene los pedidos del usuario actual"""
+    user = request.user
+    pedidos = Pedido.objects.filter(usuario=user).order_by('-fecha_solicitud')
+    
+    data = []
+    for p in pedidos[:20]:
+        data.append({
+            'id': p.id,
+            'codigo': p.codigo,
+            'producto_nombre': p.producto.nombre if p.producto else 'N/A',
+            'cantidad': p.cantidad,
+            'estado': p.estado,
+            'fecha_solicitud': p.fecha_solicitud,
+        })
+    
+    return Response(data)
+
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def mis_practicas(request):
+    """Obtiene las prácticas del usuario actual"""
+    user = request.user
+    practicas = Practica.objects.filter(instructor=user).order_by('-fecha')
+    
+    data = []
+    for p in practicas[:20]:
+        data.append({
+            'id': p.id,
+            'nombre': p.nombre,
+            'ficha': p.ficha,
+            'fecha': p.fecha,
+            'estado': p.estado,
+        })
+    
+    return Response(data)
+
+
+# ============================================================
+# APROBAR Y RECHAZAR PEDIDOS (PARA JEFE)
+# ============================================================
+
+from django.views.decorators.csrf import csrf_exempt
+from django.utils.decorators import method_decorator
+from rest_framework.views import APIView
+from rest_framework.permissions import IsAuthenticated
+from rest_framework import status
+from django.utils import timezone
+
+@method_decorator(csrf_exempt, name='dispatch')
+class AprobarPedidoView(APIView):
+    """
+    Vista para que el Jefe apruebe un pedido que requiere aprobación.
+    """
+    permission_classes = [IsAuthenticated]
+    
+    def post(self, request, pk):
+        try:
+            from .models import Pedido, PedidoHistorial
+            
+            pedido = Pedido.objects.get(pk=pk)
+            
+            # Verificar que el pedido esté en estado 'requiere_aprobacion'
+            if pedido.estado != 'requiere_aprobacion':
+                return Response(
+                    {'error': f'Este pedido no está pendiente de aprobación. Estado actual: {pedido.estado}'},
+                    status=status.HTTP_400_BAD_REQUEST
+                )
+            
+            # Verificar que el usuario tenga permisos
+            if not (request.user.is_staff or request.user.is_superuser):
+                return Response(
+                    {'error': 'No tienes permisos para aprobar pedidos. Solo el Jefe puede hacerlo.'},
+                    status=status.HTTP_403_FORBIDDEN
+                )
+            
+            # Aprobar el pedido
+            pedido.estado = 'aprobado'
+            pedido.aprobado_por_jefe = True
+            pedido.fecha_aprobacion_jefe = timezone.now()
+            pedido.save()
+            
+            # Registrar en historial
+            try:
+                PedidoHistorial.objects.create(
+                    pedido=pedido,
+                    estado='aprobado',
+                    usuario_modificador=request.user,
+                    comentario='Aprobado por Jefe'
+                )
+            except Exception:
+                pass
+            
+            return Response({
+                'success': True,
+                'message': 'Pedido aprobado correctamente',
+                'pedido_id': pedido.id,
+                'codigo': pedido.codigo
+            }, status=status.HTTP_200_OK)
+            
+        except Pedido.DoesNotExist:
+            return Response(
+                {'error': 'Pedido no encontrado'},
+                status=status.HTTP_404_NOT_FOUND
+            )
+        except Exception as e:
+            return Response(
+                {'error': f'Error al aprobar: {str(e)}'},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR
+            )
+
+
+@method_decorator(csrf_exempt, name='dispatch')
+class RechazarPedidoView(APIView):
+    """
+    Vista para que el Jefe rechace un pedido que requiere aprobación.
+    """
+    permission_classes = [IsAuthenticated]
+    
+    def post(self, request, pk):
+        try:
+            from .models import Pedido, PedidoHistorial
+            
+            pedido = Pedido.objects.get(pk=pk)
+            
+            # Verificar que el pedido esté en estado 'requiere_aprobacion'
+            if pedido.estado != 'requiere_aprobacion':
+                return Response(
+                    {'error': f'Este pedido no está pendiente de aprobación. Estado actual: {pedido.estado}'},
+                    status=status.HTTP_400_BAD_REQUEST
+                )
+            
+            # Verificar que el usuario tenga permisos
+            if not (request.user.is_staff or request.user.is_superuser):
+                return Response(
+                    {'error': 'No tienes permisos para rechazar pedidos. Solo el Jefe puede hacerlo.'},
+                    status=status.HTTP_403_FORBIDDEN
+                )
+            
+            # Obtener motivo del rechazo
+            motivo = request.data.get('motivo', 'Sin motivo especificado')
+            if not motivo or not motivo.strip():
+                return Response(
+                    {'error': 'Debes proporcionar un motivo de rechazo'},
+                    status=status.HTTP_400_BAD_REQUEST
+                )
+            
+            # Rechazar el pedido
+            pedido.estado = 'rechazado'
+            pedido.motivo_rechazo = motivo.strip()
+            pedido.save()
+            
+            # Registrar en historial
+            try:
+                PedidoHistorial.objects.create(
+                    pedido=pedido,
+                    estado='rechazado',
+                    usuario_modificador=request.user,
+                    comentario=f'Rechazado por Jefe. Motivo: {motivo}'
+                )
+            except Exception:
+                pass
+            
+            return Response({
+                'success': True,
+                'message': 'Pedido rechazado correctamente',
+                'pedido_id': pedido.id,
+                'codigo': pedido.codigo,
+                'motivo': motivo
+            }, status=status.HTTP_200_OK)
+            
+        except Pedido.DoesNotExist:
+            return Response(
+                {'error': 'Pedido no encontrado'},
+                status=status.HTTP_404_NOT_FOUND
+            )
+        except Exception as e:
+            return Response(
+                {'error': f'Error al rechazar: {str(e)}'},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR
+            )

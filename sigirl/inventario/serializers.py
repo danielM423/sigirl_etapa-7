@@ -1,5 +1,9 @@
-from rest_framework import serializers
-from django.contrib.auth.models import User
+from rest_framework import serializers # pyright: ignore[reportMissingImports]
+from django.contrib.auth import get_user_model
+from users.models import UserProfile
+
+from users.serializers import UserProfileSerializer
+User = get_user_model()
 from .models import *
 
 # ============================================================
@@ -56,12 +60,35 @@ class CategoriaSerializer(serializers.ModelSerializer):
 
 
 class ProductoSerializer(serializers.ModelSerializer):
-    categoria = CategoriaSerializer(read_only=True)
-    categoria_id = serializers.PrimaryKeyRelatedField(queryset=Categoria.objects.all(), source='categoria', write_only=True, required=False)
+    categoria_texto = serializers.CharField(write_only=True, required=False)
+    categoria_nombre = serializers.SerializerMethodField()
+    
     class Meta:
         model = Producto
-        fields = '__all__'
-        extra_kwargs = {'es_sensible': {'required': False}}
+        fields = ['id', 'nombre', 'tipo', 'categoria', 'categoria_texto', 'categoria_nombre', 
+                  'cantidad', 'minimo', 'ubicacion', 'unidad', 'es_sensible', 'estado',
+                  # ✅ AGREGAR ESTOS CAMPOS
+            'horas_uso', 'marca', 'modelo', 'serie', 
+            'responsable', 'proveedor']
+        
+        read_only_fields = ['id']
+    
+    def get_categoria_nombre(self, obj):
+        return obj.categoria.nombre if obj.categoria else None
+    
+    def create(self, validated_data):
+        categoria_texto = validated_data.pop('categoria_texto', None)
+        if categoria_texto:
+            categoria, _ = Categoria.objects.get_or_create(nombre=categoria_texto)
+            validated_data['categoria'] = categoria
+        return super().create(validated_data)
+    
+    def update(self, instance, validated_data):
+        categoria_texto = validated_data.pop('categoria_texto', None)
+        if categoria_texto:
+            categoria, _ = Categoria.objects.get_or_create(nombre=categoria_texto)
+            validated_data['categoria'] = categoria
+        return super().update(instance, validated_data)
 
 
 class PracticaReactivoSerializer(serializers.ModelSerializer):
@@ -75,36 +102,61 @@ class PracticaReactivoSerializer(serializers.ModelSerializer):
 class PracticaMaterialSerializer(serializers.ModelSerializer):
     class Meta:
         model = PracticaMaterial
-        fields = '__all__'
+        fields = ['id', 'nombre', 'cantidad_por_grupo', 'cantidad_total', 'unidad']
+
+
+class PracticaReactivoSerializer(serializers.ModelSerializer):
+    reactivo_nombre = serializers.CharField(source='reactivo.nombre', read_only=True)
+    unidad_simbolo = serializers.CharField(source='unidad.simbolo', read_only=True)
+    
+    # ✅ CORREGIDO: usar allow_null=True en lugar de null=True
+    peso_inicial = serializers.FloatField(allow_null=True, required=False)
+    peso_final = serializers.FloatField(allow_null=True, required=False)
+    cantidad_consumida = serializers.FloatField(allow_null=True, required=False)
+    cantidad_solucion_ml = serializers.FloatField(allow_null=True, required=False)
+    
+    class Meta:
+        model = PracticaReactivo
+        fields = [
+            'id', 'reactivo', 'reactivo_nombre', 'cantidad', 'unidad', 'unidad_simbolo', 
+            'es_sensible', 'peso_inicial', 'peso_final', 'cantidad_consumida',
+            'nombre_solucion', 'concentracion', 'cantidad_solucion_ml'
+        ]
 
 
 class PracticaEquipoSerializer(serializers.ModelSerializer):
     equipo_nombre = serializers.CharField(source='equipo.nombre', read_only=True)
+    
     class Meta:
         model = PracticaEquipo
-        fields = '__all__'
+        fields = ['id', 'equipo', 'equipo_nombre', 'tiempo_uso_min', 'desgaste_estimado', 'mantenimiento_requerido']
 
 
 class PracticaSerializer(serializers.ModelSerializer):
-    instructor_nombre = serializers.CharField(source='instructor.username', read_only=True)
-    competencia_nombre = serializers.CharField(source='competencia.nombre', read_only=True, allow_null=True)
-    reactivos = PracticaReactivoSerializer(many=True, required=False, read_only=True)
-    equipos = PracticaEquipoSerializer(many=True, required=False, read_only=True)
-    materiales = PracticaMaterialSerializer(many=True, required=False, read_only=True)
+    instructor_nombre = serializers.SerializerMethodField()
+    competencia_nombre = serializers.SerializerMethodField()
+    reactivos = PracticaReactivoSerializer(many=True, read_only=True)
+    equipos = PracticaEquipoSerializer(many=True, read_only=True)
+    materiales = PracticaMaterialSerializer(many=True, read_only=True)
     
     class Meta:
         model = Practica
-        fields = '__all__'
+        fields = [
+            'id', 'ficha', 'nombre', 'fecha', 'grupos_trabajo',
+            'instructor', 'instructor_nombre', 'estado',
+            'requiere_doble_aprobacion', 'observaciones',
+            'competencia', 'competencia_nombre',
+            'es_recurrente', 'periodicidad_dias',
+            'fecha_ultima_repeticion', 'repeticiones_totales',
+            'repeticiones_realizadas',
+            'reactivos', 'equipos', 'materiales'
+        ]
     
-    def create(self, validated_data):
-        return Practica.objects.create(**validated_data)
+    def get_instructor_nombre(self, obj):
+        return obj.instructor.get_full_name() or obj.instructor.username
     
-    def update(self, instance, validated_data):
-        for attr, value in validated_data.items():
-            setattr(instance, attr, value)
-        instance.save()
-        return instance
-
+    def get_competencia_nombre(self, obj):
+        return obj.competencia.nombre if obj.competencia else None
 
 class MovimientoSerializer(serializers.ModelSerializer):
     class Meta:
@@ -138,12 +190,11 @@ class AlertaSerializer(serializers.ModelSerializer):
         return obj.estado
 
 
-class UserProfileSerializer(serializers.ModelSerializer):
-    class Meta:
-        model = UserProfile
-        fields = ['avatar', 'phone', 'department', 'institution', 'cargo', 'bio', 'updated_at']
-        read_only_fields = ['updated_at']
-
+class CurrentUserProfileSerializer(serializers.ModelSerializer):
+    # ... resto del código
+    def get_profile(self, obj):
+        profile, _ = UserProfile.objects.get_or_create(user=obj)
+        return UserProfileSerializer(profile).data
 
 class ProgramaSerializer(serializers.ModelSerializer):
     competencias_count = serializers.SerializerMethodField()
@@ -376,3 +427,50 @@ class ProgramacionLaboratorioSerializer(serializers.ModelSerializer):
     class Meta:
         model = ProgramacionLaboratorio
         fields = '__all__'
+
+        # inventario/serializers.py
+class PedidoDetalleSerializer(serializers.ModelSerializer):
+    producto_nombre = serializers.CharField(source='producto.nombre', read_only=True)
+    producto_categoria = serializers.CharField(source='producto.categoria.nombre', read_only=True)
+    producto_stock = serializers.IntegerField(source='producto.cantidad', read_only=True)
+    producto_unidad = serializers.CharField(source='producto.unidad', read_only=True)
+    usuario_nombre = serializers.CharField(source='usuario.get_full_name', read_only=True)
+    usuario_username = serializers.CharField(source='usuario.username', read_only=True)
+    practica_nombre = serializers.SerializerMethodField()
+    practica_fecha = serializers.SerializerMethodField()
+    practica_franja = serializers.SerializerMethodField()
+    
+    class Meta:
+        model = Pedido
+        fields = [
+            'id', 'codigo', 'producto', 'producto_nombre', 'producto_categoria',
+            'producto_stock', 'producto_unidad', 'cantidad', 'estado', 'prioridad',
+            'solicitante', 'departamento', 'fecha_solicitud', 'fecha_respuesta',
+            'observaciones', 'motivo_rechazo', 'usuario', 'usuario_nombre',
+            'usuario_username', 'requiere_aprobacion_jefe', 'aprobado_por_jefe',
+            'fecha_aprobacion_jefe', 'practica_nombre', 'practica_fecha', 'practica_franja'
+        ]
+    
+    def get_practica_nombre(self, obj):
+        if obj.observaciones:
+            import re
+            match = re.search(r'Práctica:\s*(.+?)(?:\n|$)', obj.observaciones)
+            if match:
+                return match.group(1).strip()
+        return None
+    
+    def get_practica_fecha(self, obj):
+        if obj.observaciones:
+            import re
+            match = re.search(r'Fecha:\s*(.+?)(?:\n|$)', obj.observaciones)
+            if match:
+                return match.group(1).strip()
+        return None
+    
+    def get_practica_franja(self, obj):
+        if obj.observaciones:
+            import re
+            match = re.search(r'Franja:\s*(.+?)(?:\n|$)', obj.observaciones)
+            if match:
+                return match.group(1).strip()
+        return None
