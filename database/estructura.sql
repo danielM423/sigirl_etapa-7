@@ -1,0 +1,14 @@
+-- ==========================================================
+-- ESTRUCTURA BASE DE DATOS SIGIRL
+-- ----------------------------------------------------------
+-- Este archivo sirve para documentar o guardar el esquema SQL
+-- del sistema cuando se requiera una exportación manual.
+--
+-- En la versión actual del proyecto, la estructura principal
+-- también se administra mediante modelos y migraciones de Django.
+--
+-- Tablas esperadas del dominio:
+-- 1. categorias   -> clasifica reactivos, insumos o equipos
+-- 2. productos    -> almacena stock, mínimos y vencimientos
+-- 3. movimientos  -> registra entradas y salidas del inventario
+-- ==========================================================

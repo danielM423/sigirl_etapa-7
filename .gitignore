@@ -1,0 +1,39 @@
+# Entornos virtuales de Python
+.venv/
+venv/
+env/
+ENV/
+
+# Archivos de dependencias instaladas
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+
+# Archivos de bases de datos locales
+db.sqlite3
+
+# Node modules (si usas Node.js/React)
+node_modules/
+
+# Variables de entorno — NUNCA subir al repo
+.env
+sigirl/.env
+
+# Build del frontend — se incluye en el repo para que Render pueda servirlo
+# frontend/dist/
+# dist/
+
+# Archivos de sistema
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+
+# Ignorar base de datos de Django en subcarpetas
+sigirl/db.sqlite3
+
+# Ignorar archivos de salida de build y estáticos
+frontend/dist/
+staticfiles/

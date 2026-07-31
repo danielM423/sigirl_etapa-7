@@ -1,0 +1,14 @@
+-- ==========================================================
+-- DATOS DE PRUEBA SIGIRL
+-- ----------------------------------------------------------
+-- Este archivo está destinado a inserts manuales de ejemplo
+-- para poblar la base de datos en entornos de prueba.
+--
+-- Uso sugerido:
+-- - categorías de laboratorio
+-- - productos con stock inicial
+-- - movimientos simulados de entrada y salida
+--
+-- Si el sistema usa Django activamente, muchos datos también
+-- pueden cargarse desde el panel admin o por la API REST.
+-- ==========================================================
