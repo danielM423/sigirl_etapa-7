@@ -88,11 +88,69 @@ const SelectorPractica = () => {
   };
 
   const cargarDetallePractica = async (practicaId) => {
-    try {
-      const res = await api.get(`practicas/${practicaId}/`);
-      setPracticaDetalle(res.data);
-    } catch (err) { console.error('Error cargando detalle:', err); }
-  };
+  console.log('🔍 1. Iniciando carga de práctica ID:', practicaId);
+  
+  try {
+    console.log('🔍 2. Haciendo fetch a practicas/' + practicaId + '/');
+    const res = await api.get(`practicas/${practicaId}/`);
+    
+    console.log('🔍 3. Respuesta completa:', res);
+    console.log('🔍 4. Datos de la práctica:', res.data);
+    console.log('🔍 5. Reactivos en la respuesta:', res.data.reactivos);
+    console.log('🔍 6. Equipos en la respuesta:', res.data.equipos);
+    console.log('🔍 7. Materiales en la respuesta:', res.data.materiales);
+    
+    const practica = res.data;
+    
+    // Si no vienen en el serializador, intentar cargar por separado
+    if (!practica.reactivos || practica.reactivos.length === 0) {
+      console.log('⚠️ 8. No hay reactivos en la respuesta, intentando cargar por separado...');
+      try {
+        const reactivosRes = await api.get(`practicas/${practicaId}/reactivos/`);
+        console.log('📦 9. Reactivos cargados por separado:', reactivosRes.data);
+        practica.reactivos = reactivosRes.data || [];
+      } catch (e) {
+        console.warn('❌ 10. Error cargando reactivos por separado:', e);
+        practica.reactivos = [];
+      }
+    }
+    
+    if (!practica.equipos || practica.equipos.length === 0) {
+      console.log('⚠️ 11. No hay equipos en la respuesta, intentando cargar por separado...');
+      try {
+        const equiposRes = await api.get(`practicas/${practicaId}/equipos/`);
+        console.log('📦 12. Equipos cargados por separado:', equiposRes.data);
+        practica.equipos = equiposRes.data || [];
+      } catch (e) {
+        console.warn('❌ 13. Error cargando equipos por separado:', e);
+        practica.equipos = [];
+      }
+    }
+    
+    // Asegurar que existan los arrays
+    if (!practica.reactivos) practica.reactivos = [];
+    if (!practica.equipos) practica.equipos = [];
+    if (!practica.materiales) practica.materiales = [];
+    
+    console.log('✅ 14. Datos finales de la práctica:', {
+      id: practica.id,
+      nombre: practica.nombre,
+      reactivos: practica.reactivos.length,
+      equipos: practica.equipos.length,
+      materiales: practica.materiales.length,
+      reactivos_data: practica.reactivos,
+      equipos_data: practica.equipos,
+      materiales_data: practica.materiales
+    });
+    
+    setPracticaDetalle(practica);
+    console.log('✅ 15. Estado practicaDetalle actualizado');
+    
+  } catch (err) {
+    console.error('❌ 16. Error en cargarDetallePractica:', err);
+    toast.error('❌ Error al cargar los detalles de la práctica');
+  }
+};
 
   const verificarReactivosSensibles = async (reactivos) => {
     const sensiblesEncontrados = [];
@@ -378,6 +436,78 @@ const SelectorPractica = () => {
 
           {practicaDetalle && (
             <>
+              {/* ✅ MOSTRAR REACTIVOS DE LA PRÁCTICA */}
+              {practicaDetalle.reactivos && practicaDetalle.reactivos.length > 0 && (
+                <div className="mb-5 p-4 bg-emerald-50 rounded-xl border border-emerald-200">
+                  <h4 className="font-semibold text-emerald-800 mb-3 flex items-center gap-2">
+                    <span>🧪</span> Reactivos de esta práctica
+                    <span className="text-xs font-normal text-emerald-600 ml-2">
+                      ({practicaDetalle.reactivos.length})
+                    </span>
+                  </h4>
+                  <div className="grid grid-cols-2 md:grid-cols-3 gap-2">
+                    {practicaDetalle.reactivos.map((r, idx) => (
+                      <div key={idx} className="bg-white p-2.5 rounded-lg text-sm shadow-sm border border-emerald-100">
+                        <div className="font-medium text-stone-800">
+                          {r.reactivo_nombre || r.reactivo?.nombre || 'Reactivo'}
+                        </div>
+                        <div className="text-stone-500 text-xs flex items-center gap-2 mt-0.5">
+                          <span>Cantidad: {r.cantidad} {r.unidad?.simbolo || r.unidad || ''}</span>
+                          {r.es_sensible && <span className="text-red-500 font-bold">⚠️ SENSIBLE</span>}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* ✅ MOSTRAR EQUIPOS DE LA PRÁCTICA */}
+              {practicaDetalle.equipos && practicaDetalle.equipos.length > 0 && (
+                <div className="mb-5 p-4 bg-blue-50 rounded-xl border border-blue-200">
+                  <h4 className="font-semibold text-blue-800 mb-3 flex items-center gap-2">
+                    <span>🔧</span> Equipos de esta práctica
+                    <span className="text-xs font-normal text-blue-600 ml-2">
+                      ({practicaDetalle.equipos.length})
+                    </span>
+                  </h4>
+                  <div className="grid grid-cols-2 md:grid-cols-3 gap-2">
+                    {practicaDetalle.equipos.map((e, idx) => (
+                      <div key={idx} className="bg-white p-2.5 rounded-lg text-sm shadow-sm border border-blue-100">
+                        <div className="font-medium text-stone-800">
+                          {e.equipo_nombre || e.equipo?.nombre || 'Equipo'}
+                        </div>
+                        <div className="text-stone-500 text-xs mt-0.5">
+                          Tiempo: {e.tiempo_uso_min || e.tiempo_uso || 0} min
+                          {e.mantenimiento_requerido && ' 🔧 Mantenimiento'}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* ✅ MOSTRAR MATERIALES DE LA PRÁCTICA */}
+              {practicaDetalle.materiales && practicaDetalle.materiales.length > 0 && (
+                <div className="mb-5 p-4 bg-purple-50 rounded-xl border border-purple-200">
+                  <h4 className="font-semibold text-purple-800 mb-3 flex items-center gap-2">
+                    <span>📦</span> Materiales de esta práctica
+                    <span className="text-xs font-normal text-purple-600 ml-2">
+                      ({practicaDetalle.materiales.length})
+                    </span>
+                  </h4>
+                  <div className="grid grid-cols-2 md:grid-cols-3 gap-2">
+                    {practicaDetalle.materiales.map((m, idx) => (
+                      <div key={idx} className="bg-white p-2.5 rounded-lg text-sm shadow-sm border border-purple-100">
+                        <div className="font-medium text-stone-800">{m.nombre}</div>
+                        <div className="text-stone-500 text-xs mt-0.5">
+                          {m.cantidad_por_grupo} por grupo | Total: {m.cantidad_total}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-5">
                 <div>
                   <label className="block text-sm font-medium text-stone-700 mb-2">👥 Número de grupos</label>

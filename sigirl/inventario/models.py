@@ -1,5 +1,8 @@
 from django.db import models
 from django.contrib.auth.models import User
+from django.db.models.signals import post_save
+from django.dispatch import receiver  # ← NUEVA IMPORTACIÓN
+from datetime import date
 # === RF-034: Historial de pedidos ===
 class PedidoHistorial(models.Model):
     pedido = models.ForeignKey('Pedido', on_delete=models.CASCADE, related_name='historial')
@@ -525,20 +528,45 @@ class ProgramacionLaboratorio(models.Model):
     ambiente = models.ForeignKey('Ambiente', on_delete=models.CASCADE)
     franja = models.ForeignKey('FranjaHoraria', on_delete=models.CASCADE)
     instructor = models.ForeignKey(User, on_delete=models.SET_NULL, null=True)
-    
-    # ✅ AGREGAR null=True, blank=True a estos campos
     grupo = models.CharField(max_length=50, blank=True, null=True, default='')
     estado = models.CharField(max_length=20, default='programado')
     observaciones = models.TextField(blank=True, null=True, default='')
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
-    
-    # ✅ AGREGAR HORA
     hora_inicio = models.TimeField(null=True, blank=True)
     hora_fin = models.TimeField(null=True, blank=True)
-    creado_por = models.CharField(max_length=150, blank=True, null=True, default='admin')  # ✅ NUEVO CAMPO
+    creado_por = models.CharField(max_length=150, blank=True, null=True, default='admin')
+    
     class Meta:
         unique_together = ['practica', 'fecha', 'ambiente', 'franja']
     
     def __str__(self):
         return f"{self.practica.nombre} - {self.fecha}"
+
+    
+@receiver(post_save, sender=Practica)
+def programar_practica(sender, instance, created, **kwargs):
+                 if created:
+                     try:
+                         # Solo crear programación si existen ambiente y franja
+                         ambiente = Ambiente.objects.first()
+                         franja = FranjaHoraria.objects.first()
+                         
+                         if ambiente and franja and instance.fecha and instance.instructor:
+                             ProgramacionLaboratorio.objects.get_or_create(
+                                 practica=instance,
+                                 fecha=instance.fecha,
+                                 defaults={
+                                     'instructor': instance.instructor,
+                                     'grupo': instance.ficha or 'GRUPO-001',
+                                     'ambiente': ambiente,
+                                     'franja': franja,
+                                     'hora_inicio': '06:00:00',
+                                     'hora_fin': '12:00:00',
+                                     'creado_por': 'admin'
+                                 }
+                             )
+                         else:
+                             print(f"⚠️ No se pudo crear programación automática: ambiente={ambiente}, franja={franja}")
+                     except Exception as e:
+                         print(f"⚠️ Error al crear programación automática: {e}")      

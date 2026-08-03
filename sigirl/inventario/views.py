@@ -16,6 +16,9 @@ from rest_framework.views import APIView
 from rest_framework.permissions import IsAuthenticated
 from rest_framework import status
 from django.utils import timezone
+from rest_framework import viewsets, permissions
+from .models import Producto
+from .serializers import ProductoSerializer
 
 
 class PedidoHistorialViewSet(viewsets.ModelViewSet):
@@ -272,11 +275,15 @@ class PracticaViewSet(viewsets.ModelViewSet):
 class ReactivoViewSet(viewsets.ModelViewSet):
     queryset = Producto.objects.filter(tipo='reactivo')
     serializer_class = ProductoSerializer
+    permission_classes = [permissions.IsAuthenticated]
+
+
 
 # API REST para Equipos (productos tipo equipo)
 class EquipoViewSet(viewsets.ModelViewSet):
     queryset = Producto.objects.filter(tipo='equipo')
     serializer_class = ProductoSerializer
+    permission_classes = [permissions.IsAuthenticated]
 
 # API REST para PracticaReactivo y PracticaEquipo (opcional, si quieres exponerlos)
 class PracticaReactivoViewSet(viewsets.ModelViewSet):
@@ -2582,3 +2589,37 @@ class AprobarPedidoView(APIView):
                 {'error': f'Error al aprobar: {str(e)}'},
                 status=status.HTTP_500_INTERNAL_SERVER_ERROR
             )
+# ============================================================
+# REACTIVOS Y EQUIPOS - ENDPOINTS PARA INVENTARIO
+# ============================================================
+
+class ReactivoViewSet(viewsets.ModelViewSet):
+    """
+    Vista para reactivos (productos tipo 'reactivo')
+    """
+    queryset = Producto.objects.filter(tipo='reactivo')
+    serializer_class = ProductoSerializer
+    permission_classes = [permissions.AllowAny]
+    
+    def get_queryset(self):
+        queryset = super().get_queryset()
+        search = self.request.query_params.get('search', '')
+        if search:
+            queryset = queryset.filter(nombre__icontains=search)
+        return queryset
+
+
+class EquipoViewSet(viewsets.ModelViewSet):
+    """
+    Vista para equipos (productos tipo 'equipo')
+    """
+    queryset = Producto.objects.filter(tipo='equipo')
+    serializer_class = ProductoSerializer
+    permission_classes = [permissions.AllowAny]
+    
+    def get_queryset(self):
+        queryset = super().get_queryset()
+        search = self.request.query_params.get('search', '')
+        if search:
+            queryset = queryset.filter(nombre__icontains=search)
+        return queryset

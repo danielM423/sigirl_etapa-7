@@ -17,7 +17,11 @@ import {
   Search,
   Bell,
   BarChart3,
-  Calendar
+  Calendar,
+  GraduationCap, // 👈 NUEVO: ícono para gestión académica
+  BookOpen,       // 👈 NUEVO: ícono para programas
+  Target,         // 👈 NUEVO: ícono para competencias
+  ClipboardCheck  // 👈 NUEVO: ícono para prácticas
 } from 'lucide-react';
 
 const Layout = ({ children }) => {
@@ -43,7 +47,6 @@ const Layout = ({ children }) => {
         headers: { 'Authorization': `Bearer ${token}` }
       });
       
-      // ✅ Si es 403 o 401 (usuario no autorizado), silenciosamente no mostrar badge
       if (res.status === 403 || res.status === 401) {
         setAprobacionesPendientes(0);
         return;
@@ -51,19 +54,16 @@ const Layout = ({ children }) => {
       
       if (res.ok) {
         const data = await res.json();
-        // ✅ Asegurar que data sea un array
         setAprobacionesPendientes(Array.isArray(data) ? data.length : 0);
       } else {
         setAprobacionesPendientes(0);
       }
     } catch (error) {
-      // ✅ Ignorar errores silenciosamente
       console.log('Error al contar aprobaciones:', error.message);
       setAprobacionesPendientes(0);
     }
   };
 
-  // Cargar al inicio y actualizar cada 30 segundos
   useEffect(() => {
     contarAprobacionesPendientes();
     const interval = setInterval(contarAprobacionesPendientes, 30000);
@@ -76,11 +76,10 @@ const Layout = ({ children }) => {
     return () => clearInterval(timer);
   }, []);
 
-  // Avatar reactivo: se actualiza cuando cambia el usuario o la ruta
+  // Avatar reactivo
   const username = user?.username || localStorage.getItem('username') || '';
   const [avatarSrc, setAvatarSrc] = useState(() => localStorage.getItem(`sigirl_avatar:${username}`) || '');
 
-  // Re-leer avatar si el username o la ruta cambia (al volver de Perfil)
   useEffect(() => {
     const stored = localStorage.getItem(`sigirl_avatar:${username}`) || '';
     setAvatarSrc(stored);
@@ -113,50 +112,52 @@ const Layout = ({ children }) => {
     // ============================================================
     // 2. INVENTARIO
     // ============================================================
-    { path: '/inventario', label: 'Inventario', icon: <Package className="w-4 h-4" />, roles: ['admin', 'jefe'
-      
-    ] },
+    { path: '/inventario', label: 'Inventario', icon: <Package className="w-4 h-4" />, roles: ['admin', 'jefe'] },
 
     // ============================================================
-    // 3. PRÁCTICAS Y SOLICITUDES
+    // 3. GESTIÓN ACADÉMICA (NUEVO)
+    // ============================================================
+    { path: '/competencias', label: 'Competencias', icon: <Target className="w-4 h-4" />, roles: ['admin', 'jefe'] },
+    // ============================================================
+    // 4. PRÁCTICAS Y SOLICITUDES
     // ============================================================
     { path: '/selector-practica', label: 'Generar Solicitud', icon: <ClipboardList className="w-4 h-4" />, roles: ['usuario'] },
 
     // ============================================================
-    // 4. PEDIDOS Y APROBACIONES
+    // 5. PEDIDOS Y APROBACIONES
     // ============================================================
     { path: '/aprobaciones-jefe', label: 'Aprobar Excepciones', icon: <AlertTriangle className="w-4 h-4" />, roles: ['admin', 'jefe'], badge: true },
 
     // ============================================================
-    // 5. FORMULARIOS
+    // 6. FORMULARIOS
     // ============================================================
     { path: '/formularios/diligenciar', label: 'Formularios', icon: <FileText className="w-4 h-4" />, roles: ['admin', 'jefe', 'usuario'] },
 
     // ============================================================
-    // 6. PROGRAMACIÓN
+    // 7. PROGRAMACIÓN
     // ============================================================
     { path: '/programacion-laboratorios', label: 'Programación', icon: <Calendar className="w-4 h-4" />, roles: ['admin', 'jefe', 'usuario'] },
 
     // ============================================================
-    // 7. GESTIÓN DE EQUIPOS Y SUSTANCIAS
+    // 8. GESTIÓN DE EQUIPOS Y SUSTANCIAS
     // ============================================================
     { path: '/hoja-vida-equipos', label: 'Hoja de Vida Equipos', icon: <Package className="w-4 h-4" />, roles: ['admin', 'jefe'] },
 
     // ============================================================
-    // 8. GESTIÓN DE FORMULARIOS (Admin/Jefe)
+    // 9. GESTIÓN DE FORMULARIOS (Admin/Jefe)
     // ============================================================
     { path: '/formularios/gestion', label: 'Gestionar Formularios', icon: <FileText className="w-4 h-4" />, roles: ['admin', 'jefe'] },
     { path: '/reportes-formularios', label: 'Reportes Formularios', icon: <BarChart3 className="w-4 h-4" />, roles: ['admin', 'jefe'] },
 
     // ============================================================
-    // 9. ADMINISTRACIÓN DEL SISTEMA
+    // 10. ADMINISTRACIÓN DEL SISTEMA
     // ============================================================
     { path: '/usuarios', label: 'Usuarios', icon: <Users className="w-4 h-4" />, roles: ['admin', 'jefe'] },
     { path: '/alertas', label: 'Alertas', icon: <AlertTriangle className="w-4 h-4" />, roles: ['admin', 'jefe'] },
     { path: '/reportes', label: 'Reportes', icon: <FileText className="w-4 h-4" />, roles: ['admin', 'jefe'] },
 
     // ============================================================
-    // 10. PERFIL (SIEMPRE AL FINAL)
+    // 11. PERFIL (SIEMPRE AL FINAL)
     // ============================================================
     { path: '/perfil', label: 'Perfil', icon: <User className="w-4 h-4" />, roles: ['admin', 'jefe', 'usuario'] },
   ];

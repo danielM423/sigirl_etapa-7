@@ -37,6 +37,10 @@ from .views import (
     CampoFormularioViewSet,
     FormularioRespuestaViewSet,
     
+    # NUEVOS - Reactivos y Equipos
+    ReactivoViewSet,
+    EquipoViewSet,
+    
     # Funciones
     top_reactivos_usados,
     instructores_list,
@@ -71,6 +75,10 @@ router.register(r'formularios-plantilla', FormularioPlantillaViewSet)
 router.register(r'formularios-campos', CampoFormularioViewSet)
 router.register(r'formularios-respuesta', FormularioRespuestaViewSet)
 
+# NUEVOS - Reactivos y Equipos (solo una vez)
+router.register(r'reactivos', ReactivoViewSet, basename='reactivos')
+router.register(r'equipos', EquipoViewSet, basename='equipos')
+
 # Principales
 router.register(r'practicas', PracticaViewSet)
 router.register(r'productos', ProductoViewSet)
@@ -98,7 +106,7 @@ router.register(r'programacion-laboratorio', ProgramacionLaboratorioViewSet)
 class UsuarioViewSet(viewsets.ModelViewSet):
     queryset = User.objects.all()
     serializer_class = UserManagementSerializer
-    permission_classes = [permissions.IsAdminUser]
+    permission_classes = [permissions.IsAuthenticated]
 
 router.register(r'usuarios', UsuarioViewSet)
 

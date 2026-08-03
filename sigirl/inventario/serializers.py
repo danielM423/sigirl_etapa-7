@@ -98,24 +98,147 @@ class PracticaEquipoSerializer(serializers.ModelSerializer):
 class PracticaSerializer(serializers.ModelSerializer):
     instructor_nombre = serializers.CharField(source='instructor.username', read_only=True)
     competencia_nombre = serializers.CharField(source='competencia.nombre', read_only=True, allow_null=True)
-    reactivos = PracticaReactivoSerializer(many=True, required=False, read_only=True)
-    equipos = PracticaEquipoSerializer(many=True, required=False, read_only=True)
-    materiales = PracticaMaterialSerializer(many=True, required=False, read_only=True)
+    reactivos = serializers.SerializerMethodField()
+    equipos = serializers.SerializerMethodField()
+    materiales = serializers.SerializerMethodField()
     
     class Meta:
         model = Practica
         fields = '__all__'
+        # ✅ IMPORTANTE: Decirle al serializer que acepte estos campos aunque no estén en el modelo
+        extra_kwargs = {
+            'reactivos': {'required': False, 'allow_null': True},
+            'equipos': {'required': False, 'allow_null': True},
+        }
+    
+    def get_reactivos(self, obj):
+        from .serializers import PracticaReactivoSerializer
+        return PracticaReactivoSerializer(obj.reactivos.all(), many=True).data
+    
+    def get_equipos(self, obj):
+        from .serializers import PracticaEquipoSerializer
+        return PracticaEquipoSerializer(obj.equipos.all(), many=True).data
+    
+    def get_materiales(self, obj):
+        from .serializers import PracticaMaterialSerializer
+        return PracticaMaterialSerializer(obj.materiales.all(), many=True).data
+    
+    def to_internal_value(self, data):
+        """
+        Este método se ejecuta antes de create/update.
+        Aquí podemos ver qué datos llegan y procesarlos.
+        """
+        print("=" * 60)
+        print("🔍 to_internal_value - DATOS RECIBIDOS:")
+        print(f"📦 data: {data}")
+        print("=" * 60)
+        
+        # Guardar reactivos y equipos para usarlos después
+        self._reactivos_data = data.get('reactivos', [])
+        self._equipos_data = data.get('equipos', [])
+        
+        # Remover reactivos y equipos de los datos para que no causen error
+        # porque no son campos del modelo Practica
+        data_copy = data.copy()
+        data_copy.pop('reactivos', None)
+        data_copy.pop('equipos', None)
+        
+        return super().to_internal_value(data_copy)
     
     def create(self, validated_data):
-        return Practica.objects.create(**validated_data)
+        print("=" * 60)
+        print("🔍 CREATE - validated_data recibido:")
+        print(f"📦 validated_data: {validated_data}")
+        print(f"📦 Reactivos guardados en to_internal_value: {getattr(self, '_reactivos_data', [])}")
+        print(f"📦 Equipos guardados en to_internal_value: {getattr(self, '_equipos_data', [])}")
+        print("=" * 60)
+        
+        # ✅ Obtener reactivos y equipos que guardamos en to_internal_value
+        reactivos_data = getattr(self, '_reactivos_data', [])
+        equipos_data = getattr(self, '_equipos_data', [])
+        
+        # ✅ Crear la práctica
+        practica = Practica.objects.create(**validated_data)
+        print(f"✅ Práctica creada: ID={practica.id} - {practica.nombre}")
+        
+        # ✅ Crear los reactivos asociados
+        for r_data in reactivos_data:
+            try:
+                PracticaReactivo.objects.create(
+                    practica=practica,
+                    reactivo_id=r_data['reactivo'],
+                    cantidad=r_data['cantidad'],
+                    unidad_id=r_data['unidad'],
+                    es_sensible=r_data.get('es_sensible', False)
+                )
+                print(f"✅ Reactivo agregado: ID={r_data['reactivo']}")
+            except Exception as e:
+                print(f"❌ Error al crear reactivo: {e}")
+                import traceback
+                traceback.print_exc()
+        
+        # ✅ Crear los equipos asociados
+        for e_data in equipos_data:
+            try:
+                PracticaEquipo.objects.create(
+                    practica=practica,
+                    equipo_id=e_data['equipo'],
+                    tiempo_uso_min=e_data['tiempo_uso_min'],
+                    desgaste_estimado=e_data.get('desgaste_estimado', 0),
+                    mantenimiento_requerido=e_data.get('mantenimiento_requerido', False)
+                )
+                print(f"✅ Equipo agregado: ID={e_data['equipo']}")
+            except Exception as e:
+                print(f"❌ Error al crear equipo: {e}")
+                import traceback
+                traceback.print_exc()
+        
+        print(f"✅ Práctica {practica.id} guardada con {len(reactivos_data)} reactivos y {len(equipos_data)} equipos")
+        return practica
     
     def update(self, instance, validated_data):
+        print("=" * 60)
+        print("🔍 UPDATE - validated_data recibido:")
+        print(f"📦 validated_data: {validated_data}")
+        print("=" * 60)
+        
+        # ✅ Obtener reactivos y equipos
+        reactivos_data = getattr(self, '_reactivos_data', None)
+        equipos_data = getattr(self, '_equipos_data', None)
+        
+        # Actualizar campos básicos
         for attr, value in validated_data.items():
             setattr(instance, attr, value)
         instance.save()
+        
+        # ✅ Actualizar reactivos (borrar y crear de nuevo)
+        if reactivos_data is not None:
+            instance.reactivos.all().delete()
+            for r_data in reactivos_data:
+                PracticaReactivo.objects.create(
+                    practica=instance,
+                    reactivo_id=r_data['reactivo'],
+                    cantidad=r_data['cantidad'],
+                    unidad_id=r_data['unidad'],
+                    es_sensible=r_data.get('es_sensible', False)
+                )
+            print(f"✅ Reactivos actualizados: {len(reactivos_data)}")
+        
+        # ✅ Actualizar equipos (borrar y crear de nuevo)
+        if equipos_data is not None:
+            instance.equipos.all().delete()
+            for e_data in equipos_data:
+                PracticaEquipo.objects.create(
+                    practica=instance,
+                    equipo_id=e_data['equipo'],
+                    tiempo_uso_min=e_data['tiempo_uso_min'],
+                    desgaste_estimado=e_data.get('desgaste_estimado', 0),
+                    mantenimiento_requerido=e_data.get('mantenimiento_requerido', False)
+                )
+            print(f"✅ Equipos actualizados: {len(equipos_data)}")
+        
         return instance
-
-
+    
 class MovimientoSerializer(serializers.ModelSerializer):
     class Meta:
         model = Movimiento

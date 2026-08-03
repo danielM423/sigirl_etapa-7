@@ -7,7 +7,6 @@ const api = axios.create({
 
 // Interceptor de salida: agrega automáticamente el token a cada solicitud privada.
 api.interceptors.request.use((config) => {
-  // Intentar obtener token de diferentes nombres posibles
   const token = localStorage.getItem("access_token") || localStorage.getItem("token");
   const requestUrl = config.url || "";
   
@@ -40,7 +39,6 @@ api.interceptors.response.use(
       "token/refresh/"
     ].some((route) => requestUrl.includes(route));
 
-    // Si es error 401 y no es una ruta pública y no se ha intentado renovar aún
     if (error.response?.status === 401 && !isPublicRoute && !originalRequest._retry) {
       originalRequest._retry = true;
       
@@ -52,18 +50,15 @@ api.interceptors.response.use(
           const response = await api.post("token/refresh/", { refresh: refreshToken });
           
           if (response.data.access) {
-            // Guardar nuevo token
             localStorage.setItem("access_token", response.data.access);
             localStorage.setItem("token", response.data.access);
             
-            // Reintentar la petición original con el nuevo token
             originalRequest.headers.Authorization = `Bearer ${response.data.access}`;
             console.log("✅ Token renovado exitosamente");
             return api(originalRequest);
           }
         } catch (refreshError) {
           console.error("❌ Error al renovar token:", refreshError);
-          // Si falla la renovación, redirigir al login
           localStorage.removeItem("access_token");
           localStorage.removeItem("token");
           localStorage.removeItem("refresh_token");
@@ -72,7 +67,6 @@ api.interceptors.response.use(
           return Promise.reject(refreshError);
         }
       } else {
-        // No hay refresh token, redirigir al login
         console.error("❌ No hay refresh token disponible");
         localStorage.removeItem("access_token");
         localStorage.removeItem("token");
@@ -168,5 +162,31 @@ export const getUnidadesMedida = () => api.get('unidades-medida/');
 
 // ── Top reactivos usados ──────────────────────────────────
 export const getTopReactivosUsados = () => api.get('top-reactivos-usados/');
+
+// ============================================================
+// ═════════════════════════════════════════════════════════════
+// 🆕 NUEVAS FUNCIONES PARA GESTIÓN ACADÉMICA
+// ═════════════════════════════════════════════════════════════
+// ============================================================
+
+// ── Programas ──────────────────────────────────────────────
+export const getProgramas = () => api.get('programas/');
+export const createPrograma = (data) => api.post('programas/', data);
+export const updatePrograma = (id, data) => api.patch(`programas/${id}/`, data);
+export const deletePrograma = (id) => api.delete(`programas/${id}/`);
+export const getProgramaById = (id) => api.get(`programas/${id}/`);
+
+// ── Competencias ──────────────────────────────────────────
+export const getCompetencias = (params) => api.get('competencias/', { params });
+export const createCompetencia = (data) => api.post('competencias/', data);
+export const updateCompetencia = (id, data) => api.patch(`competencias/${id}/`, data);
+export const deleteCompetencia = (id) => api.delete(`competencias/${id}/`);
+export const getCompetenciaById = (id) => api.get(`competencias/${id}/`);
+export const getCompetenciasByPrograma = (programaId) => api.get('competencias/', { params: { programa: programaId } });
+
+// ── Reactivos Sensibles ──────────────────────────────────
+export const toggleReactivoSensible = (id) => api.post(`toggle-reactivo-sensible/${id}/`);
+export const crearReactivoSensible = (data) => api.post('crear-reactivo-sensible/', data);
+export const getSustanciasControladas = () => api.get('reporte-sustancias-controladas/');
 
 export default api;
