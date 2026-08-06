@@ -5,7 +5,7 @@ import { useSearchParams } from 'react-router-dom';
 import {
   Search, ChevronDown, Plus, Edit2, Trash2, Package, AlertCircle,
   TrendingUp, XCircle, CheckCircle2, Eye, FlaskConical, Download,
-  Bell, Shield, ClipboardList
+  Bell, Shield, ClipboardList, X
 } from 'lucide-react';
 import Layout from '../components/Layout';
 import PedidoHistorialList from '../components/PedidoHistorialList';
@@ -15,6 +15,7 @@ import ListadoDiarioList from '../components/ListadoDiarioList';
 import ScrollReveal from '../components/ScrollReveal';
 import ReportPanel from '../components/ReportPanel';
 import { exportToExcel, exportToPdf } from '../utils/reportExport';
+import { showWarning, showSuccess, showError, showInfo } from '../utils/toastHelpers';
 import {
   getProductos, createProducto, updateProducto, deleteProducto,
   getAlertas, createAlerta, updateAlerta, deleteAlerta,
@@ -26,8 +27,6 @@ const normalizeProducto = (p) => ({
   categoria: p.categoria_nombre || String(p.categoria || ''),
   umbral_minimo: p.umbral_minimo ?? p.minimo ?? 0,
 });
-
-// Eliminado: normalizePedido y toda lógica de pedidos
 
 // ─── Badge helpers ────────────────────────────────────────────────
 const ESTADO_STYLES = {
@@ -96,6 +95,9 @@ const AdminDashboard = () => {
   const [loading, setLoading] = useState(true);
   const [alertas, setAlertas] = useState([]);
 
+  // ✅ ESTADO PARA OCULTAR ALERTAS DEL DASHBOARD
+  const [alertasVisibles, setAlertasVisibles] = useState(true);
+
   const activeTab = ['alertas', 'practicas'].includes(searchParams.get('tab'))
     ? searchParams.get('tab')
     : 'inventario';
@@ -114,7 +116,6 @@ const AdminDashboard = () => {
 
   const [showModalAlerta, setShowModalAlerta] = useState(false);
   const [formAlerta, setFormAlerta] = useState({ titulo: '', descripcion: '', prioridad: 'media', remitente: 'Admin' });
-  // Eliminado: estado de pedidos
 
   const changeTab = (tab) => setSearchParams({ tab });
 
@@ -127,8 +128,19 @@ const AdminDashboard = () => {
         setProductos((prodRes.data.results ?? prodRes.data).map(normalizeProducto));
         setAlertas(alertRes.data.results ?? alertRes.data);
         setPracticas(pracRes.data.results ?? pracRes.data);
+
+        // ✅ MOSTRAR NOTIFICACIÓN DE STOCK BAJO COMO TOAST
+        const bajos = (prodRes.data.results ?? prodRes.data).filter(p => 
+          Number(p.cantidad) > 0 && Number(p.cantidad) <= Number(p.minimo ?? p.umbral_minimo ?? 5)
+        );
+        if (bajos.length > 0) {
+          showWarning(
+            `🔴 ${bajos.length} reactivo${bajos.length > 1 ? 's' : ''} bajo mínimo: ${bajos.slice(0, 3).map(p => p.nombre).join(', ')}${bajos.length > 3 ? '...' : ''}`,
+            8000
+          );
+        }
       } catch (err) {
-        toast.error('Error al cargar datos del servidor');
+        showError('Error al cargar datos del servidor');
         console.error(err);
       } finally {
         setLoading(false);
@@ -136,8 +148,6 @@ const AdminDashboard = () => {
     };
     hydrate();
   }, []);
-
-  // Eliminado: handlers de pedidos
 
   const resetFormProducto = () => {
     setFormProducto({ nombre: '', categoria: 'Solventes', ubicacion: '', cantidad: '', umbral_minimo: '' });
@@ -153,51 +163,51 @@ const AdminDashboard = () => {
   };
 
   const handleGuardarProducto = async () => {
-    if (!formProducto.nombre.trim() || !formProducto.ubicacion.trim()) { toast.error('Completa nombre y ubicación'); return; }
-    if (formProducto.cantidad === '' || formProducto.umbral_minimo === '') { toast.error('Completa cantidad y umbral mínimo'); return; }
-    if (Number(formProducto.cantidad) < 0 || Number(formProducto.umbral_minimo) < 0) { toast.error('Las cantidades no pueden ser negativas'); return; }
+    if (!formProducto.nombre.trim() || !formProducto.ubicacion.trim()) { showError('Completa nombre y ubicación'); return; }
+    if (formProducto.cantidad === '' || formProducto.umbral_minimo === '') { showError('Completa cantidad y umbral mínimo'); return; }
+    if (Number(formProducto.cantidad) < 0 || Number(formProducto.umbral_minimo) < 0) { showError('Las cantidades no pueden ser negativas'); return; }
     const payload = { nombre: formProducto.nombre.trim(), categoria_texto: formProducto.categoria, ubicacion: formProducto.ubicacion.trim(), cantidad: Number(formProducto.cantidad), umbral_minimo: Number(formProducto.umbral_minimo), tipo: 'reactivo' };
     try {
       if (selectedProduct) {
         const { data } = await updateProducto(selectedProduct.id, payload);
         setProductos((prev) => prev.map((p) => p.id === selectedProduct.id ? normalizeProducto(data) : p));
-        toast.success('Producto actualizado');
+        showSuccess('Producto actualizado');
       } else {
         const { data } = await createProducto(payload);
         setProductos((prev) => [normalizeProducto(data), ...prev]);
-        toast.success('Producto creado');
+        showSuccess('Producto creado');
       }
       setShowModalInventario(false); resetFormProducto();
     } catch (err) {
       const msg = err.response?.data;
-      toast.error(typeof msg === 'object' ? Object.values(msg).flat().join(' ') : (msg || 'Error al guardar'));
+      showError(typeof msg === 'object' ? Object.values(msg).flat().join(' ') : (msg || 'Error al guardar'));
     }
   };
 
   const handleEliminarProducto = async (id) => {
     const p = productos.find((x) => x.id === id);
     if (!p || !window.confirm(`¿Eliminar ${p.nombre}?`)) return;
-    try { await deleteProducto(id); setProductos((prev) => prev.filter((x) => x.id !== id)); toast.success('Producto eliminado'); }
-    catch { toast.error('Error al eliminar el producto'); }
+    try { await deleteProducto(id); setProductos((prev) => prev.filter((x) => x.id !== id)); showSuccess('Producto eliminado'); }
+    catch { showError('Error al eliminar el producto'); }
   };
 
   const handleResolverAlerta = async (id) => {
     try {
       const { data } = await updateAlerta(id, { resuelta: true });
       setAlertas((prev) => prev.map((a) => a.id === id ? data : a));
-      toast.success('Alerta resuelta');
-    } catch { toast.error('Error al resolver la alerta'); }
+      showSuccess('Alerta resuelta');
+    } catch { showError('Error al resolver la alerta'); }
   };
 
   const handleCrearAlerta = async () => {
-    if (!formAlerta.titulo.trim()) { toast.error('El título es requerido'); return; }
+    if (!formAlerta.titulo.trim()) { showError('El título es requerido'); return; }
     try {
       const { data } = await createAlerta({ ...formAlerta, estado: 'nueva' });
       setAlertas((prev) => [...prev, data]);
       setFormAlerta({ titulo: '', descripcion: '', prioridad: 'media', remitente: 'Admin' });
       setShowModalAlerta(false);
-      toast.success('Alerta creada');
-    } catch { toast.error('Error al crear la alerta'); }
+      showSuccess('Alerta creada');
+    } catch { showError('Error al crear la alerta'); }
   };
 
   const handleEliminarAlerta = async (id) => {
@@ -205,12 +215,9 @@ const AdminDashboard = () => {
     try {
       await deleteAlerta(id);
       setAlertas((prev) => prev.filter((a) => a.id !== id));
-      toast.success('Alerta eliminada');
-    } catch { toast.error('Error al eliminar la alerta'); }
+      showSuccess('Alerta eliminada');
+    } catch { showError('Error al eliminar la alerta'); }
   };
-
-  // Filtros
-  // Eliminado: filtro de pedidos
 
   const categoriasDisponibles = ['todas', ...new Set(productos.map((p) => p.categoria).filter(Boolean))];
 
@@ -222,7 +229,6 @@ const AdminDashboard = () => {
 
   const filteredAlertas = alertas.filter((a) => alertPriorityFilter === 'todas' || a.prioridad === alertPriorityFilter);
 
-  // Eliminado: stats de pedidos
   const statsAlertas = { total: alertas.length, nuevas: alertas.filter(a=>a.estado==='nueva').length, altas: alertas.filter(a=>a.prioridad==='alta').length };
 
   const reportPrimaryData = activeTab === 'inventario'
@@ -253,23 +259,21 @@ const AdminDashboard = () => {
   const handleExportExcel = () => {
     if (activeTab === 'inventario') {
       exportToExcel(filteredProductos.map(i=>({ producto:i.nombre, categoria:i.categoria, cantidad:i.cantidad, umbral_minimo:i.umbral_minimo, ubicacion:i.ubicacion, estado:i.estado })), 'inventario-sigirl.xlsx');
-    } else if (activeTab === 'pedidos') {
-      exportToExcel(filteredPedidos.map(i=>({ codigo:i.codigo, solicitante:i.solicitante, producto:i.producto, cantidad:i.cantidad, prioridad:i.prioridad, estado:i.estado, fecha_solicitud:i.fecha_solicitud })), 'pedidos-sigirl.xlsx');
     } else {
       exportToExcel(filteredAlertas.map(i=>({ alerta:i.titulo, remitente:i.remitente, prioridad:i.prioridad, estado:i.estado, descripcion:i.descripcion })), 'alertas-sigirl.xlsx');
     }
-    toast.success('Reporte exportado a Excel');
+    showSuccess('Reporte exportado a Excel');
   };
 
   const handleExportPdf = () => {
-    const isInv = activeTab === 'inventario', isPed = activeTab === 'pedidos';
+    const isInv = activeTab === 'inventario';
     exportToPdf({
-      title: isInv ? 'Reporte de Inventario SIGIRL' : isPed ? 'Reporte de Pedidos SIGIRL' : 'Reporte de Alertas SIGIRL',
-      headers: isInv ? ['Producto','Categoría','Cantidad','Ubicación','Estado'] : isPed ? ['Código','Solicitante','Producto','Cantidad','Estado'] : ['Alerta','Remitente','Prioridad','Estado'],
-      rows: isInv ? filteredProductos.map(i=>[i.nombre,i.categoria,i.cantidad,i.ubicacion,i.estado]) : isPed ? filteredPedidos.map(i=>[i.codigo,i.solicitante,i.producto,i.cantidad,i.estado]) : filteredAlertas.map(i=>[i.titulo,i.remitente,i.prioridad,i.estado]),
-      fileName: isInv ? 'inventario-sigirl.pdf' : isPed ? 'pedidos-sigirl.pdf' : 'alertas-sigirl.pdf',
+      title: isInv ? 'Reporte de Inventario SIGIRL' : 'Reporte de Alertas SIGIRL',
+      headers: isInv ? ['Producto','Categoría','Cantidad','Ubicación','Estado'] : ['Alerta','Remitente','Prioridad','Estado'],
+      rows: isInv ? filteredProductos.map(i=>[i.nombre,i.categoria,i.cantidad,i.ubicacion,i.estado]) : filteredAlertas.map(i=>[i.titulo,i.remitente,i.prioridad,i.estado]),
+      fileName: isInv ? 'inventario-sigirl.pdf' : 'alertas-sigirl.pdf',
     });
-    toast.success('Reporte exportado a PDF');
+    showSuccess('Reporte exportado a PDF');
   };
 
   // ─── Tabs config ─────────────────────────────────────────────────
@@ -278,42 +282,6 @@ const AdminDashboard = () => {
     { key: 'practicas',  label: 'PRÁCTICAS',  icon: <ClipboardList className="w-3.5 h-3.5" /> },
     { key: 'alertas',   label: 'ALERTAS',    icon: <Bell className="w-3.5 h-3.5" /> },
   ];
-        {/* ── PRÁCTICAS ───────────────────────────────────────────── */}
-        {activeTab === 'practicas' && (
-          <div className="space-y-4">
-            <LabSection title="Listado de Prácticas">
-              <ScrollReveal direction="up" delay={0.1}>
-                <div className="overflow-x-auto">
-                  <table className="min-w-full text-xs font-mono border">
-                  <thead>
-                    <tr className="bg-stone-100">
-                      <th className="px-2 py-1 border">ID</th>
-                      <th className="px-2 py-1 border">Nombre</th>
-                      <th className="px-2 py-1 border">Fecha</th>
-                      <th className="px-2 py-1 border">Instructor</th>
-                      <th className="px-2 py-1 border">Estado</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {practicas.length === 0 && (
-                      <tr><td colSpan="5" className="text-center py-2 text-stone-400">No hay prácticas registradas</td></tr>
-                    )}
-                    {practicas.map(prac => (
-                      <tr key={prac.id} className="border-b">
-                        <td className="px-2 py-1 border">{prac.id}</td>
-                        <td className="px-2 py-1 border">{prac.nombre}</td>
-                        <td className="px-2 py-1 border">{prac.fecha}</td>
-                        <td className="px-2 py-1 border">{prac.instructor_nombre || prac.instructor}</td>
-                        <td className="px-2 py-1 border">{prac.estado || 'pendiente'}</td>
-                      </tr>
-                    ))}
-                  </tbody>
-                  </table>
-                </div>
-              </ScrollReveal>
-            </LabSection>
-          </div>
-        )}
 
   if (loading) return (
     <Layout>
@@ -330,6 +298,31 @@ const AdminDashboard = () => {
     <Layout>
       <div className="space-y-5">
 
+        {/* ✅ ALERTA DE STOCK BAJO CON BOTÓN DE CIERRE */}
+        {alertasVisibles && productos.filter(p => p.estado === 'bajo_stock').length > 0 && (
+          <div className="relative bg-amber-50 border-l-4 border-amber-400 p-4 rounded-r-lg shadow-sm">
+            <button
+              onClick={() => setAlertasVisibles(false)}
+              className="absolute top-2 right-2 text-amber-600 hover:text-amber-800 transition-colors p-1 hover:bg-amber-100 rounded"
+              title="Cerrar alerta"
+            >
+              <X size={18} />
+            </button>
+            <div className="flex items-start gap-3 pr-8">
+              <AlertCircle className="w-5 h-5 text-amber-500 mt-0.5 flex-shrink-0" />
+              <div>
+                <p className="font-semibold text-amber-800">
+                  {productos.filter(p => p.estado === 'bajo_stock').length} reactivo{productos.filter(p => p.estado === 'bajo_stock').length > 1 ? 's' : ''} bajo mínimo
+                </p>
+                <p className="text-sm text-amber-700">
+                  {productos.filter(p => p.estado === 'bajo_stock').slice(0, 5).map(p => p.nombre).join(', ')}
+                  {productos.filter(p => p.estado === 'bajo_stock').length > 5 && ` y ${productos.filter(p => p.estado === 'bajo_stock').length - 5} más...`}
+                </p>
+              </div>
+            </div>
+          </div>
+        )}
+
         {/* Header */}
         <div className="bg-white border border-[#E0E0E0] rounded-lg p-5">
           <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
@@ -342,7 +335,6 @@ const AdminDashboard = () => {
               <h1 className="text-xl font-bold font-mono text-stone-700">Control de Sistema</h1>
               <div className="flex flex-wrap gap-2 mt-2">
                 <span className="px-2 py-0.5 rounded text-[10px] font-mono bg-[#E8F5F0] text-[#1FA971] border border-[#1FA971]/25">{productos.length} productos</span>
-                {/* <span className="px-2 py-0.5 rounded text-[10px] font-mono bg-amber-500/10 text-amber-400 border border-amber-200">{statsPedidos.pendientes} pendientes</span> */}
                 <span className="px-2 py-0.5 rounded text-[10px] font-mono bg-rose-500/10 text-rose-400 border border-rose-200">{statsAlertas.nuevas} alertas</span>
               </div>
             </div>
@@ -446,7 +438,42 @@ const AdminDashboard = () => {
           </div>
         )}
 
-        {/* PEDIDOS eliminados completamente: solo prácticas, inventario y alertas */}
+        {/* ── PRÁCTICAS ───────────────────────────────────────────── */}
+        {activeTab === 'practicas' && (
+          <div className="space-y-4">
+            <LabSection title="Listado de Prácticas">
+              <ScrollReveal direction="up" delay={0.1}>
+                <div className="overflow-x-auto">
+                  <table className="min-w-full text-xs font-mono border">
+                  <thead>
+                    <tr className="bg-stone-100">
+                      <th className="px-2 py-1 border">ID</th>
+                      <th className="px-2 py-1 border">Nombre</th>
+                      <th className="px-2 py-1 border">Fecha</th>
+                      <th className="px-2 py-1 border">Instructor</th>
+                      <th className="px-2 py-1 border">Estado</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {practicas.length === 0 && (
+                      <tr><td colSpan="5" className="text-center py-2 text-stone-400">No hay prácticas registradas</td></tr>
+                    )}
+                    {practicas.map(prac => (
+                      <tr key={prac.id} className="border-b">
+                        <td className="px-2 py-1 border">{prac.id}</td>
+                        <td className="px-2 py-1 border">{prac.nombre}</td>
+                        <td className="px-2 py-1 border">{prac.fecha}</td>
+                        <td className="px-2 py-1 border">{prac.instructor_nombre || prac.instructor}</td>
+                        <td className="px-2 py-1 border">{prac.estado || 'pendiente'}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                  </table>
+                </div>
+              </ScrollReveal>
+            </LabSection>
+          </div>
+        )}
 
         {/* ── ALERTAS ──────────────────────────────────────────────── */}
         {activeTab === 'alertas' && (
@@ -510,11 +537,11 @@ const AdminDashboard = () => {
           </div>
         )}
 
-        {/* ── MODAL PRODUCTO ───────────────────────────────────────── */}
+        {/* ── MODALES ────────────────────────────────────────────────── */}
+        {/* MODAL PRODUCTO */}
         {showModalInventario && (
           <div className="fixed inset-0 z-50 bg-black/70 backdrop-blur-sm flex items-center justify-center p-4">
             <div className="w-full max-w-xl bg-white border border-[#E0E0E0] rounded-lg overflow-hidden shadow-2xl shadow-stone-300/60">
-              {/* Header */}
               <div className="flex items-center justify-between px-6 py-4 border-b border-[#E0E0E0]">
                 <div>
                   <h2 className="text-sm font-mono font-bold text-[#1FA971] uppercase tracking-wider">{selectedProduct?'EDITAR PRODUCTO':'NUEVO PRODUCTO'}</h2>
@@ -522,8 +549,6 @@ const AdminDashboard = () => {
                 </div>
                 <button onClick={()=>{ setShowModalInventario(false); resetFormProducto(); }} className="p-1.5 text-stone-500 hover:text-rose-400 hover:bg-rose-500/10 rounded transition-colors"><XCircle className="w-4 h-4" /></button>
               </div>
-
-              {/* Form */}
               <div className="p-6 grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div className="md:col-span-2">
                   <label className="block text-[9px] font-mono font-bold text-stone-500 uppercase tracking-wider mb-1.5">Nombre</label>
@@ -548,8 +573,6 @@ const AdminDashboard = () => {
                   <input type="number" min="0" value={formProducto.umbral_minimo} onChange={(e)=>setFormProducto({...formProducto,umbral_minimo:e.target.value})} className={inputCls} placeholder="0" />
                 </div>
               </div>
-
-              {/* Footer */}
               <div className="flex justify-end gap-3 px-6 py-4 border-t border-[#E0E0E0] bg-stone-50">
                 <button onClick={()=>{ setShowModalInventario(false); resetFormProducto(); }} className="px-4 py-2 rounded text-xs font-mono font-bold border border-[#E0E0E0] text-stone-500 hover:text-stone-700 hover:border-slate-500 transition-colors">Cancelar</button>
                 <button onClick={handleGuardarProducto} className="px-4 py-2 rounded text-xs font-mono font-bold bg-[#1FA971] text-white hover:bg-[#157A55] transition-colors shadow-sm">
@@ -560,22 +583,13 @@ const AdminDashboard = () => {
           </div>
         )}
 
-        {/* ── MODAL CREAR ALERTA ────────────────────────────────── */}
+        {/* MODAL CREAR ALERTA */}
         {showModalAlerta && (
           <div className="fixed inset-0 z-50 bg-black/70 backdrop-blur-sm flex items-center justify-center p-4">
             <div className="w-full max-w-md bg-white border border-[#E0E0E0] rounded-lg overflow-hidden shadow-2xl shadow-stone-300/60">
               <div className="flex items-center justify-between px-6 py-4 border-b border-[#E0E0E0]">
                 <div>
                   <h2 className="text-sm font-mono font-bold text-rose-400 uppercase tracking-wider">NUEVA ALERTA</h2>
-
-              <RejectPedidoModal
-                open={Boolean(pedidoToReject)}
-                pedido={pedidoToReject}
-                motivo={pedidoToReject?.motivo || ''}
-                onChangeMotivo={(motivo) => setPedidoToReject((prev) => prev ? { ...prev, motivo } : prev)}
-                onClose={() => setPedidoToReject(null)}
-                onConfirm={() => pedidoToReject && handleRechazarPedido(pedidoToReject.id)}
-              />
                   <p className="text-[10px] font-mono text-stone-500 mt-0.5">Registrar una nueva incidencia</p>
                 </div>
                 <button onClick={()=>setShowModalAlerta(false)} className="p-1.5 text-stone-500 hover:text-rose-400 hover:bg-rose-500/10 rounded transition-colors"><XCircle className="w-4 h-4" /></button>

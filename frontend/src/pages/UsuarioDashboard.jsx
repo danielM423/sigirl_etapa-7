@@ -28,27 +28,24 @@ const UsuarioDashboard = () => {
 
   const cargarDatos = async () => {
     try {
-      // 1. Cargar prácticas del usuario
-      const practicasRes = await api.get('practicas/');
-      const practicasData = practicasRes.data || [];
+      const [practicasRes, pedidosRes] = await Promise.all([
+        api.get('practicas/'),
+        api.get('pedidos/')
+      ]);
       
-      // Filtrar prácticas del usuario actual
+      const practicasData = practicasRes.data || [];
+      const pedidosData = pedidosRes.data || [];
+      
       const misPracticas = practicasData.filter(p => 
         p.instructor === user?.id || p.instructor_nombre === user?.username
       );
-      setPracticas(misPracticas);
-
-      // 2. Cargar pedidos del usuario
-      const pedidosRes = await api.get('pedidos/');
-      const pedidosData = pedidosRes.data || [];
-      
-      // Filtrar pedidos del usuario actual
       const misPedidos = pedidosData.filter(p => 
         p.usuario === user?.id || p.usuario_username === user?.username
       );
+      
+      setPracticas(misPracticas);
       setPedidos(misPedidos);
-
-      // 3. Calcular estadísticas
+      
       setStats({
         totalPracticas: misPracticas.length,
         pedidosActivos: misPedidos.filter(p => p.estado === 'pendiente').length,
@@ -81,6 +78,19 @@ const UsuarioDashboard = () => {
     return new Date(dateStr).toLocaleDateString('es-CO');
   };
 
+  if (loading) {
+    return (
+      <Layout>
+        <div className="flex items-center justify-center h-64">
+          <div className="text-center">
+            <div className="w-3 h-3 rounded-full mx-auto mb-3 bg-[#1FA971] animate-pulse" />
+            <p className="text-stone-500 font-mono text-sm">CARGANDO DASHBOARD...</p>
+          </div>
+        </div>
+      </Layout>
+    );
+  }
+
   const statsCards = [
     { title: 'Mis Prácticas', value: stats.totalPracticas, icon: <ClipboardList className="w-5 h-5" />, bg: 'bg-emerald-50', text: 'text-emerald-600' },
     { title: 'Pedidos Activos', value: stats.pedidosActivos, icon: <Clock className="w-5 h-5" />, bg: 'bg-amber-50', text: 'text-amber-600' },
@@ -88,25 +98,21 @@ const UsuarioDashboard = () => {
     { title: 'Pedidos Rechazados', value: stats.pedidosRechazados, icon: <AlertTriangle className="w-5 h-5" />, bg: 'bg-rose-50', text: 'text-rose-600' }
   ];
 
-  if (loading) {
-    return (
-      <Layout>
-        <div className="p-6 text-center">Cargando tu dashboard...</div>
-      </Layout>
-    );
-  }
-
   return (
     <Layout>
-      <div className="p-6 max-w-7xl mx-auto">
+      <div className="p-4 md:p-6 lg:p-8 max-w-7xl mx-auto animate-fade-in">
         {/* Encabezado */}
-        <motion.div initial={{ opacity: 0, y: -20 }} animate={{ opacity: 1, y: 0 }} className="mb-8">
+        <motion.div 
+          initial={{ opacity: 0, y: -20 }} 
+          animate={{ opacity: 1, y: 0 }} 
+          className="mb-8"
+        >
           <div className="flex items-center gap-3">
             <span className="text-4xl">📊</span>
             <div>
-              <h1 className="text-3xl font-bold text-stone-800">Mi Dashboard</h1>
+              <h1 className="text-2xl md:text-3xl font-bold text-stone-800">Mi Dashboard</h1>
               <p className="text-stone-500 text-sm mt-1">
-                Bienvenido, <span className="font-medium text-stone-700">{user?.nombre || user?.username || 'Usuario'}</span>
+                Bienvenido, <span className="font-medium text-[#1FA971]">{user?.nombre || user?.username || 'Usuario'}</span>
               </p>
             </div>
           </div>
@@ -120,14 +126,14 @@ const UsuarioDashboard = () => {
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: idx * 0.08 }}
-              className={`${stat.bg} rounded-2xl p-5 border border-stone-200/50 shadow-sm hover:shadow-md transition-all`}
+              className="bg-white border border-[#E0E0E0] border-t-[3px] border-t-[#1FA971] rounded-xl p-4 shadow-[0_2px_6px_rgba(0,0,0,0.05)] hover:shadow-[0_6px_18px_rgba(31,169,113,0.13)] hover:-translate-y-0.5 transition-all"
             >
               <div className="flex items-center justify-between">
-                <div className={`${stat.text}`}>{stat.icon}</div>
-                <span className={`text-xs px-2.5 py-1 rounded-full ${stat.text} bg-white/60`}>{stat.title}</span>
+                <div className={`p-2 rounded-lg ${stat.bg}`}>{stat.icon}</div>
+                <span className="text-[9px] font-mono font-bold text-stone-500 uppercase tracking-wider">{stat.title}</span>
               </div>
               <div className="mt-4">
-                <span className="text-3xl font-bold text-stone-800">{stat.value}</span>
+                <span className="text-3xl font-bold font-mono text-[#157A55]">{stat.value}</span>
               </div>
             </motion.div>
           ))}
@@ -135,15 +141,15 @@ const UsuarioDashboard = () => {
 
         {/* Mis Prácticas */}
         <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.2 }} className="mb-8">
-          <div className="bg-white rounded-2xl border border-stone-200 shadow-sm overflow-hidden">
-            <div className="px-5 py-3 border-b border-stone-200 flex items-center justify-between">
+          <div className="bg-white border border-[#E0E0E0] rounded-xl overflow-hidden shadow-[0_2px_8px_rgba(0,0,0,0.05)]">
+            <div className="flex items-center justify-between px-5 py-3 border-b border-[#E0E0E0] bg-[#E8F5F0]">
               <div className="flex items-center gap-2">
-                <span className="text-sm font-semibold text-stone-700">📋 Mis Prácticas</span>
-                <span className="text-xs text-stone-400">({practicas.length})</span>
+                <span className="text-[10px] font-mono font-bold text-[#157A55] uppercase tracking-wider">Mis Prácticas</span>
+                <span className="text-[10px] font-mono text-stone-400">({practicas.length})</span>
               </div>
               <button
                 onClick={() => navigate('/practicas/gestion')}
-                className="text-xs text-emerald-600 hover:text-emerald-700 font-medium"
+                className="text-[10px] font-mono font-bold text-[#1FA971] hover:text-[#157A55] transition-colors"
               >
                 Ver todas →
               </button>
@@ -152,32 +158,32 @@ const UsuarioDashboard = () => {
               {practicas.length === 0 ? (
                 <div className="text-center py-8">
                   <span className="text-5xl">📋</span>
-                  <p className="text-stone-500 mt-4">No tienes prácticas registradas</p>
-                  <p className="text-sm text-stone-400">Crea una práctica desde el selector</p>
+                  <p className="text-stone-500 font-mono mt-4">No tienes prácticas registradas</p>
+                  <p className="text-sm text-stone-400 font-mono">Crea una práctica desde el selector</p>
                 </div>
               ) : (
                 <div className="overflow-x-auto">
-                  <table className="min-w-full text-sm">
+                  <table className="w-full text-sm">
                     <thead className="bg-stone-50">
                       <tr>
-                        <th className="px-4 py-2 text-left text-xs font-medium text-stone-500 uppercase">Nombre</th>
-                        <th className="px-4 py-2 text-left text-xs font-medium text-stone-500 uppercase">Fecha</th>
-                        <th className="px-4 py-2 text-left text-xs font-medium text-stone-500 uppercase">Estado</th>
-                        <th className="px-4 py-2 text-left text-xs font-medium text-stone-500 uppercase">Acciones</th>
+                        <th className="px-4 py-2 text-left text-[9px] font-mono font-bold text-stone-500 uppercase tracking-wider">Nombre</th>
+                        <th className="px-4 py-2 text-left text-[9px] font-mono font-bold text-stone-500 uppercase tracking-wider">Fecha</th>
+                        <th className="px-4 py-2 text-left text-[9px] font-mono font-bold text-stone-500 uppercase tracking-wider">Estado</th>
+                        <th className="px-4 py-2 text-left text-[9px] font-mono font-bold text-stone-500 uppercase tracking-wider">Acciones</th>
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-stone-100">
                       {practicas.slice(0, 5).map((p) => (
-                        <tr key={p.id} className="hover:bg-stone-50">
-                          <td className="px-4 py-3 text-sm font-medium text-stone-800">{p.nombre}</td>
-                          <td className="px-4 py-3 text-sm text-stone-600">{formatDate(p.fecha)}</td>
+                        <tr key={p.id} className="hover:bg-stone-50/50 transition-colors">
+                          <td className="px-4 py-3 text-sm font-mono font-medium text-stone-700">{p.nombre}</td>
+                          <td className="px-4 py-3 text-sm font-mono text-stone-600">{formatDate(p.fecha)}</td>
                           <td className="px-4 py-3 text-sm">
-                            <span className={`px-2.5 py-1 rounded-full text-xs font-medium ${getEstadoColor(p.estado)}`}>
+                            <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-[10px] font-mono font-bold ${getEstadoColor(p.estado)}`}>
                               {p.estado || 'pendiente'}
                             </span>
                           </td>
                           <td className="px-4 py-3 text-sm">
-                            <button className="text-emerald-600 hover:text-emerald-700 text-xs font-medium">
+                            <button className="text-[#1FA971] hover:text-[#157A55] text-xs font-mono font-bold transition-colors">
                               Ver detalle
                             </button>
                           </td>
@@ -193,15 +199,15 @@ const UsuarioDashboard = () => {
 
         {/* Mis Pedidos Recientes */}
         <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.3 }} className="mb-8">
-          <div className="bg-white rounded-2xl border border-stone-200 shadow-sm overflow-hidden">
-            <div className="px-5 py-3 border-b border-stone-200 flex items-center justify-between">
+          <div className="bg-white border border-[#E0E0E0] rounded-xl overflow-hidden shadow-[0_2px_8px_rgba(0,0,0,0.05)]">
+            <div className="flex items-center justify-between px-5 py-3 border-b border-[#E0E0E0] bg-[#E8F5F0]">
               <div className="flex items-center gap-2">
-                <span className="text-sm font-semibold text-stone-700">📝 Mis Pedidos Recientes</span>
-                <span className="text-xs text-stone-400">({pedidos.length})</span>
+                <span className="text-[10px] font-mono font-bold text-[#157A55] uppercase tracking-wider">Mis Pedidos Recientes</span>
+                <span className="text-[10px] font-mono text-stone-400">({pedidos.length})</span>
               </div>
               <button
                 onClick={() => navigate('/pedidos')}
-                className="text-xs text-emerald-600 hover:text-emerald-700 font-medium"
+                className="text-[10px] font-mono font-bold text-[#1FA971] hover:text-[#157A55] transition-colors"
               >
                 Ver todos →
               </button>
@@ -210,33 +216,33 @@ const UsuarioDashboard = () => {
               {pedidos.length === 0 ? (
                 <div className="text-center py-8">
                   <span className="text-5xl">📝</span>
-                  <p className="text-stone-500 mt-4">No tienes pedidos registrados</p>
-                  <p className="text-sm text-stone-400">Genera una solicitud desde el selector de prácticas</p>
+                  <p className="text-stone-500 font-mono mt-4">No tienes pedidos registrados</p>
+                  <p className="text-sm text-stone-400 font-mono">Genera una solicitud desde el selector de prácticas</p>
                 </div>
               ) : (
                 <div className="overflow-x-auto">
-                  <table className="min-w-full text-sm">
+                  <table className="w-full text-sm">
                     <thead className="bg-stone-50">
                       <tr>
-                        <th className="px-4 py-2 text-left text-xs font-medium text-stone-500 uppercase">Código</th>
-                        <th className="px-4 py-2 text-left text-xs font-medium text-stone-500 uppercase">Producto</th>
-                        <th className="px-4 py-2 text-left text-xs font-medium text-stone-500 uppercase">Cantidad</th>
-                        <th className="px-4 py-2 text-left text-xs font-medium text-stone-500 uppercase">Estado</th>
-                        <th className="px-4 py-2 text-left text-xs font-medium text-stone-500 uppercase">Fecha</th>
+                        <th className="px-4 py-2 text-left text-[9px] font-mono font-bold text-stone-500 uppercase tracking-wider">Código</th>
+                        <th className="px-4 py-2 text-left text-[9px] font-mono font-bold text-stone-500 uppercase tracking-wider">Producto</th>
+                        <th className="px-4 py-2 text-left text-[9px] font-mono font-bold text-stone-500 uppercase tracking-wider">Cantidad</th>
+                        <th className="px-4 py-2 text-left text-[9px] font-mono font-bold text-stone-500 uppercase tracking-wider">Estado</th>
+                        <th className="px-4 py-2 text-left text-[9px] font-mono font-bold text-stone-500 uppercase tracking-wider">Fecha</th>
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-stone-100">
                       {pedidos.slice(0, 5).map((p) => (
-                        <tr key={p.id} className="hover:bg-stone-50">
-                          <td className="px-4 py-3 text-sm font-medium text-stone-700">{p.codigo || 'N/A'}</td>
-                          <td className="px-4 py-3 text-sm text-stone-600">{p.producto?.nombre || p.producto_nombre || 'N/A'}</td>
-                          <td className="px-4 py-3 text-sm text-stone-700">{p.cantidad}</td>
+                        <tr key={p.id} className="hover:bg-stone-50/50 transition-colors">
+                          <td className="px-4 py-3 text-sm font-mono font-medium text-stone-700">{p.codigo || 'N/A'}</td>
+                          <td className="px-4 py-3 text-sm font-mono text-stone-600">{p.producto?.nombre || p.producto_nombre || 'N/A'}</td>
+                          <td className="px-4 py-3 text-sm font-mono text-stone-700">{p.cantidad}</td>
                           <td className="px-4 py-3 text-sm">
-                            <span className={`px-2.5 py-1 rounded-full text-xs font-medium ${getEstadoColor(p.estado)}`}>
+                            <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-[10px] font-mono font-bold ${getEstadoColor(p.estado)}`}>
                               {p.estado || 'pendiente'}
                             </span>
                           </td>
-                          <td className="px-4 py-3 text-sm text-stone-600">{formatDate(p.fecha_solicitud)}</td>
+                          <td className="px-4 py-3 text-sm font-mono text-stone-600">{formatDate(p.fecha_solicitud)}</td>
                         </tr>
                       ))}
                     </tbody>
@@ -252,11 +258,11 @@ const UsuarioDashboard = () => {
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.4 }}
-          className="bg-gradient-to-r from-emerald-50 to-emerald-100/50 rounded-2xl p-4 border border-emerald-200"
+          className="bg-gradient-to-r from-[#E8F5F0] to-[#DDF3EA] rounded-xl p-4 border border-[#1FA971]/20"
         >
-          <div className="flex items-center justify-between text-sm text-stone-600">
+          <div className="flex flex-wrap items-center justify-between gap-2 text-sm text-stone-600 font-mono">
             <span className="flex items-center gap-2">
-              <CheckCircle className="w-4 h-4 text-emerald-600" />
+              <CheckCircle className="w-4 h-4 text-[#1FA971]" />
               Sistema operativo
             </span>
             <span className="flex items-center gap-2">
@@ -264,7 +270,7 @@ const UsuarioDashboard = () => {
               Última actualización: {new Date().toLocaleString('es-CO')}
             </span>
             <span className="flex items-center gap-2">
-              <User className="w-4 h-4 text-emerald-600" />
+              <User className="w-4 h-4 text-[#1FA971]" />
               {user?.username || 'Usuario'}
             </span>
           </div>

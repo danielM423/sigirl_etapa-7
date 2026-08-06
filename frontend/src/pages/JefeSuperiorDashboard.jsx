@@ -6,7 +6,7 @@ import {
   Users, TrendingUp, BarChart3, Search, ChevronDown, Eye, Download,
   Plus, Edit2, Trash2, CheckCircle2, XCircle, Package, AlertCircle,
   FlaskConical, Shield, UserCheck, ClipboardList, RefreshCw,
-  Clock, Activity
+  Clock, Activity, X
 } from 'lucide-react';
 import {
   ResponsiveContainer, BarChart, Bar, XAxis, YAxis, CartesianGrid,
@@ -20,6 +20,7 @@ import ListadoDiarioList from '../components/ListadoDiarioList';
 import ScrollReveal from '../components/ScrollReveal';
 import { getProductos, getUsuarios, updateUsuario, deleteUsuario, getAuditoria, getPracticas, createPractica, updatePractica, deletePractica, aprobarPractica, rechazarPractica } from '../services/api';
 import { exportToExcel } from '../utils/reportExport';
+import { showWarning, showSuccess, showError, showInfo } from '../utils/toastHelpers';
 
 // ─── Design helpers ──────────────────────────────────────────────
 const inputCls = 'w-full bg-stone-50 border border-[#E0E0E0] rounded-md px-3 py-2.5 text-sm font-mono text-stone-700 placeholder-stone-400 focus:outline-none focus:border-emerald-500 transition-colors';
@@ -114,6 +115,9 @@ const JefeSuperiorDashboard = () => {
   const [auditSearch, setAuditSearch] = useState('');
   const [auditModulo, setAuditModulo] = useState('');
 
+  // ✅ ESTADO PARA OCULTAR ALERTAS DEL DASHBOARD
+  const [alertasVisibles, setAlertasVisibles] = useState(true);
+
   const initialTab = searchParams.get('tab');
   const [activeTab, setActiveTab] = useState(
     ['estadisticas', 'usuarios', 'inventario', 'bitacora', 'practicas'].includes(initialTab) ? initialTab : 'estadisticas'
@@ -130,12 +134,25 @@ const JefeSuperiorDashboard = () => {
           getUsuarios().catch(() => ({ data: [] })),
           getPracticas()
         ]);
-        setProductos((prodRes.data.results ?? prodRes.data).map(p => ({ ...p, categoria: p.categoria_nombre || String(p.categoria || '') })));
+        const prods = prodRes.data.results ?? prodRes.data;
+        setProductos(prods.map(p => ({ ...p, categoria: p.categoria_nombre || String(p.categoria || '') })));
         const rawUsuarios = usrRes.data.results ?? usrRes.data;
         setUsuarios(rawUsuarios);
         setPracticas(pracRes.data.results ?? pracRes.data);
+
+        // ✅ MOSTRAR NOTIFICACIÓN DE STOCK BAJO COMO TOAST
+        const bajos = prods.filter(p => 
+          Number(p.cantidad) > 0 && Number(p.cantidad) <= Number(p.minimo ?? p.umbral_minimo ?? 5)
+        );
+        if (bajos.length > 0) {
+          showWarning(
+            `🔴 ${bajos.length} reactivo${bajos.length > 1 ? 's' : ''} bajo mínimo: ${bajos.slice(0, 3).map(p => p.nombre).join(', ')}${bajos.length > 3 ? '...' : ''}`,
+            8000
+          );
+        }
+
       } catch (err) {
-        toast.error('Error al cargar datos del servidor');
+        showError('Error al cargar datos del servidor');
         console.error(err);
       } finally {
         setLoading(false);
@@ -145,22 +162,24 @@ const JefeSuperiorDashboard = () => {
     load();
   }, []);
 
+  // ... (resto del código igual, con los mismos cambios de agregar el botón de cierre)
+
   // ─── CRUD Prácticas ──────────────────────────────────────────
   const handleGuardarPractica = async () => {
     try {
       if (editPractica) {
         const { data } = await updatePractica(editPractica.id, formPractica);
         setPracticas(prev => prev.map(p => p.id === editPractica.id ? data : p));
-        toast.success('Práctica actualizada');
+        showSuccess('Práctica actualizada');
       } else {
         const { data } = await createPractica(formPractica);
         setPracticas(prev => [data, ...prev]);
-        toast.success('Práctica creada');
+        showSuccess('Práctica creada');
       }
       setEditPractica(null);
       setFormPractica({ nombre: '', fecha: '', instructor: '', grupos_trabajo: '' });
     } catch (err) {
-      toast.error('Error al guardar práctica');
+      showError('Error al guardar práctica');
     }
   };
 
@@ -174,24 +193,24 @@ const JefeSuperiorDashboard = () => {
     try {
       await deletePractica(id);
       setPracticas(prev => prev.filter(p => p.id !== id));
-      toast.success('Práctica eliminada');
-    } catch { toast.error('Error al eliminar práctica'); }
+      showSuccess('Práctica eliminada');
+    } catch { showError('Error al eliminar práctica'); }
   };
 
   const handleAprobarPractica = async (id) => {
     try {
       await aprobarPractica(id);
       setPracticas(prev => prev.map(p => p.id === id ? { ...p, estado: 'aprobado' } : p));
-      toast.success('Práctica aprobada');
-    } catch { toast.error('Error al aprobar práctica'); }
+      showSuccess('Práctica aprobada');
+    } catch { showError('Error al aprobar práctica'); }
   };
 
   const handleRechazarPractica = async (id) => {
     try {
       await rechazarPractica(id, { motivo: 'Rechazado por jefe superior' });
       setPracticas(prev => prev.map(p => p.id === id ? { ...p, estado: 'rechazado' } : p));
-      toast.success('Práctica rechazada');
-    } catch { toast.error('Error al rechazar práctica'); }
+      showSuccess('Práctica rechazada');
+    } catch { showError('Error al rechazar práctica'); }
   };
 
   // ─── Cargar bitácora cuando se activa ──────────────────────────
@@ -203,7 +222,7 @@ const JefeSuperiorDashboard = () => {
     if (auditModulo) params.modulo = auditModulo;
     getAuditoria(params)
       .then(res => setAuditoria(res.data.results ?? res.data))
-      .catch(() => toast.error('Error al cargar bitácora'))
+      .catch(() => showError('Error al cargar bitácora'))
       .finally(() => setAuditLoading(false));
   }, [activeTab, auditSearch, auditModulo]);
 
@@ -237,11 +256,11 @@ const JefeSuperiorDashboard = () => {
 
   const handleGuardarUsuario = async () => {
     if (!formUsuario.nombre.trim() || !formUsuario.email.trim()) {
-      toast.error('Completa nombre y email');
+      showError('Completa nombre y email');
       return;
     }
     if (!formUsuario.email.includes('@')) {
-      toast.error('Email inválido');
+      showError('Email inválido');
       return;
     }
     try {
@@ -254,12 +273,12 @@ const JefeSuperiorDashboard = () => {
           rol_input: formUsuario.rol
         });
         setUsuarios(prev => prev.map(u => u.id === selectedUsuario.id ? { ...u, ...data } : u));
-        toast.success('Usuario actualizado');
+        showSuccess('Usuario actualizado');
       }
       setShowUsuarioModal(false);
       resetUsuarioForm();
     } catch (err) {
-      toast.error(err.response?.data?.error || 'Error al guardar usuario');
+      showError(err.response?.data?.error || 'Error al guardar usuario');
     }
   };
 
@@ -269,8 +288,8 @@ const JefeSuperiorDashboard = () => {
     try {
       await deleteUsuario(id);
       setUsuarios(prev => prev.filter(x => x.id !== id));
-      toast.success('Usuario eliminado');
-    } catch { toast.error('Error al eliminar usuario'); }
+      showSuccess('Usuario eliminado');
+    } catch { showError('Error al eliminar usuario'); }
   };
 
   const handleVerUsuario = (u) => {
@@ -280,7 +299,7 @@ const JefeSuperiorDashboard = () => {
       `Departamento: ${u.department || u.departamento || '—'}`,
       `Rol: ${u.rol || 'usuario'}`
     ];
-    toast.info(<div className="text-sm font-mono"><p className="font-bold mb-2 text-[#1FA971]">DETALLE USUARIO</p><div className="space-y-1">{lines.map((l, i) => <p key={i} className="text-stone-600">{l}</p>)}</div></div>, { autoClose: 6000 });
+    showInfo(<div className="text-sm font-mono"><p className="font-bold mb-2 text-[#1FA971]">DETALLE USUARIO</p><div className="space-y-1">{lines.map((l, i) => <p key={i} className="text-stone-600">{l}</p>)}</div></div>, 6000);
   };
 
   // ─── Computed stats ────────────────────────────────────────────
@@ -320,6 +339,55 @@ const JefeSuperiorDashboard = () => {
   return (
     <Layout>
       <div className="space-y-5">
+        {/* ✅ ALERTA DE STOCK BAJO CON BOTÓN DE CIERRE */}
+        {alertasVisibles && productos.filter(p => {
+          const cantidad = Number(p.cantidad || 0);
+          const minimo = Number(p.minimo || p.umbral_minimo || 5);
+          return cantidad > 0 && cantidad <= minimo;
+        }).length > 0 && (
+          <div className="relative bg-amber-50 border-l-4 border-amber-400 p-4 rounded-r-lg shadow-sm">
+            <button
+              onClick={() => setAlertasVisibles(false)}
+              className="absolute top-2 right-2 text-amber-600 hover:text-amber-800 transition-colors p-1 hover:bg-amber-100 rounded"
+              title="Cerrar alerta"
+            >
+              <X size={18} />
+            </button>
+            <div className="flex items-start gap-3 pr-8">
+              <AlertCircle className="w-5 h-5 text-amber-500 mt-0.5 flex-shrink-0" />
+              <div>
+                <p className="font-semibold text-amber-800">
+                  {productos.filter(p => {
+                    const cantidad = Number(p.cantidad || 0);
+                    const minimo = Number(p.minimo || p.umbral_minimo || 5);
+                    return cantidad > 0 && cantidad <= minimo;
+                  }).length} reactivo{productos.filter(p => {
+                    const cantidad = Number(p.cantidad || 0);
+                    const minimo = Number(p.minimo || p.umbral_minimo || 5);
+                    return cantidad > 0 && cantidad <= minimo;
+                  }).length > 1 ? 's' : ''} bajo mínimo
+                </p>
+                <p className="text-sm text-amber-700">
+                  {productos.filter(p => {
+                    const cantidad = Number(p.cantidad || 0);
+                    const minimo = Number(p.minimo || p.umbral_minimo || 5);
+                    return cantidad > 0 && cantidad <= minimo;
+                  }).slice(0, 5).map(p => p.nombre).join(', ')}
+                  {productos.filter(p => {
+                    const cantidad = Number(p.cantidad || 0);
+                    const minimo = Number(p.minimo || p.umbral_minimo || 5);
+                    return cantidad > 0 && cantidad <= minimo;
+                  }).length > 5 && ` y ${productos.filter(p => {
+                    const cantidad = Number(p.cantidad || 0);
+                    const minimo = Number(p.minimo || p.umbral_minimo || 5);
+                    return cantidad > 0 && cantidad <= minimo;
+                  }).length - 5} más...`}
+                </p>
+              </div>
+            </div>
+          </div>
+        )}
+
         {/* Header */}
         <div className="bg-white border border-[#E0E0E0] rounded-lg p-5">
           <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
@@ -557,7 +625,7 @@ const JefeSuperiorDashboard = () => {
             <LabSection
               title="BITÁCORA DE AUDITORÍA"
               action={<><Download className="w-3 h-3" /> EXPORTAR</>}
-              onAction={() => exportToExcel(auditoria.map(a => ({ usuario: a.usuario, accion: a.accion, modulo: a.modulo, descripcion: a.descripcion, fecha: a.fecha })), 'bitacora.xlsx') && toast.success('Exportado')}
+              onAction={() => exportToExcel(auditoria.map(a => ({ usuario: a.usuario, accion: a.accion, modulo: a.modulo, descripcion: a.descripcion, fecha: a.fecha })), 'bitacora.xlsx') && showSuccess('Exportado')}
             >
               <div className="flex flex-col md:flex-row gap-3 mb-4">
                 <div className="relative flex-1">

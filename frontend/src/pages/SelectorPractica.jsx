@@ -2,8 +2,9 @@ import { useState, useEffect } from 'react';
 import Layout from '../components/Layout';
 import api from '../services/api';
 import { motion } from 'framer-motion';
-import { toast, ToastContainer } from 'react-toastify';
+import { ToastContainer } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
+import { showSuccess, showWarning, showError, showInfo } from '../utils/toastHelpers';
 
 const SelectorPractica = () => {
   const [programas, setProgramas] = useState([]);
@@ -82,75 +83,73 @@ const SelectorPractica = () => {
       const res = await api.get(`practicas/?competencia=${competenciaId}`);
       setPracticas(res.data);
       if (res.data.length === 0) {
-        toast.info('📋 No hay prácticas disponibles para esta competencia');
+        showInfo('📋 No hay prácticas disponibles para esta competencia');
       }
     } catch (err) { console.error('Error cargando prácticas:', err); }
   };
 
   const cargarDetallePractica = async (practicaId) => {
-  console.log('🔍 1. Iniciando carga de práctica ID:', practicaId);
-  
-  try {
-    console.log('🔍 2. Haciendo fetch a practicas/' + practicaId + '/');
-    const res = await api.get(`practicas/${practicaId}/`);
+    console.log('🔍 1. Iniciando carga de práctica ID:', practicaId);
     
-    console.log('🔍 3. Respuesta completa:', res);
-    console.log('🔍 4. Datos de la práctica:', res.data);
-    console.log('🔍 5. Reactivos en la respuesta:', res.data.reactivos);
-    console.log('🔍 6. Equipos en la respuesta:', res.data.equipos);
-    console.log('🔍 7. Materiales en la respuesta:', res.data.materiales);
-    
-    const practica = res.data;
-    
-    // Si no vienen en el serializador, intentar cargar por separado
-    if (!practica.reactivos || practica.reactivos.length === 0) {
-      console.log('⚠️ 8. No hay reactivos en la respuesta, intentando cargar por separado...');
-      try {
-        const reactivosRes = await api.get(`practicas/${practicaId}/reactivos/`);
-        console.log('📦 9. Reactivos cargados por separado:', reactivosRes.data);
-        practica.reactivos = reactivosRes.data || [];
-      } catch (e) {
-        console.warn('❌ 10. Error cargando reactivos por separado:', e);
-        practica.reactivos = [];
+    try {
+      console.log('🔍 2. Haciendo fetch a practicas/' + practicaId + '/');
+      const res = await api.get(`practicas/${practicaId}/`);
+      
+      console.log('🔍 3. Respuesta completa:', res);
+      console.log('🔍 4. Datos de la práctica:', res.data);
+      console.log('🔍 5. Reactivos en la respuesta:', res.data.reactivos);
+      console.log('🔍 6. Equipos en la respuesta:', res.data.equipos);
+      console.log('🔍 7. Materiales en la respuesta:', res.data.materiales);
+      
+      const practica = res.data;
+      
+      if (!practica.reactivos || practica.reactivos.length === 0) {
+        console.log('⚠️ 8. No hay reactivos en la respuesta, intentando cargar por separado...');
+        try {
+          const reactivosRes = await api.get(`practicas/${practicaId}/reactivos/`);
+          console.log('📦 9. Reactivos cargados por separado:', reactivosRes.data);
+          practica.reactivos = reactivosRes.data || [];
+        } catch (e) {
+          console.warn('❌ 10. Error cargando reactivos por separado:', e);
+          practica.reactivos = [];
+        }
       }
-    }
-    
-    if (!practica.equipos || practica.equipos.length === 0) {
-      console.log('⚠️ 11. No hay equipos en la respuesta, intentando cargar por separado...');
-      try {
-        const equiposRes = await api.get(`practicas/${practicaId}/equipos/`);
-        console.log('📦 12. Equipos cargados por separado:', equiposRes.data);
-        practica.equipos = equiposRes.data || [];
-      } catch (e) {
-        console.warn('❌ 13. Error cargando equipos por separado:', e);
-        practica.equipos = [];
+      
+      if (!practica.equipos || practica.equipos.length === 0) {
+        console.log('⚠️ 11. No hay equipos en la respuesta, intentando cargar por separado...');
+        try {
+          const equiposRes = await api.get(`practicas/${practicaId}/equipos/`);
+          console.log('📦 12. Equipos cargados por separado:', equiposRes.data);
+          practica.equipos = equiposRes.data || [];
+        } catch (e) {
+          console.warn('❌ 13. Error cargando equipos por separado:', e);
+          practica.equipos = [];
+        }
       }
+      
+      if (!practica.reactivos) practica.reactivos = [];
+      if (!practica.equipos) practica.equipos = [];
+      if (!practica.materiales) practica.materiales = [];
+      
+      console.log('✅ 14. Datos finales de la práctica:', {
+        id: practica.id,
+        nombre: practica.nombre,
+        reactivos: practica.reactivos.length,
+        equipos: practica.equipos.length,
+        materiales: practica.materiales.length,
+        reactivos_data: practica.reactivos,
+        equipos_data: practica.equipos,
+        materiales_data: practica.materiales
+      });
+      
+      setPracticaDetalle(practica);
+      console.log('✅ 15. Estado practicaDetalle actualizado');
+      
+    } catch (err) {
+      console.error('❌ 16. Error en cargarDetallePractica:', err);
+      showError('❌ Error al cargar los detalles de la práctica');
     }
-    
-    // Asegurar que existan los arrays
-    if (!practica.reactivos) practica.reactivos = [];
-    if (!practica.equipos) practica.equipos = [];
-    if (!practica.materiales) practica.materiales = [];
-    
-    console.log('✅ 14. Datos finales de la práctica:', {
-      id: practica.id,
-      nombre: practica.nombre,
-      reactivos: practica.reactivos.length,
-      equipos: practica.equipos.length,
-      materiales: practica.materiales.length,
-      reactivos_data: practica.reactivos,
-      equipos_data: practica.equipos,
-      materiales_data: practica.materiales
-    });
-    
-    setPracticaDetalle(practica);
-    console.log('✅ 15. Estado practicaDetalle actualizado');
-    
-  } catch (err) {
-    console.error('❌ 16. Error en cargarDetallePractica:', err);
-    toast.error('❌ Error al cargar los detalles de la práctica');
-  }
-};
+  };
 
   const verificarReactivosSensibles = async (reactivos) => {
     const sensiblesEncontrados = [];
@@ -178,7 +177,7 @@ const SelectorPractica = () => {
 
   const calcularPedido = async () => {
     if (!selectedPractica || numeroGrupos < 1) {
-      toast.warning('⚠️ Seleccione una práctica y un número válido de grupos');
+      showWarning('⚠️ Seleccione una práctica y un número válido de grupos');
       return;
     }
     setCalculando(true);
@@ -188,18 +187,42 @@ const SelectorPractica = () => {
         practica_id: selectedPractica,
         numero_grupos: numeroGrupos
       });
-      setResultado(res.data);
-      if (res.data.reactivos && res.data.reactivos.length > 0) {
-        await verificarReactivosSensibles(res.data.reactivos);
+      
+      const data = res.data;
+      let reactivos = data.reactivos || [];
+      let equipos = data.equipos || [];
+      
+      if (equipos.length === 0 && reactivos.length > 0) {
+        const palabrasEquipo = ['Analizador', 'Balanza', 'Microscopio', 'Cabina', 'pH-metro', 'Conductímetro', 'Sottec', 'Refractómetro', 'Horno', 'Centrífuga', 'Campana', 'Flujo', 'Electroforesis', 'Turbidímetro', 'Nevera', 'Erlenmeyer'];
+        
+        equipos = reactivos.filter(r => 
+          palabrasEquipo.some(palabra => r.nombre.includes(palabra))
+        );
+        reactivos = reactivos.filter(r => 
+          !palabrasEquipo.some(palabra => r.nombre.includes(palabra))
+        );
       }
-      if (!res.data.tiene_stock_suficiente) {
-        toast.info('⚠️ Algunos productos no tienen stock suficiente. El pedido requerirá aprobación del Jefe.');
+      
+      setResultado({
+        ...data,
+        reactivos: reactivos,
+        equipos: equipos
+      });
+      
+      if (reactivos && reactivos.length > 0) {
+        await verificarReactivosSensibles(reactivos);
+      }
+      
+      const tieneStockSuficiente = reactivos.every(r => r.suficiente) && equipos.every(e => e.suficiente);
+      
+      if (!tieneStockSuficiente) {
+        showInfo('⚠️ Algunos productos no tienen stock suficiente. El pedido requerirá aprobación del Jefe.');
       } else {
-        toast.success('✅ Cálculo completado. Revise los detalles del pedido.');
+        showSuccess('✅ Cálculo completado. Revise los detalles del pedido.');
       }
     } catch (err) {
       console.error('Error calculando:', err);
-      toast.error('❌ Error al calcular el pedido. Intente nuevamente.');
+      showError('❌ Error al calcular el pedido. Intente nuevamente.');
     } finally {
       setCalculando(false);
     }
@@ -208,15 +231,15 @@ const SelectorPractica = () => {
   const generarPedido = async () => {
     if (!resultado) return;
     if (!franjaSeleccionada) {
-      toast.warning('⚠️ Por favor seleccione una franja horaria para la programación');
+      showWarning('⚠️ Por favor seleccione una franja horaria para la programación');
       return;
     }
     if (!fechaPractica) {
-      toast.warning('⚠️ Por favor seleccione una fecha para la práctica');
+      showWarning('⚠️ Por favor seleccione una fecha para la práctica');
       return;
     }
     if (!horaInicio) {
-      toast.warning('⚠️ Por favor seleccione una hora de inicio');
+      showWarning('⚠️ Por favor seleccione una hora de inicio');
       return;
     }
 
@@ -242,8 +265,8 @@ const SelectorPractica = () => {
 
       if (response.ok) {
         const data = await response.json();
-        toast.success(`✅ Pedido generado exitosamente!`);
-        toast.info(`📅 Programado para: ${fechaPractica} - ${horaInicio}${horaFin ? ` a ${horaFin}` : ''}`);
+        showSuccess('✅ Pedido generado exitosamente!');
+        showInfo(`📅 Programado para: ${fechaPractica} - ${horaInicio}${horaFin ? ` a ${horaFin}` : ''}`);
         
         setErrorCronograma(null);
         setSelectedPrograma('');
@@ -261,8 +284,8 @@ const SelectorPractica = () => {
         const error = await response.json();
         
         if (error.error && error.error.includes('Cronograma completo')) {
-          toast.error(`⚠️ ${error.error}`);
-          toast.info(`📊 ${error.detalle}`);
+          showError(`⚠️ ${error.error}`);
+          showInfo(`📊 ${error.detalle}`);
           setErrorCronograma({
             mensaje: error.error,
             detalle: error.detalle,
@@ -272,18 +295,18 @@ const SelectorPractica = () => {
             ambiente: error.ambiente
           });
         } else {
-          toast.error('❌ Error al generar el pedido: ' + (error.error || 'Error desconocido'));
+          showError('❌ Error al generar el pedido: ' + (error.error || 'Error desconocido'));
         }
       }
     } catch (err) {
       console.error('Error generando pedido:', err);
-      toast.error('❌ Error al generar el pedido');
+      showError('❌ Error al generar el pedido');
     }
   };
 
   const generarPDF = async () => {
     if (!selectedPractica) {
-      toast.warning('⚠️ Primero seleccione una práctica');
+      showWarning('⚠️ Primero seleccione una práctica');
       return;
     }
     try {
@@ -310,21 +333,36 @@ const SelectorPractica = () => {
         a.click();
         document.body.removeChild(a);
         window.URL.revokeObjectURL(url);
-        toast.success('📄 PDF generado exitosamente');
+        showSuccess('📄 PDF generado exitosamente');
       } else {
         const error = await response.json();
-        toast.error('❌ Error al generar PDF: ' + (error.error || 'Error desconocido'));
+        showError('❌ Error al generar PDF: ' + (error.error || 'Error desconocido'));
       }
     } catch (err) {
       console.error('Error:', err);
-      toast.error('❌ Error al generar el PDF');
+      showError('❌ Error al generar el PDF');
     }
   };
 
   return (
     <Layout>
-      <ToastContainer />
-      <div className="p-6 max-w-4xl mx-auto">
+      <ToastContainer 
+        position="top-right"
+        autoClose={4000}
+        hideProgressBar={false}
+        newestOnTop={true}
+        closeOnClick={true}
+        rtl={false}
+        pauseOnFocusLoss={false}
+        draggable={true}
+        pauseOnHover={true}
+        limit={1}
+        closeButton={true}
+        style={{ width: '400px' }}
+        toastClassName="custom-toast"
+        progressClassName="custom-progress"
+      />
+      <div className="p-6 max-w-4xl mx-auto animate-fade-in">
         <div className="mb-6">
           <div className="flex items-center gap-3">
             <span className="text-4xl">📋</span>
@@ -335,7 +373,6 @@ const SelectorPractica = () => {
           </div>
         </div>
 
-        {/* Alerta de cronograma lleno */}
         {errorCronograma && (
           <div className="bg-red-50 border-l-4 border-red-500 text-red-700 px-4 py-3 rounded-xl mb-6">
             <div className="flex items-start gap-3">
@@ -436,7 +473,6 @@ const SelectorPractica = () => {
 
           {practicaDetalle && (
             <>
-              {/* ✅ MOSTRAR REACTIVOS DE LA PRÁCTICA */}
               {practicaDetalle.reactivos && practicaDetalle.reactivos.length > 0 && (
                 <div className="mb-5 p-4 bg-emerald-50 rounded-xl border border-emerald-200">
                   <h4 className="font-semibold text-emerald-800 mb-3 flex items-center gap-2">
@@ -461,7 +497,6 @@ const SelectorPractica = () => {
                 </div>
               )}
 
-              {/* ✅ MOSTRAR EQUIPOS DE LA PRÁCTICA */}
               {practicaDetalle.equipos && practicaDetalle.equipos.length > 0 && (
                 <div className="mb-5 p-4 bg-blue-50 rounded-xl border border-blue-200">
                   <h4 className="font-semibold text-blue-800 mb-3 flex items-center gap-2">
@@ -486,7 +521,6 @@ const SelectorPractica = () => {
                 </div>
               )}
 
-              {/* ✅ MOSTRAR MATERIALES DE LA PRÁCTICA */}
               {practicaDetalle.materiales && practicaDetalle.materiales.length > 0 && (
                 <div className="mb-5 p-4 bg-purple-50 rounded-xl border border-purple-200">
                   <h4 className="font-semibold text-purple-800 mb-3 flex items-center gap-2">
@@ -523,7 +557,7 @@ const SelectorPractica = () => {
                   <button 
                     onClick={calcularPedido} 
                     disabled={calculando}
-                    className="w-full bg-emerald-600 text-white px-6 py-3 rounded-xl hover:bg-emerald-700 disabled:opacity-50 transition-all shadow-sm hover:shadow-md font-medium"
+                    className="w-full bg-[#1FA971] text-white px-6 py-3 rounded-xl hover:bg-[#157A55] disabled:opacity-50 transition-all shadow-sm hover:shadow-md font-medium"
                   >
                     {calculando ? '⏳ Calculando...' : '📊 Calcular Cantidades'}
                   </button>
@@ -625,33 +659,83 @@ const SelectorPractica = () => {
                   <p className="font-medium text-stone-800">{horaInicio}{horaFin ? ` - ${horaFin}` : ''}</p>
                 </div>
               </div>
-              
+
               {resultado.reactivos && resultado.reactivos.length > 0 && (
                 <div className="mt-4">
-                  <h4 className="font-semibold text-stone-700 mb-3">🧪 Reactivos a solicitar</h4>
+                  <h4 className="font-semibold text-emerald-700 mb-3 flex items-center gap-2">
+                    <span>🧪</span> Reactivos a solicitar
+                    <span className="text-xs text-stone-400 font-normal">
+                      ({resultado.reactivos.length})
+                    </span>
+                  </h4>
                   <div className="overflow-x-auto">
-                    <table className="min-w-full border border-stone-200 rounded-xl overflow-hidden">
-                      <thead className="bg-stone-50">
+                    <table className="min-w-full border border-emerald-200 rounded-xl overflow-hidden">
+                      <thead className="bg-emerald-50">
                         <tr>
-                          <th className="px-4 py-3 text-left text-xs font-medium text-stone-500 uppercase">Reactivo</th>
-                          <th className="px-4 py-3 text-left text-xs font-medium text-stone-500 uppercase">Cantidad</th>
-                          <th className="px-4 py-3 text-left text-xs font-medium text-stone-500 uppercase">Stock</th>
-                          <th className="px-4 py-3 text-left text-xs font-medium text-stone-500 uppercase">Estado</th>
+                          <th className="px-4 py-3 text-left text-xs font-medium text-emerald-700 uppercase">Reactivo</th>
+                          <th className="px-4 py-3 text-left text-xs font-medium text-emerald-700 uppercase">Cantidad</th>
+                          <th className="px-4 py-3 text-left text-xs font-medium text-emerald-700 uppercase">Stock</th>
+                          <th className="px-4 py-3 text-left text-xs font-medium text-emerald-700 uppercase">Estado</th>
                         </tr>
                       </thead>
-                      <tbody className="divide-y divide-stone-100">
+                      <tbody className="divide-y divide-emerald-100">
                         {resultado.reactivos.map((r, i) => (
-                          <tr key={i} className="hover:bg-stone-50">
-                            <td className="px-4 py-3 text-sm">
+                          <tr key={i} className="hover:bg-emerald-50/50">
+                            <td className="px-4 py-3 text-sm font-medium text-stone-700">
                               {r.nombre}
                               {alertasSensibles.some(s => s.nombre === r.nombre) && (
                                 <span className="ml-2 text-red-500 text-xs font-bold">⚠️ SENSIBLE</span>
                               )}
                             </td>
-                            <td className="px-4 py-3 text-sm">{r.cantidad_total} {r.unidad}</td>
-                            <td className="px-4 py-3 text-sm">{r.stock_actual}</td>
+                            <td className="px-4 py-3 text-sm text-stone-600">
+                              {r.cantidad_total} {r.unidad || 'ml'}
+                            </td>
+                            <td className="px-4 py-3 text-sm text-stone-600">{r.stock_actual}</td>
                             <td className="px-4 py-3 text-sm">
                               {r.suficiente ? (
+                                <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-emerald-100 text-emerald-700">✅ Suficiente</span>
+                              ) : (
+                                <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-rose-100 text-rose-700">⚠️ Insuficiente</span>
+                              )}
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              )}
+
+              {resultado.equipos && resultado.equipos.length > 0 && (
+                <div className="mt-4">
+                  <h4 className="font-semibold text-blue-700 mb-3 flex items-center gap-2">
+                    <span>🔧</span> Equipos a solicitar
+                    <span className="text-xs text-stone-400 font-normal">
+                      ({resultado.equipos.length})
+                    </span>
+                  </h4>
+                  <div className="overflow-x-auto">
+                    <table className="min-w-full border border-blue-200 rounded-xl overflow-hidden">
+                      <thead className="bg-blue-50">
+                        <tr>
+                          <th className="px-4 py-3 text-left text-xs font-medium text-blue-700 uppercase">Equipo</th>
+                          <th className="px-4 py-3 text-left text-xs font-medium text-blue-700 uppercase">Cantidad</th>
+                          <th className="px-4 py-3 text-left text-xs font-medium text-blue-700 uppercase">Stock</th>
+                          <th className="px-4 py-3 text-left text-xs font-medium text-blue-700 uppercase">Estado</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-blue-100">
+                        {resultado.equipos.map((e, i) => (
+                          <tr key={i} className="hover:bg-blue-50/50">
+                            <td className="px-4 py-3 text-sm font-medium text-stone-700">
+                              {e.nombre}
+                            </td>
+                            <td className="px-4 py-3 text-sm text-stone-600">
+                              {e.cantidad_total} {e.unidad || 'ud'}
+                            </td>
+                            <td className="px-4 py-3 text-sm text-stone-600">{e.stock_actual}</td>
+                            <td className="px-4 py-3 text-sm">
+                              {e.suficiente ? (
                                 <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-emerald-100 text-emerald-700">✅ Suficiente</span>
                               ) : (
                                 <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-rose-100 text-rose-700">⚠️ Insuficiente</span>
@@ -668,7 +752,7 @@ const SelectorPractica = () => {
               <div className="mt-6 flex gap-3">
                 <button 
                   onClick={generarPedido} 
-                  className="flex-1 bg-emerald-600 text-white px-6 py-3 rounded-xl hover:bg-emerald-700 transition-all shadow-sm hover:shadow-md font-medium"
+                  className="flex-1 bg-[#1FA971] text-white px-6 py-3 rounded-xl hover:bg-[#157A55] transition-all shadow-sm hover:shadow-md font-medium"
                 >
                   ✅ Enviar Solicitud
                 </button>

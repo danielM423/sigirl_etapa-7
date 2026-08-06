@@ -27,11 +27,13 @@ import {
   FlaskConical,
   User,
   Clock,
-  CheckCircle
+  CheckCircle,
+  X
 } from 'lucide-react';
 import api, { getInventarioPracticasInstructor } from '../services/api';
 import { UserContext } from '../context/UserContext';
 import { exportToExcel } from '../utils/reportExport';
+import { showWarning, showSuccess, showError, showInfo } from '../utils/toastHelpers';
 import Layout from '../components/Layout';
 
 // Colores para gráficos
@@ -121,6 +123,9 @@ function Dashboard() {
   const isUsuario = role === 'usuario';
   const canExportReports = isAdmin || isJefe;
   
+  // ✅ ESTADO PARA OCULTAR ALERTAS DEL DASHBOARD
+  const [alertasVisibles, setAlertasVisibles] = useState(true);
+  
   const [productos, setProductos] = useState([]);
   const [pedidos, setPedidos] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -145,9 +150,19 @@ function Dashboard() {
       setProductos(prods);
       setPedidos(allPedidos);
 
+      // ========== MOSTRAR NOTIFICACIÓN DE STOCK BAJO ==========
+      const bajos = prods.filter(p => 
+        Number(p.cantidad) > 0 && Number(p.cantidad) <= Number(p.minimo ?? p.umbral_minimo ?? 5)
+      );
+      if (bajos.length > 0 && !showToast) {
+        showWarning(
+          `🔴 ${bajos.length} reactivo${bajos.length > 1 ? 's' : ''} bajo mínimo: ${bajos.slice(0, 3).map(p => p.nombre).join(', ')}${bajos.length > 3 ? '...' : ''}`,
+          8000
+        );
+      }
+
       // ========== SI ES USUARIO, FILTRAR SUS DATOS ==========
       if (isUsuario) {
-        // Filtrar prácticas del usuario
         const practicasRes = await api.get('practicas/').catch(() => ({ data: [] }));
         const allPracticas = practicasRes.data?.results ?? practicasRes.data ?? [];
         const misPracticasData = allPracticas.filter(p => 
@@ -155,35 +170,16 @@ function Dashboard() {
         );
         setMisPracticas(misPracticasData);
 
-        // Filtrar pedidos del usuario
         const misPedidosData = allPedidos.filter(p => 
           p.usuario === user?.id || p.usuario_username === user?.username
         );
         setMisPedidos(misPedidosData);
       }
 
-      if (showToast) toast.success('🔬 Dashboard actualizado');
+      if (showToast) showSuccess('🔬 Dashboard actualizado');
 
-      // Recordatorios de stock
-      if (!showToast) {
-        try {
-          const username = localStorage.getItem('username') || '';
-          const prefs = JSON.parse(localStorage.getItem(`sigirl_profile_preferences:${username}`) || '{}');
-          const stockReminders = prefs.stockReminders !== false;
-          if (stockReminders) {
-            const criticos = prods.filter((p) => Number(p.cantidad ?? 0) <= 0);
-            const bajos = prods.filter((p) => Number(p.cantidad ?? 0) > 0 && Number(p.cantidad ?? 0) <= Number(p.minimo ?? p.umbral_minimo ?? 5));
-            if (criticos.length > 0) {
-              toast.error(`🔴 ${criticos.length} reactivo${criticos.length > 1 ? 's' : ''} agotado${criticos.length > 1 ? 's' : ''}: ${criticos.slice(0,2).map(p=>p.nombre).join(', ')}${criticos.length > 2 ? '...' : ''}`, { autoClose: 6000 });
-            }
-            if (bajos.length > 0) {
-              toast.warn(`🟠 ${bajos.length} reactivo${bajos.length > 1 ? 's' : ''} bajo mínimo: ${bajos.slice(0,2).map(p=>p.nombre).join(', ')}${bajos.length > 2 ? '...' : ''}`, { autoClose: 6000 });
-            }
-          }
-        } catch { /* preferencias no críticas */ }
-      }
     } catch {
-      toast.error('❌ Error al cargar dashboard');
+      showError('❌ Error al cargar dashboard');
     } finally {
       setLoading(false);
     }
@@ -265,7 +261,7 @@ function Dashboard() {
 
   const handleExportCategorias = () => {
     if (!canExportReports) {
-      toast.info('Exportación disponible para administración');
+      showInfo('Exportación disponible para administración');
       return;
     }
     const total = barData.reduce((sum, item) => sum + Number(item.value || 0), 0) || 1;
@@ -276,7 +272,7 @@ function Dashboard() {
       Nivel: Number(item.value || 0) <= 5 ? 'Leve' : Number(item.value || 0) <= 15 ? 'Medio' : 'Crítico',
     }));
     exportToExcel(rows, 'reporte-categorias.xlsx', 'Categorias');
-    toast.success('Reporte exportado');
+    showSuccess('Reporte exportado');
   };
 
   const handleExportEstados = () => {
@@ -286,7 +282,7 @@ function Dashboard() {
       Total: item.value,
     }));
     exportToExcel(rows, 'estado-pedidos.xlsx', 'Pedidos');
-    toast.success('Reporte exportado');
+    showSuccess('Reporte exportado');
   };
 
   const handleVerTodos = () => {
@@ -294,14 +290,6 @@ function Dashboard() {
     else if (isJefe) navigate('/jefe?tab=pedidos');
     else navigate('/pedidos');
   };
-
-  const quickActions = [
-    { label: 'Inventario', path: '/inventario', enabled: true },
-    { label: 'Pedidos', path: '/pedidos', enabled: true },
-    { label: 'Usuarios', path: '/usuarios', enabled: isAdmin || isJefe },
-    { label: 'Alertas', path: '/alertas', enabled: isAdmin || isJefe },
-    { label: 'Reportes', path: '/reportes', enabled: isAdmin || isJefe },
-  ].filter((item) => item.enabled);
 
   const recentOrders = useMemo(() => {
     const data = isUsuario ? misPedidos : pedidos;
@@ -319,6 +307,55 @@ function Dashboard() {
   return (
     <Layout>
       <div className="space-y-5 max-w-[1400px] mx-auto">
+        {/* ✅ ALERTA DE STOCK BAJO CON BOTÓN DE CIERRE */}
+        {alertasVisibles && productos.filter(p => {
+          const cantidad = Number(p.cantidad || 0);
+          const minimo = Number(p.minimo || p.umbral_minimo || 5);
+          return cantidad > 0 && cantidad <= minimo;
+        }).length > 0 && (
+          <div className="relative bg-amber-50 border-l-4 border-amber-400 p-4 rounded-r-lg shadow-sm">
+            <button
+              onClick={() => setAlertasVisibles(false)}
+              className="absolute top-2 right-2 text-amber-600 hover:text-amber-800 transition-colors p-1 hover:bg-amber-100 rounded"
+              title="Cerrar alerta"
+            >
+              <X size={18} />
+            </button>
+            <div className="flex items-start gap-3 pr-8">
+              <AlertCircle className="w-5 h-5 text-amber-500 mt-0.5 flex-shrink-0" />
+              <div>
+                <p className="font-semibold text-amber-800">
+                  {productos.filter(p => {
+                    const cantidad = Number(p.cantidad || 0);
+                    const minimo = Number(p.minimo || p.umbral_minimo || 5);
+                    return cantidad > 0 && cantidad <= minimo;
+                  }).length} reactivo{productos.filter(p => {
+                    const cantidad = Number(p.cantidad || 0);
+                    const minimo = Number(p.minimo || p.umbral_minimo || 5);
+                    return cantidad > 0 && cantidad <= minimo;
+                  }).length > 1 ? 's' : ''} bajo mínimo
+                </p>
+                <p className="text-sm text-amber-700">
+                  {productos.filter(p => {
+                    const cantidad = Number(p.cantidad || 0);
+                    const minimo = Number(p.minimo || p.umbral_minimo || 5);
+                    return cantidad > 0 && cantidad <= minimo;
+                  }).slice(0, 5).map(p => p.nombre).join(', ')}
+                  {productos.filter(p => {
+                    const cantidad = Number(p.cantidad || 0);
+                    const minimo = Number(p.minimo || p.umbral_minimo || 5);
+                    return cantidad > 0 && cantidad <= minimo;
+                  }).length > 5 && ` y ${productos.filter(p => {
+                    const cantidad = Number(p.cantidad || 0);
+                    const minimo = Number(p.minimo || p.umbral_minimo || 5);
+                    return cantidad > 0 && cantidad <= minimo;
+                  }).length - 5} más...`}
+                </p>
+              </div>
+            </div>
+          </div>
+        )}
+
         {/* Header */}
         <div className="flex items-center justify-between">
           <div>
@@ -350,7 +387,6 @@ function Dashboard() {
         {/* ========== TARJETAS DE ESTADÍSTICAS ========== */}
         <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4">
           {isUsuario ? (
-            // ===== TARJETAS PARA USUARIO =====
             <>
               <LabMetricCard 
                 title="MIS PRÁCTICAS" 
@@ -386,7 +422,6 @@ function Dashboard() {
               />
             </>
           ) : (
-            // ===== TARJETAS PARA ADMIN/JEFE =====
             <>
               <LabMetricCard 
                 title="TOTAL PRODUCTOS" 
@@ -428,7 +463,6 @@ function Dashboard() {
         {/* ========== GRÁFICOS ========== */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
           {isUsuario ? (
-            // ===== GRÁFICOS PARA USUARIO =====
             <>
               <LabSection
                 title="ESTADO DE MIS PEDIDOS"
@@ -502,7 +536,6 @@ function Dashboard() {
               </LabSection>
             </>
           ) : (
-            // ===== GRÁFICOS PARA ADMIN/JEFE =====
             <>
               <LabSection
                 title="DISTRIBUCIÓN POR CATEGORÍA"

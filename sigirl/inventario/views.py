@@ -1340,34 +1340,53 @@ def calcular_pedido(request):
     except Practica.DoesNotExist:
         return Response({'error': 'Práctica no encontrada'}, status=status.HTTP_404_NOT_FOUND)
     
-    # Calcular reactivos
+    # ✅ SEPARAR REACTIVOS (productos tipo 'reactivo')
     reactivos = []
     for pr in practica.reactivos.all():
-        cantidad_total = float(pr.cantidad) * numero_grupos
-        reactivos.append({
-            'id': pr.reactivo.id,
-            'nombre': pr.reactivo.nombre,
-            'cantidad_base': float(pr.cantidad),
-            'unidad': pr.unidad.simbolo,
-            'cantidad_total': cantidad_total,
-            'stock_actual': pr.reactivo.cantidad,
-            'suficiente': pr.reactivo.cantidad >= cantidad_total
-        })
+        if pr.reactivo.tipo == 'reactivo':  # Solo reactivos
+            cantidad_total = float(pr.cantidad) * numero_grupos
+            reactivos.append({
+                'id': pr.reactivo.id,
+                'nombre': pr.reactivo.nombre,
+                'cantidad_base': float(pr.cantidad),
+                'unidad': pr.unidad.simbolo if pr.unidad else 'ml',
+                'cantidad_total': cantidad_total,
+                'stock_actual': pr.reactivo.cantidad,
+                'suficiente': pr.reactivo.cantidad >= cantidad_total,
+                'tipo': 'reactivo'  # ✅ Indicar tipo
+            })
     
-    # Calcular equipos
+    # ✅ SEPARAR EQUIPOS (productos tipo 'equipo')
     equipos = []
+    for pr in practica.reactivos.all():
+        if pr.reactivo.tipo == 'equipo':  # Solo equipos
+            cantidad_total = float(pr.cantidad) * numero_grupos
+            equipos.append({
+                'id': pr.reactivo.id,
+                'nombre': pr.reactivo.nombre,
+                'cantidad_base': float(pr.cantidad),
+                'unidad': 'ud',  # Unidad para equipos
+                'cantidad_total': cantidad_total,
+                'stock_actual': pr.reactivo.cantidad,
+                'suficiente': pr.reactivo.cantidad >= cantidad_total,
+                'tipo': 'equipo'  # ✅ Indicar tipo
+            })
+    
+    # ✅ TAMBIÉN PROCESAR EQUIPOS DESDE PracticaEquipo si los tienes
     for pe in practica.equipos.all():
-        cantidad_total = 1 * numero_grupos
+        cantidad_total = pe.tiempo_uso_min * numero_grupos
         equipos.append({
             'id': pe.equipo.id,
             'nombre': pe.equipo.nombre,
-            'cantidad_base': 1,
+            'cantidad_base': pe.tiempo_uso_min,
+            'unidad': 'min',
             'cantidad_total': cantidad_total,
             'stock_actual': pe.equipo.cantidad,
-            'suficiente': pe.equipo.cantidad >= cantidad_total
+            'suficiente': pe.equipo.cantidad >= 1,
+            'tipo': 'equipo'
         })
     
-    # ========== CALCULAR MATERIALES ==========
+    # Calcular materiales
     materiales = []
     for pm in practica.materiales.all():
         cantidad_total = pm.cantidad_por_grupo * numero_grupos
@@ -1377,6 +1396,9 @@ def calcular_pedido(request):
             'cantidad_total': cantidad_total
         })
     
+    # Verificar si hay stock suficiente
+    tiene_stock_suficiente = all(r['suficiente'] for r in reactivos) and all(e['suficiente'] for e in equipos)
+    
     return Response({
         'practica': {
             'id': practica.id,
@@ -1384,10 +1406,10 @@ def calcular_pedido(request):
             'ficha': practica.ficha
         },
         'numero_grupos': numero_grupos,
-        'reactivos': reactivos,
-        'equipos': equipos,
+        'reactivos': reactivos,  # ✅ Solo reactivos
+        'equipos': equipos,      # ✅ Solo equipos
         'materiales': materiales,
-        'tiene_stock_suficiente': all(r['suficiente'] for r in reactivos) and all(e['suficiente'] for e in equipos)
+        'tiene_stock_suficiente': tiene_stock_suficiente
     })
 
 @api_view(['POST'])

@@ -2,6 +2,9 @@ import React, { useContext, useEffect, useState } from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { UserContext } from '../context/UserContext';
 import { motion } from 'framer-motion';
+import { toast } from 'react-toastify';
+import 'react-toastify/dist/ReactToastify.css';
+import { clearAllToasts } from '../utils/toastHelpers';
 import { 
   LayoutDashboard, 
   Package, 
@@ -18,10 +21,10 @@ import {
   Bell,
   BarChart3,
   Calendar,
-  GraduationCap, // 👈 NUEVO: ícono para gestión académica
-  BookOpen,       // 👈 NUEVO: ícono para programas
-  Target,         // 👈 NUEVO: ícono para competencias
-  ClipboardCheck  // 👈 NUEVO: ícono para prácticas
+  GraduationCap,
+  BookOpen,
+  Target,
+  ClipboardCheck
 } from 'lucide-react';
 
 const Layout = ({ children }) => {
@@ -32,7 +35,7 @@ const Layout = ({ children }) => {
   const [currentTime, setCurrentTime] = useState(new Date());
   const normalizedRole = role === 'jefe_superior' ? 'jefe' : role;
 
-  // ========== CONTADOR DE APROBACIONES PENDIENTES (BADGE) ==========
+  // ========== CONTADOR DE APROBACIONES PENDIENTES ==========
   const [aprobacionesPendientes, setAprobacionesPendientes] = useState(0);
 
   const contarAprobacionesPendientes = async () => {
@@ -102,92 +105,51 @@ const Layout = ({ children }) => {
     });
   };
 
-  // ========== MENÚ SUPERIOR CON BADGE ==========
+  // ========== MENÚ SUPERIOR ==========
   const navItems = [
-    // ============================================================
-    // 1. DASHBOARD
-    // ============================================================
     { path: '/dashboard', label: 'Dashboard', icon: <LayoutDashboard className="w-4 h-4" />, roles: ['admin', 'jefe', 'usuario'] },
-
-    // ============================================================
-    // 2. INVENTARIO
-    // ============================================================
     { path: '/inventario', label: 'Inventario', icon: <Package className="w-4 h-4" />, roles: ['admin', 'jefe'] },
-
-    // ============================================================
-    // 3. GESTIÓN ACADÉMICA (NUEVO)
-    // ============================================================
     { path: '/competencias', label: 'Competencias', icon: <Target className="w-4 h-4" />, roles: ['admin', 'jefe'] },
-    // ============================================================
-    // 4. PRÁCTICAS Y SOLICITUDES
-    // ============================================================
     { path: '/selector-practica', label: 'Generar Solicitud', icon: <ClipboardList className="w-4 h-4" />, roles: ['usuario'] },
-
-    // ============================================================
-    // 5. PEDIDOS Y APROBACIONES
-    // ============================================================
     { path: '/aprobaciones-jefe', label: 'Aprobar Excepciones', icon: <AlertTriangle className="w-4 h-4" />, roles: ['admin', 'jefe'], badge: true },
-
-    // ============================================================
-    // 6. FORMULARIOS
-    // ============================================================
     { path: '/formularios/diligenciar', label: 'Formularios', icon: <FileText className="w-4 h-4" />, roles: ['admin', 'jefe', 'usuario'] },
-
-    // ============================================================
-    // 7. PROGRAMACIÓN
-    // ============================================================
     { path: '/programacion-laboratorios', label: 'Programación', icon: <Calendar className="w-4 h-4" />, roles: ['admin', 'jefe', 'usuario'] },
-
-    // ============================================================
-    // 8. GESTIÓN DE EQUIPOS Y SUSTANCIAS
-    // ============================================================
     { path: '/hoja-vida-equipos', label: 'Hoja de Vida Equipos', icon: <Package className="w-4 h-4" />, roles: ['admin', 'jefe'] },
-
-    // ============================================================
-    // 9. GESTIÓN DE FORMULARIOS (Admin/Jefe)
-    // ============================================================
     { path: '/formularios/gestion', label: 'Gestionar Formularios', icon: <FileText className="w-4 h-4" />, roles: ['admin', 'jefe'] },
     { path: '/reportes-formularios', label: 'Reportes Formularios', icon: <BarChart3 className="w-4 h-4" />, roles: ['admin', 'jefe'] },
-
-    // ============================================================
-    // 10. ADMINISTRACIÓN DEL SISTEMA
-    // ============================================================
     { path: '/usuarios', label: 'Usuarios', icon: <Users className="w-4 h-4" />, roles: ['admin', 'jefe'] },
     { path: '/alertas', label: 'Alertas', icon: <AlertTriangle className="w-4 h-4" />, roles: ['admin', 'jefe'] },
     { path: '/reportes', label: 'Reportes', icon: <FileText className="w-4 h-4" />, roles: ['admin', 'jefe'] },
-
-    // ============================================================
-    // 11. PERFIL (SIEMPRE AL FINAL)
-    // ============================================================
     { path: '/perfil', label: 'Perfil', icon: <User className="w-4 h-4" />, roles: ['admin', 'jefe', 'usuario'] },
   ];
 
   const filteredNav = navItems.filter(item => item.roles.includes(normalizedRole));
 
+  // ✅ FUNCIÓN DE LOGOUT CORREGIDA
   const handleLogout = () => {
+    clearAllToasts();  // Limpiar todas las notificaciones
     logout();
     navigate('/login');
   };
 
   return (
     <div className="min-h-screen relative">
-      {/* Patrón de fondo */}
       <div className="pattern-dots"></div>
       
       <div className="relative z-10">
-        {/* Header con glassmorphism */}
+        {/* Header con diseño SIGIRL */}
         <motion.div 
           initial={{ y: -100 }}
           animate={{ y: 0 }}
           transition={{ type: 'spring', stiffness: 300, damping: 30 }}
-          className="fixed top-0 left-0 right-0 z-20 bg-white/80 backdrop-blur-md border-b border-[#e2e8f0] shadow-sm"
+          className="fixed top-0 left-0 right-0 z-20 bg-white/95 backdrop-blur-md border-b border-[#E0E0E0] shadow-sm"
         >
           <div className="flex justify-between items-center px-4 sm:px-6 py-3">
             <div className="flex items-center gap-4">
               <motion.button 
                 whileTap={{ scale: 0.95 }}
                 onClick={() => setSidebarOpen(!sidebarOpen)}
-                className="lg:hidden text-[#16a34a] hover:text-[#15803d] transition-colors"
+                className="lg:hidden text-[#1FA971] hover:text-[#157A55] transition-colors"
               >
                 <Menu size={20} />
               </motion.button>
@@ -196,12 +158,12 @@ const Layout = ({ children }) => {
                 <motion.div 
                   whileHover={{ rotate: 180, scale: 1.1 }}
                   transition={{ duration: 0.3 }}
-                  className="p-2 rounded-xl bg-gradient-to-br from-[#16a34a] to-[#15803d] shadow-md"
+                  className="p-2 rounded-xl bg-gradient-to-br from-[#1FA971] to-[#157A55] shadow-md"
                 >
                   <FlaskConical size={20} className="text-white" />
                 </motion.div>
                 <div className="hidden sm:block">
-                  <h1 className="text-lg font-bold tracking-tight bg-gradient-to-r from-[#16a34a] to-[#15803d] bg-clip-text text-transparent">
+                  <h1 className="text-lg font-bold tracking-tight bg-gradient-to-r from-[#1FA971] to-[#157A55] bg-clip-text text-transparent">
                     SIGIRL
                   </h1>
                   <p className="text-[9px] text-[#64748b] font-mono hidden md:block">
@@ -218,20 +180,20 @@ const Layout = ({ children }) => {
                 <input 
                   type="text"
                   placeholder="Buscar reactivos, pedidos, usuarios..."
-                  className="w-full pl-10 pr-4 py-2 bg-[#f8fafc] border border-[#e2e8f0] rounded-xl text-sm focus:outline-none focus:border-[#16a34a] focus:ring-2 focus:ring-[#16a34a]/20 transition-all"
+                  className="w-full pl-10 pr-4 py-2 bg-[#f8fafc] border border-[#E0E0E0] rounded-xl text-sm focus:outline-none focus:border-[#1FA971] focus:ring-2 focus:ring-[#1FA971]/20 transition-all"
                 />
               </div>
             </div>
             
             <div className="flex items-center gap-4">
               {/* Estado del sistema */}
-              <div className="hidden md:flex items-center gap-2 px-3 py-1.5 bg-[#dcfce7]/50 rounded-full">
+              <div className="hidden md:flex items-center gap-2 px-3 py-1.5 bg-[#E8F5F0] rounded-full">
                 <motion.div 
                   animate={{ scale: [1, 1.2, 1] }}
                   transition={{ repeat: Infinity, duration: 2 }}
-                  className="w-2 h-2 rounded-full bg-[#16a34a] shadow-glow-green"
+                  className="w-2 h-2 rounded-full bg-[#1FA971] shadow-glow-green"
                 />
-                <span className="text-[10px] font-mono text-[#16a34a] font-medium">SISTEMA ONLINE</span>
+                <span className="text-[10px] font-mono text-[#157A55] font-medium">SISTEMA ONLINE</span>
               </div>
               
               {/* Hora y fecha */}
@@ -257,16 +219,16 @@ const Layout = ({ children }) => {
               </motion.button>
               
               {/* Avatar */}
-              <div className="flex items-center gap-3 pl-3 border-l border-[#e2e8f0]">
+              <div className="flex items-center gap-3 pl-3 border-l border-[#E0E0E0]">
                 <motion.div 
                   whileHover={{ scale: 1.05 }}
-                  className="relative w-9 h-9 rounded-full border-2 border-[#16a34a]/30 overflow-hidden shadow-md cursor-pointer"
+                  className="relative w-9 h-9 rounded-full border-2 border-[#1FA971]/30 overflow-hidden shadow-md cursor-pointer"
                   onClick={() => navigate('/perfil')}
                 >
                   {avatarSrc ? (
                     <img src={avatarSrc} alt="avatar" className="w-full h-full object-cover" />
                   ) : (
-                    <div className="w-full h-full bg-gradient-to-br from-[#16a34a] to-[#15803d] flex items-center justify-center">
+                    <div className="w-full h-full bg-gradient-to-br from-[#1FA971] to-[#157A55] flex items-center justify-center">
                       <span className="text-sm font-bold text-white">
                         {(user?.nombre || username || 'U').charAt(0).toUpperCase()}
                       </span>
@@ -277,8 +239,10 @@ const Layout = ({ children }) => {
                   <p className="text-sm font-semibold text-[#1e293b] leading-tight">
                     {user?.nombre || username || 'Usuario'}
                   </p>
-                  <p className="text-[10px] text-[#16a34a] font-mono font-medium">
-                    {normalizedRole === 'admin' ? 'Administrador' : normalizedRole === 'jefe' ? 'Jefe Superior' : 'Usuario'}
+                  <p className="text-[10px] text-[#1FA971] font-mono font-medium">
+                    {normalizedRole === 'admin' ? '👨‍💼 Administrador' : 
+                     normalizedRole === 'jefe' ? '👔 Jefe Superior' : 
+                     '👤 Usuario'}
                   </p>
                 </div>
               </div>
@@ -288,7 +252,6 @@ const Layout = ({ children }) => {
 
         {/* Sidebar + Main Content */}
         <div className="flex pt-[65px]">
-          {/* Backdrop móvil para cerrar sidebar */}
           {sidebarOpen && (
             <div
               className="fixed inset-0 z-[9] bg-black/40 lg:hidden"
@@ -300,14 +263,14 @@ const Layout = ({ children }) => {
           <aside className={`
             fixed z-10
             w-64 h-[calc(100vh-65px)] 
-            bg-white border-r border-[#e2e8f0]
+            bg-white border-r border-[#E0E0E0]
             transition-transform duration-300 ease-in-out
             overflow-y-auto
             ${sidebarOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'}
           `}>
             <nav className="p-4 space-y-1">
-              <div className="mb-5 px-2 pt-2 pb-4 border-b border-[#e2e8f0]">
-                <div className="text-center text-[11px] font-mono text-[#16a34a]/70">
+              <div className="mb-5 px-2 pt-2 pb-4 border-b border-[#E0E0E0]">
+                <div className="text-center text-[11px] font-mono text-[#1FA971]/70">
                   SO₃OH · NaOH · HCl
                 </div>
               </div>
@@ -321,8 +284,8 @@ const Layout = ({ children }) => {
                     flex items-center gap-3 px-4 py-2.5 rounded-lg
                     transition-all font-mono text-sm
                     ${location.pathname === item.path 
-                      ? 'bg-[#dcfce7] text-[#16a34a] border-l-[3px] border-[#16a34a] font-semibold pl-[13px]' 
-                      : 'text-stone-600 hover:text-[#16a34a] hover:bg-[#dcfce7]/50'
+                      ? 'bg-[#E8F5F0] text-[#1FA971] border-l-[3px] border-[#1FA971] font-semibold pl-[13px]' 
+                      : 'text-stone-600 hover:text-[#1FA971] hover:bg-[#E8F5F0]/50'
                     }
                   `}
                 >
@@ -338,7 +301,7 @@ const Layout = ({ children }) => {
                 </Link>
               ))}
               
-              <div className="pt-4 mt-4 border-t border-[#e2e8f0]">
+              <div className="pt-4 mt-4 border-t border-[#E0E0E0]">
                 <button
                   onClick={handleLogout}
                   className="flex items-center gap-3 px-4 py-2.5 rounded-lg text-rose-500 hover:text-rose-700 hover:bg-rose-50 transition-all font-mono text-sm w-full"

@@ -1,7 +1,11 @@
 from rest_framework import serializers
 from django.contrib.auth.models import User
 from .models import *
-
+from .models import (
+    Practica, 
+    PracticaReactivo, 
+    PracticaEquipo, 
+    PracticaMaterial,)
 # ============================================================
 # SERIALIZERS EXISTENTES
 # ============================================================
@@ -112,36 +116,63 @@ class PracticaSerializer(serializers.ModelSerializer):
         }
     
     def get_reactivos(self, obj):
-        from .serializers import PracticaReactivoSerializer
-        return PracticaReactivoSerializer(obj.reactivos.all(), many=True).data
+        try:
+            from .serializers import PracticaReactivoSerializer
+            reactivos = obj.reactivos.all()
+            print(f"🔍 get_reactivos: Práctica {obj.id} - {obj.nombre} tiene {reactivos.count()} reactivos")
+            return PracticaReactivoSerializer(reactivos, many=True).data
+        except Exception as e:
+            print(f"❌ Error en get_reactivos: {e}")
+            import traceback
+            traceback.print_exc()
+            return []
     
     def get_equipos(self, obj):
-        from .serializers import PracticaEquipoSerializer
-        return PracticaEquipoSerializer(obj.equipos.all(), many=True).data
+            try:
+                from .serializers import PracticaEquipoSerializer
+                equipos = obj.equipos.all()
+                print(f"🔍 get_equipos: Práctica {obj.id} - {obj.nombre} tiene {equipos.count()} equipos")
+                return PracticaEquipoSerializer(equipos, many=True).data
+            except Exception as e:
+                print(f"❌ Error en get_equipos: {e}")
+                import traceback
+                traceback.print_exc()
+            return []
     
     def get_materiales(self, obj):
-        from .serializers import PracticaMaterialSerializer
-        return PracticaMaterialSerializer(obj.materiales.all(), many=True).data
+        try:
+            from .serializers import PracticaMaterialSerializer
+            materiales = obj.materiales.all()
+            print(f"🔍 get_materiales: Práctica {obj.id} tiene {materiales.count()} materiales")
+            return PracticaMaterialSerializer(materiales, many=True).data
+        except Exception as e:
+            print(f"❌ Error en get_materiales: {e}")
+            return []
     
     def to_internal_value(self, data):
-        """
-        Este método se ejecuta antes de create/update.
-        Aquí podemos ver qué datos llegan y procesarlos.
-        """
         print("=" * 60)
         print("🔍 to_internal_value - DATOS RECIBIDOS:")
         print(f"📦 data: {data}")
+        print(f"📦 data keys: {data.keys() if hasattr(data, 'keys') else 'No es dict'}")
         print("=" * 60)
         
-        # Guardar reactivos y equipos para usarlos después
+        # ✅ Guardar reactivos y equipos para usarlos después
         self._reactivos_data = data.get('reactivos', [])
         self._equipos_data = data.get('equipos', [])
         
-        # Remover reactivos y equipos de los datos para que no causen error
-        # porque no son campos del modelo Practica
-        data_copy = data.copy()
-        data_copy.pop('reactivos', None)
-        data_copy.pop('equipos', None)
+        print(f"📦 Reactivos guardados: {self._reactivos_data}")
+        print(f"📦 Equipos guardados: {self._equipos_data}")
+        print("=" * 60)
+        
+        # Remover reactivos y equipos de los datos
+        data_copy = data.copy() if hasattr(data, 'copy') else {}
+        
+        if isinstance(data_copy, dict):
+            data_copy.pop('reactivos', None)
+            data_copy.pop('equipos', None)
+        
+        print(f"📦 data_copy final: {data_copy}")
+        print("=" * 60)
         
         return super().to_internal_value(data_copy)
     
@@ -206,6 +237,9 @@ class PracticaSerializer(serializers.ModelSerializer):
         reactivos_data = getattr(self, '_reactivos_data', None)
         equipos_data = getattr(self, '_equipos_data', None)
         
+        print(f"🔍 Reactivos en update: {reactivos_data}")
+        print(f"🔍 Equipos en update: {equipos_data}")
+        
         # Actualizar campos básicos
         for attr, value in validated_data.items():
             setattr(instance, attr, value)
@@ -213,29 +247,42 @@ class PracticaSerializer(serializers.ModelSerializer):
         
         # ✅ Actualizar reactivos (borrar y crear de nuevo)
         if reactivos_data is not None:
-            instance.reactivos.all().delete()
-            for r_data in reactivos_data:
-                PracticaReactivo.objects.create(
-                    practica=instance,
-                    reactivo_id=r_data['reactivo'],
-                    cantidad=r_data['cantidad'],
-                    unidad_id=r_data['unidad'],
-                    es_sensible=r_data.get('es_sensible', False)
-                )
-            print(f"✅ Reactivos actualizados: {len(reactivos_data)}")
-        
-        # ✅ Actualizar equipos (borrar y crear de nuevo)
+            try:
+                instance.reactivos.all().delete()
+                for r_data in reactivos_data:
+                    PracticaReactivo.objects.create(
+                        practica=instance,
+                        reactivo_id=r_data['reactivo'],
+                        cantidad=r_data['cantidad'],
+                        unidad_id=r_data['unidad'],
+                        es_sensible=r_data.get('es_sensible', False)
+                    )
+                print(f"✅ Reactivos actualizados: {len(reactivos_data)}")
+            except Exception as e:
+                print(f"❌ Error actualizando reactivos: {e}")
+                import traceback
+                traceback.print_exc()
+    
+    # ✅ Actualizar equipos (borrar y crear de nuevo)
         if equipos_data is not None:
-            instance.equipos.all().delete()
-            for e_data in equipos_data:
-                PracticaEquipo.objects.create(
-                    practica=instance,
-                    equipo_id=e_data['equipo'],
-                    tiempo_uso_min=e_data['tiempo_uso_min'],
-                    desgaste_estimado=e_data.get('desgaste_estimado', 0),
-                    mantenimiento_requerido=e_data.get('mantenimiento_requerido', False)
-                )
-            print(f"✅ Equipos actualizados: {len(equipos_data)}")
+            try:
+                instance.equipos.all().delete()
+                for e_data in equipos_data:
+                    # Verificar que los datos necesarios existan
+                    equipo_id = e_data.get('equipo')
+                    if equipo_id:
+                        PracticaEquipo.objects.create(
+                            practica=instance,
+                            equipo_id=equipo_id,
+                            tiempo_uso_min=e_data.get('tiempo_uso_min', 30),
+                            desgaste_estimado=e_data.get('desgaste_estimado', 0),
+                            mantenimiento_requerido=e_data.get('mantenimiento_requerido', False)
+                        )
+                print(f"✅ Equipos actualizados: {len(equipos_data)}")
+            except Exception as e:
+                print(f"❌ Error actualizando equipos: {e}")
+                import traceback
+                traceback.print_exc()
         
         return instance
     
