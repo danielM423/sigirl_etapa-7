@@ -8,13 +8,9 @@ const AprobacionesJefe = () => {
   const [aprobando, setAprobando] = useState(null);
 
   const cargarPedidos = async () => {
-    const token = localStorage.getItem('access_token');
     try {
-      const res = await fetch('http://127.0.0.1:8000/api/pedidos-requieren-aprobacion/', {
-        headers: { 'Authorization': `Bearer ${token}` }
-      });
-      const data = await res.json();
-      setPedidos(data);
+      const res = await api.get('pedidos-requieren-aprobacion/');
+      setPedidos(res.data);
     } catch (err) {
       console.error('Error cargando pedidos:', err);
     } finally {
@@ -24,18 +20,11 @@ const AprobacionesJefe = () => {
 
   const aprobarPedido = async (pedidoId) => {
     setAprobando(pedidoId);
-    const token = localStorage.getItem('access_token');
     try {
-      const res = await fetch(`http://127.0.0.1:8000/api/aprobar-excepcion-pedido/${pedidoId}/`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`
-        }
-      });
-      const data = await res.json();
-      if (res.ok) {
-        alert(`✅ ${data.mensaje}`);
+      const res = await api.post(`aprobar-excepcion-pedido/${pedidoId}/`);
+      const data = res.data;
+      if (res.status >= 200 && res.status < 300) {
+        alert(data.mensaje);
         cargarPedidos();
       } else {
         alert(`❌ Error: ${data.error}`);
@@ -70,7 +59,7 @@ const AprobacionesJefe = () => {
 
         {pedidos.length === 0 ? (
           <div className="bg-white rounded-lg shadow p-8 text-center text-gray-500">
-            ✅ No hay pedidos pendientes de aprobación
+            No hay pedidos pendientes de aprobación
           </div>
         ) : (
           <div className="bg-white rounded-lg shadow overflow-hidden">
@@ -101,7 +90,7 @@ const AprobacionesJefe = () => {
                         disabled={aprobando === p.id}
                         className="bg-emerald-600 text-white px-4 py-2 rounded-lg hover:bg-emerald-700 disabled:opacity-50"
                       >
-                        {aprobando === p.id ? 'Aprobando...' : '✅ Aprobar Excepción'}
+                        {aprobando === p.id ? 'Aprobando...' : 'Aprobar excepción'}
                       </button>
                     </td>
                   </tr>

@@ -17,6 +17,7 @@ import {
   ChevronRight,
 } from 'lucide-react';
 import { UserContext } from '../context/UserContext';
+import api from '../services/api';
 
 const Sidebar = ({ isOpen, setIsOpen }) => {
   const location = useLocation();
@@ -37,14 +38,10 @@ const Sidebar = ({ isOpen, setIsOpen }) => {
       const token = localStorage.getItem('access_token');
       if (!token) return;
       
-      const res = await fetch('http://127.0.0.1:8000/api/pedidos-requieren-aprobacion/', {
-        headers: { 'Authorization': `Bearer ${token}` }
-      });
+      const res = await api.get('pedidos-requieren-aprobacion/');
       
-      if (res.ok) {
-        const data = await res.json();
-        setAprobacionesPendientes(data.length);
-      }
+      const data = res.data;
+      setAprobacionesPendientes(Array.isArray(data) ? data.length : 0);
     } catch (error) {
       console.error('Error contando aprobaciones:', error);
     }
@@ -71,11 +68,11 @@ const Sidebar = ({ isOpen, setIsOpen }) => {
             children: [
               { path: '/admin?tab=inventario', label: 'Vista general', icon: Boxes },
               { path: '/inventario', label: 'Reactivos', icon: Package },
-              { path: '/admin?tab=inventario', label: 'Alertas', icon: AlertTriangle },
+              { path: '/alertas', label: 'Alertas', icon: AlertTriangle },
             ],
           },
           { path: '/admin?tab=practicas', label: 'Prácticas', icon: ClipboardList, description: 'Gestión de prácticas' },
-          { path: '/admin?tab=pedidos', label: 'Pedidos', icon: ClipboardList, description: 'Aprobaciones' },
+          { path: '/aprobaciones-jefe', label: 'Aprobar Excepciones', icon: AlertTriangle, description: 'Pedidos que requieren aprobación' },
           { path: '/usuarios', label: 'Usuarios', icon: Users, description: 'Gestión de usuarios' },
           { path: '/perfil', label: 'Configuración', icon: Settings, description: 'Mi perfil' },
           { path: '/sustancias-controladas', label: 'Sustancias Controladas', icon: AlertTriangle, description: 'Reporte de reactivos sensibles' },
@@ -96,7 +93,7 @@ const Sidebar = ({ isOpen, setIsOpen }) => {
             children: [
               { path: '/inventario', label: 'Ver inventario', icon: Boxes },
               { path: '/jefe?tab=pedidos', label: 'Movimientos', icon: ClipboardList },
-              { path: '/inventario', label: 'Alertas', icon: AlertTriangle },
+              { path: '/alertas', label: 'Alertas', icon: AlertTriangle },
             ],
           },
           { path: '/sustancias-controladas', label: 'Sustancias Controladas', icon: AlertTriangle, description: 'Reporte de reactivos sensibles' },
@@ -126,7 +123,7 @@ const Sidebar = ({ isOpen, setIsOpen }) => {
             description: 'Consulta rápida',
             children: [
               { path: '/inventario', label: 'Productos', icon: Boxes },
-              { path: '/inventario', label: 'Alertas', icon: AlertTriangle },
+              { path: '/alertas', label: 'Alertas', icon: AlertTriangle },
             ],
           },
           { path: '/usuario', label: 'Pedidos', icon: ClipboardList, description: 'Mis solicitudes' },

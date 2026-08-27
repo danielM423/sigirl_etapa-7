@@ -4,7 +4,14 @@ import autoTable from 'jspdf-autotable';
 
 export const exportToExcel = (rows = [], fileName = 'reporte-sigirl.xlsx', sheetName = 'Reporte') => {
   const workbook = XLSX.utils.book_new();
-  const worksheet = XLSX.utils.json_to_sheet(rows);
+  const safeRows = rows.map((row) => Object.fromEntries(
+    Object.entries(row).map(([key, value]) => [key, value == null ? '' : typeof value === 'object' ? JSON.stringify(value) : value])
+  ));
+  const worksheet = XLSX.utils.json_to_sheet(safeRows);
+  const columns = Object.keys(safeRows[0] || {});
+  worksheet['!cols'] = columns.map((column) => ({
+    wch: Math.min(42, Math.max(column.length + 2, ...safeRows.map((row) => String(row[column] ?? '').length + 2))),
+  }));
   XLSX.utils.book_append_sheet(workbook, worksheet, sheetName);
   XLSX.writeFile(workbook, fileName);
 };

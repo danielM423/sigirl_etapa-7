@@ -229,11 +229,12 @@ const AdminDashboard = () => {
 
   const filteredAlertas = alertas.filter((a) => alertPriorityFilter === 'todas' || a.prioridad === alertPriorityFilter);
 
-  const statsAlertas = { total: alertas.length, nuevas: alertas.filter(a=>a.estado==='nueva').length, altas: alertas.filter(a=>a.prioridad==='alta').length };
+  const isResolvedAlert = (alerta) => alerta.resuelta === true || alerta.estado === 'resuelta';
+  const statsAlertas = { total: alertas.length, nuevas: alertas.filter((a) => !isResolvedAlert(a)).length, altas: alertas.filter(a=>a.prioridad==='alta').length };
 
   const reportPrimaryData = activeTab === 'inventario'
     ? [{ name:'OK', value:productos.filter(p=>p.estado==='ok').length },{ name:'Bajo stock', value:productos.filter(p=>p.estado==='bajo_stock').length },{ name:'Agotados', value:productos.filter(p=>p.estado==='agotado').length }]
-    : [{ name:'Nuevas', value:statsAlertas.nuevas },{ name:'Resueltas', value:alertas.filter(a=>a.estado==='resuelta').length },{ name:'Alta prioridad', value:statsAlertas.altas }];
+    : [{ name:'Activas', value:statsAlertas.nuevas },{ name:'Resueltas', value:alertas.filter(isResolvedAlert).length },{ name:'Alta prioridad', value:statsAlertas.altas }];
 
   const reportSecondaryData = activeTab === 'inventario'
     ? Object.entries(filteredProductos.reduce((acc,p)=>{ acc[p.categoria]=(acc[p.categoria]||0)+1; return acc; },{})).map(([name,value])=>({name,value}))
@@ -376,7 +377,7 @@ const AdminDashboard = () => {
               <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4">
                 <StatCard label="Total Productos"  value={productos.length}                                              icon={<Package className="w-4 h-4" />} color="blue" />
                 <StatCard label="Reactivos Críticos" value={productos.filter(p=>p.estado==='agotado').length}           icon={<AlertCircle className="w-4 h-4" />} color="rose" />
-                <StatCard label="Alertas Activas"   value={alertas.filter(a=>a.estado==='nueva').length}                icon={<AlertCircle className="w-4 h-4" />} color="amber" />
+                <StatCard label="Alertas Activas"   value={alertas.filter((a) => !isResolvedAlert(a)).length}             icon={<AlertCircle className="w-4 h-4" />} color="amber" />
                 <StatCard label="Nivel Inventario"  value={`${productos.length?Math.max(10,Math.round((productos.filter(p=>p.estado==='ok').length/productos.length)*100)):0}%`} icon={<TrendingUp className="w-4 h-4" />} color="emerald" />
               </div>
             </ScrollReveal>
@@ -517,10 +518,10 @@ const AdminDashboard = () => {
                         </td>
                         <td className="py-3 text-[11px] font-mono text-stone-500">{a.remitente}</td>
                         <td className="py-3"><span className={`px-2 py-0.5 rounded text-[10px] font-mono font-bold ${a.prioridad==='alta'?'bg-rose-100 text-rose-400 border border-rose-200':a.prioridad==='media'?'bg-amber-100 text-amber-400 border border-amber-200':'bg-[#E8F5F0] text-[#1FA971] border border-[#1FA971]/25'}`}>{a.prioridad}</span></td>
-                        <td className="py-3"><span className={`px-2 py-0.5 rounded text-[10px] font-mono font-bold ${a.estado==='resuelta'?'bg-[#E8F5F0] text-[#1FA971] border border-[#1FA971]/25':'bg-blue-100 text-blue-400 border border-blue-200'}`}>{a.estado}</span></td>
+                        <td className="py-3"><span className={`px-2 py-0.5 rounded text-[10px] font-mono font-bold ${isResolvedAlert(a)?'bg-[#E8F5F0] text-[#1FA971] border border-[#1FA971]/25':'bg-blue-100 text-blue-400 border border-blue-200'}`}>{isResolvedAlert(a) ? 'resuelta' : 'activa'}</span></td>
                         <td className="py-3">
                           <div className="flex items-center gap-2">
-                            <button onClick={()=>handleResolverAlerta(a.id)} disabled={a.estado==='resuelta'} className="px-3 py-1.5 rounded text-[10px] font-mono font-bold bg-[#E8F5F0] text-[#1FA971] border border-[#1FA971]/25 hover:bg-[#E8F5F0] transition-colors disabled:opacity-40 disabled:cursor-not-allowed">
+                            <button onClick={()=>handleResolverAlerta(a.id)} disabled={isResolvedAlert(a)} className="px-3 py-1.5 rounded text-[10px] font-mono font-bold bg-[#E8F5F0] text-[#1FA971] border border-[#1FA971]/25 hover:bg-[#E8F5F0] transition-colors disabled:opacity-40 disabled:cursor-not-allowed">
                               Resolver
                             </button>
                             <button onClick={()=>handleEliminarAlerta(a.id)} className="p-1.5 rounded text-rose-400 hover:bg-rose-500/10 border border-transparent hover:border-rose-200 transition-colors">
