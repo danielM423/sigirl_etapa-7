@@ -1,100 +1,116 @@
-import { useEffect, useState } from "react";
-import { getPedidoHistorial } from "../services/pedidoHistorial";
+import { useEffect, useState, useContext } from "react";
+import { getPDFDocumentos, deletePDFDocumento, updatePDFDocumento } from "../services/pdfDocumento";
+import { toast } from "react-toastify";
+import { UserContext } from "../context/UserContext";
 
-export default function PedidoHistorialList() {
+export default function PDFDocumentoList() {
   const [data, setData] = useState([]);
   const [selected, setSelected] = useState(null);
   const [showModal, setShowModal] = useState(false);
-  const [loading, setLoading] = useState(true);
+  const [editMode, setEditMode] = useState(false);
+  const [form, setForm] = useState({});
+  const { role } = useContext(UserContext);
 
   useEffect(() => {
-    cargarHistorial();
+    getPDFDocumentos().then(res => setData(res.data));
   }, []);
-
-  const cargarHistorial = async () => {
-    setLoading(true);
-    try {
-      const res = await getPedidoHistorial();
-      
-      // 🔥 CORREGIDO: Procesar datos de forma segura
-      let historialData = [];
-      if (res && res.data) {
-        if (Array.isArray(res.data)) {
-          historialData = res.data;
-        } else if (res.data.results && Array.isArray(res.data.results)) {
-          historialData = res.data.results;
-        }
-      } else if (Array.isArray(res)) {
-        historialData = res;
-      }
-      
-      setData(historialData);
-    } catch (error) {
-      console.error('Error cargando historial:', error);
-      setData([]);
-    } finally {
-      setLoading(false);
-    }
-  };
 
   const handleView = (item) => {
     setSelected(item);
     setShowModal(true);
   };
-
   const handleEdit = (item) => {
-    alert('Funcionalidad de edición pendiente para el pedido #' + item.id);
+    setForm({ ...item });
+    setSelected(item);
+    setEditMode(true);
+    setShowModal(true);
   };
+    const handleFormChange = (e) => {
+      const { name, value } = e.target;
+      setForm(f => ({ ...f, [name]: value }));
+    };
 
-  const handleDelete = (item) => {
-    if(window.confirm('¿Seguro que deseas eliminar el pedido #' + item.id + '?')){
-      alert('Funcionalidad de borrado pendiente para el pedido #' + item.id);
+    const handleFormSubmit = async (e) => {
+      e.preventDefault();
+      try {
+        await updatePDFDocumento(selected.id, form);
+        setData(data.map(d => d.id === selected.id ? { ...d, ...form } : d));
+        setShowModal(false);
+        setEditMode(false);
+        toast.success("PDF actualizado correctamente");
+      } catch (err) {
+        toast.error("Error al actualizar PDF");
+      }
+    };
+  const handleDelete = async (item) => {
+    if(window.confirm('¿Seguro que deseas eliminar el PDF #' + item.id + '?')){
+      try {
+        await deletePDFDocumento(item.id);
+        setData(data.filter(d => d.id !== item.id));
+      } catch (e) {
+        alert('Error al eliminar el PDF');
+      }
     }
   };
 
-  if (loading) {
-    return (
-      <div className="rf-block">
-        <h2 className="rf-title">Historial de Pedidos</h2>
-        <div className="text-center py-4 text-stone-400">Cargando historial...</div>
-      </div>
-    );
-  }
-
   return (
     <div className="rf-block">
-      <h2 className="rf-title">Historial de Pedidos</h2>
+      <h2 className="rf-title">PDFs Almacenados</h2>
       <div className="rf-list">
-        {data.length === 0 ? (
-          <div className="text-center py-4 text-stone-400">No hay registros en el historial</div>
-        ) : (
-          data.map(item => (
-            <div key={item.id} className="rf-card">
-              <div className="rf-card-row">
-                <span>Estado: <b>{item.estado}</b></span>
-                <span>Fecha: {item.fecha}</span>
-              </div>
-              <div className="rf-card-row rf-card-actions">
-                <button className="rf-btn" onClick={() => handleView(item)}>Ver</button>
-                <button className="rf-btn" onClick={() => handleEdit(item)}>Editar</button>
-                <button className="rf-btn rf-btn-danger" onClick={() => handleDelete(item)}>Eliminar</button>
-              </div>
+        {data.map(item => (
+          <div key={item.id} className="rf-card">
+            <div className="rf-card-row">
+              <span>Tipo: <b>{item.tipo}</b></span>
+              <span>Referencia: {item.referencia}</span>
             </div>
-          ))
-        )}
+            <div className="rf-card-row rf-card-actions">
+              <button className="rf-btn" onClick={() => handleView(item)}>Ver</button>
+              {(role === 'jefe' || role === 'jefe_superior') && (
+                <>
+                  <button className="rf-btn" onClick={() => handleEdit(item)}>Editar</button>
+                  <button className="rf-btn rf-btn-danger" onClick={() => handleDelete(item)}>Eliminar</button>
+                </>
+              )}
+              {(role === 'admin') && (
+                <button className="rf-btn rf-btn-danger" onClick={() => handleDelete(item)}>Eliminar</button>
+              )}
+            </div>
+          </div>
+        ))}
       </div>
 
-      {/* Modal de detalle */}
+      {/* Modal de detalle/edición */}
       {showModal && selected && (
         <div className="rf-modal-bg">
           <div className="rf-modal">
-            <h3>Detalle del Pedido #{selected.id}</h3>
-            <p><b>Estado:</b> {selected.estado}</p>
-            <p><b>Fecha:</b> {selected.fecha}</p>
-            <p><b>Usuario modificador:</b> {selected.usuario_modificador}</p>
-            <p><b>Comentario:</b> {selected.comentario}</p>
-            <p><b>ID Pedido:</b> {selected.pedido}</p>
-            <button className="rf-btn" onClick={()=>setShowModal(false)} style={{marginTop:12}}>Cerrar</button>
+            {editMode ? (
+              <form onSubmit={handleFormSubmit}>
+                <h3>Editar PDF #{selected.id}</h3>
+                <div style={{marginBottom:8}}>
+                  <label>Tipo:</label>
+                  <input name="tipo" value={form.tipo || ''} onChange={handleFormChange} style={{width:'100%'}} />
+                </div>
+                <div style={{marginBottom:8}}>
+                  <label>Referencia:</label>
+                  <input name="referencia" value={form.referencia || ''} onChange={handleFormChange} style={{width:'100%'}} />
+                </div>
+                <div style={{marginBottom:8}}>
+                  <label>Usuario:</label>
+                  <input name="usuario" value={form.usuario || ''} onChange={handleFormChange} style={{width:'100%'}} />
+                </div>
+                {/* Agrega más campos si es necesario */}
+                <button type="submit" style={{marginTop:12, marginRight:8}}>Guardar</button>
+                <button type="button" onClick={()=>{setShowModal(false);setEditMode(false);}} style={{marginTop:12}}>Cancelar</button>
+              </form>
+            ) : (
+              <>
+                <h3>Detalle del PDF #{selected.id}</h3>
+                <p><b>Tipo:</b> {selected.tipo}</p>
+                <p><b>Referencia:</b> {selected.referencia}</p>
+                <p><b>Usuario:</b> {selected.usuario}</p>
+                <button onClick={()=>setShowModal(false)} style={{marginTop:12}}>Cerrar</button>
+              </>
+            )}
           </div>
         </div>
       )}

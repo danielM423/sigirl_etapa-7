@@ -25,15 +25,7 @@ const Reportes = () => {
     setLoading(true);
     getAlertas()
       .then((res) => {
-        // ✅ CORREGIDO: Verificar que los datos sean un array
-        let datos = [];
-        if (res.data) {
-          if (Array.isArray(res.data)) {
-            datos = res.data;
-          } else if (res.data.results && Array.isArray(res.data.results)) {
-            datos = res.data.results;
-          }
-        }
+        const datos = res.data?.results ?? res.data ?? [];
         setAlertas(datos);
         if (datos.length === 0) {
           toast.info('No hay alertas registradas');
@@ -42,7 +34,6 @@ const Reportes = () => {
       .catch((err) => {
         console.error('Error al cargar alertas:', err);
         toast.error('No se pudieron cargar las alertas');
-        setAlertas([]); // ← En error, array vacío
       })
       .finally(() => setLoading(false));
   };
@@ -51,7 +42,7 @@ const Reportes = () => {
     cargarAlertas();
   }, []);
 
-  // ✅ Función para extraer string de objetos
+  // Función para extraer string de objetos {id, nombre}
   const getValue = (value, defaultValue = '—') => {
     if (!value) return defaultValue;
     if (typeof value === 'string') return value;
@@ -61,23 +52,20 @@ const Reportes = () => {
     return String(value);
   };
 
-  // ✅ Verificar que alertas sea un array
-  const alertasLista = Array.isArray(alertas) ? alertas : [];
-
   // Datos para gráfica de prioridades (barras)
   const datosPrioridad = [
-    { name: 'Alta', value: alertasLista.filter(a => getValue(a.prioridad) === 'alta').length, color: '#ef4444' },
-    { name: 'Media', value: alertasLista.filter(a => getValue(a.prioridad) === 'media').length, color: '#f59e0b' },
-    { name: 'Baja', value: alertasLista.filter(a => getValue(a.prioridad) === 'baja').length, color: '#1FA971' }
+    { name: 'Alta', value: alertas.filter(a => getValue(a.prioridad) === 'alta').length, color: '#ef4444' },
+    { name: 'Media', value: alertas.filter(a => getValue(a.prioridad) === 'media').length, color: '#f59e0b' },
+    { name: 'Baja', value: alertas.filter(a => getValue(a.prioridad) === 'baja').length, color: '#1FA971' }
   ];
 
   // Datos para gráfica de estado (pastel)
   const datosEstado = [
-    { name: 'Activas', value: alertasLista.filter(a => a.resuelta === false || getValue(a.estado) !== 'resuelta').length, color: '#ef4444' },
-    { name: 'Resueltas', value: alertasLista.filter(a => a.resuelta === true || getValue(a.estado) === 'resuelta').length, color: '#1FA971' }
+    { name: 'Activas', value: alertas.filter(a => a.resuelta === false || getValue(a.estado) !== 'resuelta').length, color: '#ef4444' },
+    { name: 'Resueltas', value: alertas.filter(a => a.resuelta === true || getValue(a.estado) === 'resuelta').length, color: '#1FA971' }
   ];
 
-  const totalAlertas = alertasLista.length;
+  const totalAlertas = alertas.length;
 
   if (loading) {
     return (
@@ -186,19 +174,19 @@ const Reportes = () => {
           <div className="bg-white border-l-4 border-red-500 rounded-lg p-4 shadow">
             <p className="text-xs text-gray-500">Alta Prioridad</p>
             <p className="text-2xl font-bold text-red-600">
-              {alertasLista.filter(a => getValue(a.prioridad) === 'alta').length}
+              {alertas.filter(a => getValue(a.prioridad) === 'alta').length}
             </p>
           </div>
           <div className="bg-white border-l-4 border-amber-500 rounded-lg p-4 shadow">
             <p className="text-xs text-gray-500">Media Prioridad</p>
             <p className="text-2xl font-bold text-amber-600">
-              {alertasLista.filter(a => getValue(a.prioridad) === 'media').length}
+              {alertas.filter(a => getValue(a.prioridad) === 'media').length}
             </p>
           </div>
           <div className="bg-white border-l-4 border-green-500 rounded-lg p-4 shadow">
             <p className="text-xs text-gray-500">Resueltas</p>
             <p className="text-2xl font-bold text-green-600">
-              {alertasLista.filter(a => a.resuelta === true || getValue(a.estado) === 'resuelta').length}
+              {alertas.filter(a => a.resuelta === true || getValue(a.estado) === 'resuelta').length}
             </p>
           </div>
         </div>
@@ -207,7 +195,7 @@ const Reportes = () => {
         <div className="bg-white border border-[#E0E0E0] rounded-xl overflow-hidden shadow-[0_2px_8px_rgba(0,0,0,0.05)]">
           <div className="px-5 py-3 border-b border-[#E0E0E0] bg-[#E8F5F0]">
             <span className="text-xs font-mono font-bold text-[#157A55] uppercase tracking-wider">
-              LISTADO DE ALERTAS ({alertasLista.length} registros)
+              LISTADO DE ALERTAS ({alertas.length} registros)
             </span>
           </div>
           <div className="overflow-x-auto">
@@ -224,14 +212,14 @@ const Reportes = () => {
                 </tr>
               </thead>
               <tbody className="divide-y divide-stone-100">
-                {alertasLista.length === 0 ? (
+                {alertas.length === 0 ? (
                   <tr>
                     <td colSpan={7} className="px-4 py-8 text-center text-stone-400 font-mono text-sm">
                       No hay alertas registradas en el sistema
                     </td>
                   </tr>
                 ) : (
-                  alertasLista.map((item) => (
+                  alertas.map((item) => (
                     <tr key={item.id} className="hover:bg-[#E8F5F0]/40 transition-colors">
                       <td className="px-4 py-3 text-sm font-mono font-semibold text-stone-700">
                         {getValue(item.titulo)}

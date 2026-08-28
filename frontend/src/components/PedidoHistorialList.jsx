@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { getPedidoHistorial } from "../services/pedidoHistorialService";
+import { getPedidoHistorial } from "../services/pedidoHistorial";
 
 export default function PedidoHistorialList() {
   const [data, setData] = useState([]);

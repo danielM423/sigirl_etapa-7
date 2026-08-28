@@ -34,21 +34,16 @@ import { UserContext } from '../context/UserContext';
 import { exportToExcel } from '../utils/reportExport';
 import Layout from '../components/Layout';
 
-// ✅ Función de utilidad para obtener datos de forma segura
-const obtenerDatosSeguro = (data) => {
-  if (!data) return [];
-  if (Array.isArray(data)) return data;
-  if (data.results && Array.isArray(data.results)) return data.results;
-  return [];
-};
-
 // Colores para gráficos
 const CHART_COLORS = ['#1FA971', '#157A55', '#4ade80', '#f59e0b', '#ef4444'];
 
 // Componente de tarjeta métrica estilo claro
-const LabMetricCard = ({ title, value, icon, trend, subtitle }) => {
+const LabMetricCard = ({ title, value, icon, trend, subtitle, onClick, clickable }) => {
   return (
-    <div className="bg-white border border-[#E0E0E0] border-t-[3px] border-t-[#1FA971] rounded-xl p-4 shadow-[0_2px_6px_rgba(0,0,0,0.05)] hover:shadow-[0_6px_18px_rgba(31,169,113,0.13)] hover:-translate-y-0.5 transition-all duration-200 group">
+    <div 
+      onClick={clickable ? onClick : undefined}
+      className={`bg-white border border-[#E0E0E0] border-t-[3px] border-t-[#1FA971] rounded-xl p-4 shadow-[0_2px_6px_rgba(0,0,0,0.05)] hover:shadow-[0_6px_18px_rgba(31,169,113,0.13)] hover:-translate-y-0.5 transition-all duration-200 group ${clickable ? 'cursor-pointer' : ''}`}
+    >
       <div className="flex items-start justify-between">
         <div>
           <div className="flex items-center gap-2 mb-2">
@@ -129,7 +124,7 @@ function Dashboard() {
   const [productos, setProductos] = useState([]);
   const [pedidos, setPedidos] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [chartsReady, setChartsReady] = useState(false);
+  const [chartsReady, setChartsReady] = useState(true);
   const [inventario, setInventario] = useState([]);
   const [loadingInventario, setLoadingInventario] = useState(true);
   const [misPracticas, setMisPracticas] = useState([]);
@@ -144,9 +139,8 @@ function Dashboard() {
         api.get('pedidos/').catch(() => ({ data: [] })),
       ]);
 
-      // ✅ Verificar que sean arrays
-      const prods = obtenerDatosSeguro(productosResponse.data);
-      const allPedidos = obtenerDatosSeguro(pedidosResponse.data);
+      const prods = productosResponse.data?.results ?? productosResponse.data ?? [];
+      const allPedidos = pedidosResponse.data?.results ?? pedidosResponse.data ?? [];
       
       setProductos(prods);
       setPedidos(allPedidos);
@@ -155,7 +149,7 @@ function Dashboard() {
       if (isUsuario) {
         // Filtrar prácticas del usuario
         const practicasRes = await api.get('practicas/').catch(() => ({ data: [] }));
-        const allPracticas = obtenerDatosSeguro(practicasRes.data);
+        const allPracticas = practicasRes.data?.results ?? practicasRes.data ?? [];
         const misPracticasData = allPracticas.filter(p => 
           p.instructor === user?.id || p.instructor_nombre === user?.username
         );
@@ -188,11 +182,8 @@ function Dashboard() {
           }
         } catch { /* preferencias no críticas */ }
       }
-    } catch (error) {
-      console.error('❌ Error al cargar dashboard:', error);
+    } catch {
       toast.error('❌ Error al cargar dashboard');
-      setProductos([]);
-      setPedidos([]);
     } finally {
       setLoading(false);
     }
@@ -208,44 +199,32 @@ function Dashboard() {
   }, []);
 
   // ========== ESTADÍSTICAS GENERALES ==========
-  const stats = useMemo(() => {
-    // ✅ Verificar que pedidos sea un array
-    const pedidosLista = Array.isArray(pedidos) ? pedidos : [];
-    const productosLista = Array.isArray(productos) ? productos : [];
-    
-    return {
-      totalProductos: productosLista.length,
-      bajoStock: productosLista.filter((item) => Number(item.cantidad || 0) <= Number(item.minimo || 5)).length,
-      totalPedidos: pedidosLista.length,
-      alertas: pedidosLista.filter((item) => item.estado === 'rechazado').length,
-      aprobados: pedidosLista.filter((item) => item.estado === 'aprobado').length,
-      pendientes: pedidosLista.filter((item) => item.estado === 'pendiente').length,
-    };
-  }, [productos, pedidos]);
+  const stats = useMemo(() => ({
+    totalProductos: productos.length,
+    bajoStock: productos.filter((item) => Number(item.cantidad || 0) <= Number(item.minimo || 5)).length,
+    totalPedidos: pedidos.length,
+    alertas: pedidos.filter((item) => item.estado === 'rechazado').length,
+    aprobados: pedidos.filter((item) => item.estado === 'aprobado').length,
+    pendientes: pedidos.filter((item) => item.estado === 'pendiente').length,
+  }), [productos, pedidos]);
 
   // ========== ESTADÍSTICAS DEL USUARIO ==========
-  const userStats = useMemo(() => {
-    const misPracticasLista = Array.isArray(misPracticas) ? misPracticas : [];
-    const misPedidosLista = Array.isArray(misPedidos) ? misPedidos : [];
-    
-    return {
-      totalPracticas: misPracticasLista.length,
-      pedidosActivos: misPedidosLista.filter(p => p.estado === 'pendiente').length,
-      pedidosAprobados: misPedidosLista.filter(p => p.estado === 'aprobado').length,
-      pedidosRechazados: misPedidosLista.filter(p => p.estado === 'rechazado').length,
-    };
-  }, [misPracticas, misPedidos]);
+  const userStats = useMemo(() => ({
+    totalPracticas: misPracticas.length,
+    pedidosActivos: misPedidos.filter(p => p.estado === 'pendiente').length,
+    pedidosAprobados: misPedidos.filter(p => p.estado === 'aprobado').length,
+    pedidosRechazados: misPedidos.filter(p => p.estado === 'rechazado').length,
+  }), [misPracticas, misPedidos]);
 
   // ========== GRÁFICO DE BARRAS - USUARIO ==========
   const userBarData = useMemo(() => {
-    const misPedidosLista = Array.isArray(misPedidos) ? misPedidos : [];
     const estados = {
       'pendiente': 0,
       'aprobado': 0,
       'rechazado': 0,
       'entregado': 0
     };
-    misPedidosLista.forEach(p => {
+    misPedidos.forEach(p => {
       const estado = p.estado?.toLowerCase() || 'pendiente';
       if (estados[estado] !== undefined) estados[estado]++;
     });
@@ -268,8 +247,7 @@ function Dashboard() {
 
   // ========== GRÁFICOS GENERALES (Admin/Jefe) ==========
   const barData = useMemo(() => {
-    const productosLista = Array.isArray(productos) ? productos : [];
-    const grouped = productosLista.reduce((acc, item) => {
+    const grouped = productos.reduce((acc, item) => {
       const key = item.categoria_nombre || item.categoria || 'General';
       acc[key] = (acc[key] || 0) + Number(item.cantidad || 0);
       return acc;
@@ -326,7 +304,7 @@ function Dashboard() {
   ].filter((item) => item.enabled);
 
   const recentOrders = useMemo(() => {
-    const data = isUsuario ? (Array.isArray(misPedidos) ? misPedidos : []) : (Array.isArray(pedidos) ? pedidos : []);
+    const data = isUsuario ? misPedidos : pedidos;
     return data.slice(0, 6).map((pedido) => ({
       id: pedido.id,
       codigo: pedido.codigo || `PED-${String(pedido.id).padStart(4, '0')}`,
@@ -379,24 +357,32 @@ function Dashboard() {
                 value={userStats.totalPracticas} 
                 icon={<ClipboardList className="h-5 w-5 text-emerald-600" />}
                 subtitle="Prácticas creadas"
+                onClick={() => navigate('/selector-practica')}
+                clickable={true}
               />
               <LabMetricCard 
                 title="PEDIDOS ACTIVOS" 
                 value={userStats.pedidosActivos} 
                 icon={<Clock className="h-5 w-5 text-amber-500" />}
                 subtitle="Pendientes de aprobación"
+                onClick={() => navigate('/pedidos')}
+                clickable={true}
               />
               <LabMetricCard 
                 title="PEDIDOS APROBADOS" 
                 value={userStats.pedidosAprobados} 
                 icon={<CheckCircle className="h-5 w-5 text-emerald-600" />}
                 subtitle="Solicitudes aceptadas"
+                onClick={() => navigate('/pedidos?estado=aprobado')}
+                clickable={true}
               />
               <LabMetricCard 
                 title="PEDIDOS RECHAZADOS" 
                 value={userStats.pedidosRechazados} 
                 icon={<XCircle className="h-5 w-5 text-rose-500" />}
                 subtitle="Solicitudes rechazadas"
+                onClick={() => navigate('/pedidos?estado=rechazado')}
+                clickable={true}
               />
             </>
           ) : (
@@ -407,6 +393,8 @@ function Dashboard() {
                 value={stats.totalProductos} 
                 icon={<Package2 className="h-5 w-5 text-emerald-600" />}
                 subtitle="En inventario"
+                onClick={() => navigate('/inventario')}
+                clickable={true}
               />
               <LabMetricCard 
                 title="PEDIDOS ACTIVOS" 
@@ -414,119 +402,26 @@ function Dashboard() {
                 icon={<ClipboardList className="h-5 w-5 text-emerald-600" />}
                 trend="+12%"
                 subtitle="Este mes"
+                onClick={() => navigate('/pedidos')}
+                clickable={true}
               />
               <LabMetricCard 
                 title="STOCK BAJO" 
                 value={stats.bajoStock} 
                 icon={<AlertCircle className="h-5 w-5 text-amber-500" />}
                 subtitle="Requieren reposición"
+                onClick={() => navigate('/inventario?filter=bajo_stock')}
+                clickable={true}
               />
               <LabMetricCard 
                 title="RECHAZADOS" 
                 value={stats.alertas} 
                 icon={<XCircle className="h-5 w-5 text-rose-500" />}
                 subtitle="Alertas críticas"
+                onClick={() => navigate('/alertas')}
+                clickable={true}
               />
             </>
-          )}
-        </div>
-
-        {/* ========== INVENTARIO DE PRÁCTICAS ABIERTAS ========== */}
-        <div className="bg-gradient-to-br from-emerald-50 to-white border border-[#E0E0E0] rounded-xl p-6 shadow-sm mb-2">
-          <div className="flex items-center gap-2 mb-2">
-            <Package2 className="h-5 w-5 text-emerald-600" />
-            <span className="text-[11px] font-mono font-bold text-emerald-700 uppercase tracking-wider">
-              {isUsuario ? 'MIS PRÁCTICAS' : 'Inventario de Prácticas Abiertas'}
-            </span>
-          </div>
-          {loadingInventario ? (
-            <div className="text-stone-400 text-xs py-4 text-center">Cargando...</div>
-          ) : isUsuario ? (
-            // ===== PRÁCTICAS DEL USUARIO =====
-            (Array.isArray(misPracticas) ? misPracticas : []).length === 0 ? (
-              <div className="flex flex-col items-center py-6">
-                <svg width="48" height="48" fill="none" viewBox="0 0 24 24" className="mb-2 text-emerald-200">
-                  <path d="M12 2v2m0 16v2m10-10h-2M4 12H2m15.07-7.07l-1.41 1.41M6.34 17.66l-1.41 1.41m12.02 0l1.41-1.41M6.34 6.34L4.93 4.93" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-                </svg>
-                <span className="text-stone-400 text-sm font-mono">No has creado prácticas aún</span>
-              </div>
-            ) : (
-              <div className="overflow-x-auto mb-2">
-                <table className="min-w-full text-xs font-mono border rounded-lg overflow-hidden">
-                  <thead>
-                    <tr className="bg-emerald-100 text-emerald-800">
-                      <th className="px-3 py-2 border">Nombre</th>
-                      <th className="px-3 py-2 border">Fecha</th>
-                      <th className="px-3 py-2 border">Estado</th>
-                      <th className="px-3 py-2 border">Acciones</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {(Array.isArray(misPracticas) ? misPracticas : []).slice(0, 5).map(p => (
-                      <tr key={p.id} className="border-b hover:bg-emerald-50/60 transition-colors">
-                        <td className="px-3 py-2 border">{p.nombre}</td>
-                        <td className="px-3 py-2 border text-center">{p.fecha}</td>
-                        <td className="px-3 py-2 border text-center">
-                          <span className={`px-2 py-0.5 rounded-full text-[10px] ${
-                            p.estado === 'aprobada' ? 'bg-emerald-100 text-emerald-700' :
-                            p.estado === 'pendiente' ? 'bg-amber-100 text-amber-700' :
-                            p.estado === 'rechazada' ? 'bg-rose-100 text-rose-700' :
-                            'bg-stone-100 text-stone-700'
-                          }`}>
-                            {p.estado || 'pendiente'}
-                          </span>
-                        </td>
-                        <td className="px-3 py-2 border text-center">
-                          <button className="text-emerald-600 hover:text-emerald-700 text-[10px] font-mono">
-                            Ver →
-                          </button>
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-                {(Array.isArray(misPracticas) ? misPracticas : []).length > 5 && (
-                  <p className="text-[10px] text-stone-400 mt-2 text-center">Mostrando 5 de {(Array.isArray(misPracticas) ? misPracticas : []).length} prácticas</p>
-                )}
-              </div>
-            )
-          ) : (
-            // ===== INVENTARIO GENERAL (Admin/Jefe) =====
-            (Array.isArray(inventario) ? inventario : []).length === 0 ? (
-              <div className="flex flex-col items-center py-6">
-                <svg width="48" height="48" fill="none" viewBox="0 0 24 24" className="mb-2 text-emerald-200">
-                  <path d="M12 2v2m0 16v2m10-10h-2M4 12H2m15.07-7.07l-1.41 1.41M6.34 17.66l-1.41 1.41m12.02 0l1.41-1.41M6.34 6.34L4.93 4.93" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-                </svg>
-                <span className="text-stone-400 text-sm font-mono">No hay inventario asociado a prácticas abiertas.</span>
-              </div>
-            ) : (
-              <div className="overflow-x-auto mb-2">
-                <table className="min-w-full text-xs font-mono border rounded-lg overflow-hidden">
-                  <thead>
-                    <tr className="bg-emerald-100 text-emerald-800">
-                      <th className="px-3 py-2 border">ID</th>
-                      <th className="px-3 py-2 border">Nombre</th>
-                      <th className="px-3 py-2 border">Tipo</th>
-                      <th className="px-3 py-2 border">Cantidad</th>
-                      <th className="px-3 py-2 border">Unidad</th>
-                      <th className="px-3 py-2 border">Ubicación</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {(Array.isArray(inventario) ? inventario : []).map(prod => (
-                      <tr key={prod.id} className="border-b hover:bg-emerald-50/60 transition-colors">
-                        <td className="px-3 py-2 border text-center">{prod.id}</td>
-                        <td className="px-3 py-2 border">{prod.nombre}</td>
-                        <td className="px-3 py-2 border text-center">{prod.tipo}</td>
-                        <td className="px-3 py-2 border text-center">{prod.cantidad}</td>
-                        <td className="px-3 py-2 border text-center">{prod.unidad}</td>
-                        <td className="px-3 py-2 border">{prod.ubicacion}</td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            )
           )}
         </div>
 
@@ -539,6 +434,8 @@ function Dashboard() {
                 title="ESTADO DE MIS PEDIDOS"
                 subtitle="Distribución de tus solicitudes"
                 icon={<BarChart3 className="h-4 w-4 text-emerald-600" />}
+                action={<span className="text-emerald-600 hover:text-emerald-700">VER TODOS →</span>}
+                onActionClick={() => navigate('/pedidos')}
               >
                 <div className="h-[280px]">
                   {chartsReady && userBarData.length > 0 && (
@@ -585,7 +482,7 @@ function Dashboard() {
                     )}
                     <div className="absolute inset-0 flex items-center justify-center">
                       <div className="text-center">
-                        <p className="text-2xl font-bold font-mono text-emerald-600">{(Array.isArray(misPedidos) ? misPedidos : []).length}</p>
+                        <p className="text-2xl font-bold font-mono text-emerald-600">{misPedidos.length}</p>
                         <p className="text-[8px] text-stone-500 font-mono uppercase">TOTAL</p>
                       </div>
                     </div>
@@ -597,7 +494,7 @@ function Dashboard() {
                           <div className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: item.color }} />
                           <span className="text-[10px] font-mono text-stone-500 truncate">{item.name}</span>
                         </div>
-                        <span className="text-[10px] font-mono font-bold text-stone-700">{item.value} ({Math.round((item.value / ((Array.isArray(misPedidos) ? misPedidos : []).length || 1)) * 100)}%)</span>
+                        <span className="text-[10px] font-mono font-bold text-stone-700">{item.value} ({Math.round((item.value / (misPedidos.length || 1)) * 100)}%)</span>
                       </div>
                     ))}
                   </div>

@@ -22,46 +22,25 @@ const GestionFormularios = () => {
     cargarPlantillas();
   }, []);
 
-  // ✅ CORREGIDO: Manejar datos de forma segura
   const cargarPlantillas = async () => {
     try {
       const res = await api.get('formularios-plantilla/');
-      const data = res.data;
-      
-      if (Array.isArray(data)) {
-        setPlantillas(data);
-      } else if (data?.results && Array.isArray(data.results)) {
-        setPlantillas(data.results);
-      } else {
-        setPlantillas([]);
-        console.warn('⚠️ Los datos de plantillas no son un array:', data);
-      }
+      setPlantillas(res.data);
     } catch (err) {
       console.error('Error:', err);
       toast.error('❌ Error al cargar las plantillas');
-      setPlantillas([]);
     } finally {
       setLoading(false);
     }
   };
 
-  // ✅ CORREGIDO: Manejar datos de campos de forma segura
   const cargarCampos = async (plantillaId) => {
     try {
       const res = await api.get(`formularios-campos/?plantilla=${plantillaId}`);
-      const data = res.data;
-      
-      if (Array.isArray(data)) {
-        setCampos(data);
-      } else if (data?.results && Array.isArray(data.results)) {
-        setCampos(data.results);
-      } else {
-        setCampos([]);
-      }
+      setCampos(res.data);
     } catch (err) {
       console.error('Error:', err);
       toast.error('❌ Error al cargar los campos');
-      setCampos([]);
     }
   };
 
@@ -134,9 +113,6 @@ const GestionFormularios = () => {
     setShowCamposModal(true);
   };
 
-  // ✅ Verificación de seguridad antes de renderizar
-  const plantillasLista = Array.isArray(plantillas) ? plantillas : [];
-
   if (loading) {
     return (
       <Layout>
@@ -169,7 +145,7 @@ const GestionFormularios = () => {
 
         {/* Grid de plantillas */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
-          {plantillasLista.map((p, idx) => (
+          {plantillas.map((p, idx) => (
             <motion.div
               key={p.id}
               initial={{ opacity: 0, y: 20 }}
@@ -230,7 +206,7 @@ const GestionFormularios = () => {
           ))}
         </div>
 
-        {plantillasLista.length === 0 && (
+        {plantillas.length === 0 && (
           <div className="text-center py-16 bg-stone-50 rounded-2xl border-2 border-dashed border-stone-200">
             <span className="text-6xl">📋</span>
             <p className="text-stone-500 mt-4">No hay formularios creados</p>

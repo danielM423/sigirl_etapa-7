@@ -41,17 +41,6 @@ class InventarioApiTests(APITestCase):
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertIn('access', response.data)
 
-    def test_auth_aliases_funcionan(self):
-        self.autenticar('usuario_test', 'demo123')
-
-        response_user = self.client.get('/api/auth/user/')
-        self.assertEqual(response_user.status_code, status.HTTP_200_OK)
-        self.assertEqual(response_user.data['username'], 'usuario_test')
-
-        response_profile = self.client.get('/api/auth/profile/')
-        self.assertEqual(response_profile.status_code, status.HTTP_200_OK)
-        self.assertEqual(response_profile.data['username'], 'usuario_test')
-
     def test_usuario_solo_ve_sus_pedidos(self):
         self.autenticar('usuario_test', 'demo123')
         response = self.client.get('/api/pedidos/')

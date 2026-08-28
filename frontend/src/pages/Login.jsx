@@ -39,7 +39,7 @@ function Login() {
       const accessToken = res.data.access;
       const refreshToken = res.data.refresh;
 
-      // 2. Guardar token temporalmente
+      // 2. Guardar token (AMBAS claves para compatibilidad)
       localStorage.setItem('access_token', accessToken);
       localStorage.setItem('token', accessToken);
       localStorage.setItem('refresh_token', refreshToken);
@@ -49,26 +49,18 @@ function Login() {
         headers: { Authorization: `Bearer ${accessToken}` }
       });
 
-      // 4. 🔥 OBTENER EL ROL DESPUÉS DE LA RESPUESTA
+      // 4. Obtener el rol del perfil
       let userRole = userRes.data?.role || 'usuario';
-      
-      // 🔥 FORZAR EL ROL PARA USUARIOS ESPECÍFICOS
-      if (username.trim() === 'jefe') {
-        userRole = 'jefe';
-      } else if (username.trim() === 'admin') {
-        userRole = 'admin';
-      } else if (userRole === 'jefe_superior') {
-        userRole = 'jefe';
-      }
+      if (userRole === 'jefe_superior') userRole = 'jefe';
 
-      // 5. 🔥 GUARDAR EL ROL CORRECTO
+      // 5. Guardar usuario
       localStorage.setItem('username', username.trim());
       localStorage.setItem('role', userRole);
       localStorage.setItem('user', JSON.stringify({ 
         id: userRes.data?.id,
         username: username.trim(), 
         email: userRes.data?.email,
-        role: userRole
+        role: userRole 
       }));
 
       // 6. Actualizar contexto
@@ -76,14 +68,12 @@ function Login() {
       setRole(userRole);
 
       // 7. Redirigir según el rol
-      if (userRole === 'admin') {
-        navigate('/admin');
-      } else if (userRole === 'jefe') {
-        navigate('/jefe');
-      } else {
-        navigate('/usuario');
+      const currentPath = window.location.pathname;
+      if (currentPath === '/login' || currentPath === '/' || currentPath === '/register') {
+        if (userRole === 'admin') navigate('/admin');
+        else if (userRole === 'jefe') navigate('/jefe');
+        else navigate('/usuario');
       }
-      
     } catch (err) {
       const data = err.response?.data || {};
       const statusCode = err.response?.status;

@@ -7,14 +7,6 @@ import Layout from '../components/Layout';
 import { UserContext } from '../context/UserContext';
 import api, { getPedidos } from '../services/api';
 
-// ✅ Función de utilidad para obtener datos de forma segura
-const obtenerDatosSeguro = (data) => {
-  if (!data) return [];
-  if (Array.isArray(data)) return data;
-  if (data.results && Array.isArray(data.results)) return data.results;
-  return [];
-};
-
 const EMPTY_FORM = { username:'', first_name:'', last_name:'', email:'', institution:'', department:'', phone:'', cargo:'', bio:'', avatar:'' };
 const DEFAULT_PREFS = { emailAlerts: true, compactView: false, stockReminders: true };
 const PREFS_STORAGE_KEY = 'sigirl_profile_preferences';
@@ -84,25 +76,19 @@ const ProfileSettings = () => {
     return `${first}${second}`.toUpperCase();
   }, [form.first_name, form.last_name, form.username]);
 
-  // ✅ activityData con verificación de array
   const activityData = useMemo(() => {
     const months = ['Ene','Feb','Mar','Abr','May','Jun'];
     const DEMO = { jefe: [82, 97, 115, 108, 130, 144], admin: [54, 68, 91, 85, 102, 118], usuario: [12, 20, 35, 28, 42, 50] };
     const fallback = DEMO[role] || DEMO.usuario;
     const username = (user?.username || form.username || '').toLowerCase();
-    
-    // ✅ Verificar que actividadPedidos sea un array
-    const pedidosLista = Array.isArray(actividadPedidos) ? actividadPedidos : [];
-    
-    const propios = pedidosLista.filter(p => {
-      const candidates = [p.solicitante, p.usuario_username].filter(Boolean).map(v => String(v).toLowerCase());
+    const propios = actividadPedidos.filter(p => {
+      const candidates = [p.solicitante, p.usuario_username].filter(Boolean).map(v=>String(v).toLowerCase());
       return username && candidates.includes(username);
     });
-    const source = propios.length > 0 ? propios : pedidosLista;
-    
+    const source = propios.length > 0 ? propios : actividadPedidos;
     return months.map((name, idx) => {
       const month = String(idx + 1).padStart(2, '0');
-      const total = Array.isArray(source) ? source.filter(p => String(p.fecha_solicitud||'').includes(`-${month}-`)).length : 0;
+      const total = source.filter(p => String(p.fecha_solicitud||'').includes(`-${month}-`)).length;
       return { name, value: total > 0 ? total * 15 : fallback[idx] };
     });
   }, [form.username, user?.username, role, actividadPedidos]);
@@ -132,22 +118,13 @@ const ProfileSettings = () => {
     let active = true;
     const load = async () => {
       try {
-        const [profileRes, pedidosRes] = await Promise.all([
+        const [profileRes] = await Promise.all([
           api.get('auth/profile/'),
-          getPedidos().catch(() => ({ data: [] })),
+          getPedidos().then(res => setActividadPedidos(res.data?.results ?? res.data ?? [])).catch(()=>{}),
         ]);
-        
-        // ✅ Verificar que los pedidos sean un array
-        const pedidosData = obtenerDatosSeguro(pedidosRes.data);
-        
-        if (active) {
-          applyProfileData(profileRes.data);
-          setActividadPedidos(pedidosData);
-        }
-      } catch (error) {
-        console.error('Error cargando perfil:', error);
+        if (active) applyProfileData(profileRes.data);
+      } catch {
         toast.error('No se pudo cargar la información del perfil');
-        if (active) setActividadPedidos([]);
       } finally {
         if (active) setLoading(false);
       }

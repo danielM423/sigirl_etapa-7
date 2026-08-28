@@ -9,8 +9,13 @@ from .models import Competencia, PedidoHistorial, PDFDocumento, Asistencia, List
 from .serializers import CompetenciaSerializer, FranjaHorariaSerializer, PedidoHistorialSerializer, PDFDocumentoSerializer, AsistenciaSerializer, ListadoDiarioSerializer, ProgramaSerializer, ProgramacionLaboratorioSerializer,AmbienteSerializer,FranjaHorariaSerializer,ProgramacionLaboratorioSerializer
 from rest_framework.parsers import MultiPartParser, FormParser
 from .permissions import IsAdminOrJefe, IsAdminOrReadOnly, IsStaffOrSuperuser, IsInventoryManagerOrReadOnly
-from users.models import UserProfile
-
+from .permissions import IsAdminOrJefe, IsAdminOrReadOnly, IsStaffOrSuperuser, IsInventoryManagerOrReadOnly
+from django.views.decorators.csrf import csrf_exempt
+from django.utils.decorators import method_decorator
+from rest_framework.views import APIView
+from rest_framework.permissions import IsAuthenticated
+from rest_framework import status
+from django.utils import timezone
 
 
 class PedidoHistorialViewSet(viewsets.ModelViewSet):
@@ -286,8 +291,7 @@ from io import BytesIO
 import secrets
 
 from django.conf import settings
-from django.contrib.auth import get_user_model
-User = get_user_model()
+from django.contrib.auth.models import User
 from django.contrib.auth.tokens import default_token_generator
 from django.contrib.auth.hashers import make_password, check_password
 from django.core.exceptions import ValidationError
@@ -305,8 +309,7 @@ from rest_framework_simplejwt.views import TokenObtainPairView, TokenRefreshView
 from openpyxl import Workbook
 from openpyxl.styles import Alignment, Font, PatternFill
 
-from .models import Alerta, Categoria, Producto, Movimiento, Pedido
-from users.models import UserProfile
+from .models import Alerta, Categoria, Producto, Movimiento, Pedido, UserProfile
 from .serializers import (
     AlertaSerializer,
     CategoriaSerializer,
@@ -367,15 +370,10 @@ def _validate_registration_email(email: str):
     return normalized_email
 
 
-def _get_role_from_user(user: User) -> str: # type: ignore
-    # CORREGIDO: admin = superuser, jefe = staff (pero no superuser)
-    if user.is_superuser:
-        return 'admin'
-    elif user.is_staff:
-        return 'jefe'
-    else:
-        return 'usuario'
-    
+def _get_role_from_user(user: User) -> str: # pyright: ignore[reportInvalidTypeForm]
+    return 'jefe' if user.is_superuser else 'admin' if user.is_staff else 'usuario'
+
+
 def _profile_existing_fields():
     return {
         field.name
@@ -834,31 +832,20 @@ def resend_verification_email(request):
 @permission_classes([IsAuthenticated])
 def get_current_user(request):
     user = request.user
-    
-    # ✅ Asegurar que el perfil existe
-    try:
-        profile = UserProfile.objects.get(user=user)
-    except UserProfile.DoesNotExist:
-        profile = UserProfile.objects.create(user=user)
-    
-    # ✅ Determinar el rol
-    if user.is_superuser:
-        role = 'admin'
-    elif user.is_staff:
-        role = 'jefe'
-    else:
-        role = 'usuario'
-    
+    profile, _ = UserProfile.objects.get_or_create(user=user)
+    role = _get_role_from_user(user)
     return Response({
-        'id': user.id,
-        'username': user.username,
-        'email': user.email,
-        'first_name': user.first_name,
-        'last_name': user.last_name,
-        'role': role,
-        'is_staff': user.is_staff,
-        'is_superuser': user.is_superuser,
+        "id": user.id,
+        "username": user.username,
+        "email": user.email,
+        "email_verified": profile.email_verified,
+        "is_staff": user.is_staff,
+        "is_superuser": user.is_superuser,
+        "first_name": user.first_name,
+        "last_name": user.last_name,
+        "role": role,
     })
+
 
 # =====================
 # AUTH - Manage Profile
@@ -1117,15 +1104,6 @@ def download_inventory_pdf(request):
     response['Content-Disposition'] = 'attachment; filename="reporte_inventario_sigirl.pdf"'
     response['Content-Encoding'] = 'utf-8'
     return response
-
-
-# =====================
-# ALERTA (VIEWSET)
-# =====================
-class AlertaViewSet(viewsets.ModelViewSet):
-    queryset = Alerta.objects.all().order_by('-fecha')
-    serializer_class = AlertaSerializer
-    permission_classes = [IsAuthenticated]
 
 
 # =====================
@@ -1402,12 +1380,39 @@ def generar_pedido(request):
     practica_id = request.data.get('practica_id')
     numero_grupos = request.data.get('numero_grupos', 1)
     observaciones = request.data.get('observaciones', '')
-    franja_nombre = request.data.get('franja', 'Mañana')  # ← NUEVO: recibir franja
+    franja_nombre = request.data.get('franja', 'Mañana')
+    
+    # ✅ RECIBIR FECHA Y HORA DEL FRONTEND
+    fecha_practica = request.data.get('fecha', '')
+    hora_inicio = request.data.get('hora_inicio', '')
+    hora_fin = request.data.get('hora_fin', '')
+    ambiente_nombre = request.data.get('ambiente', 'TOC 501')
+    
+    print(f"📥 Recibiendo pedido: fecha={fecha_practica}, hora={hora_inicio}-{hora_fin}")
     
     try:
         practica = Practica.objects.get(id=practica_id)
     except Practica.DoesNotExist:
         return Response({'error': 'Práctica no encontrada'}, status=404)
+    
+    # ✅ VERIFICAR SI EL CRONOGRAMA ESTÁ LLENO PARA ESA FECHA Y AMBIENTE
+    LIMITE_PRACTICAS = 8  # Máximo de prácticas por día por ambiente
+    
+    if fecha_practica:
+        programaciones_existentes = ProgramacionLaboratorio.objects.filter(
+            fecha=fecha_practica,
+            ambiente__nombre=ambiente_nombre
+        ).count()
+        
+        if programaciones_existentes >= LIMITE_PRACTICAS:
+            return Response({
+                'error': f'⚠️ Cronograma completo para el {fecha_practica} en {ambiente_nombre}',
+                'detalle': f'Ya hay {programaciones_existentes} prácticas programadas. El límite es {LIMITE_PRACTICAS}.',
+                'programaciones_existentes': programaciones_existentes,
+                'limite': LIMITE_PRACTICAS,
+                'fecha': fecha_practica,
+                'ambiente': ambiente_nombre
+            }, status=status.HTTP_400_BAD_REQUEST)
     
     pedidos_creados = []
     requiere_aprobacion = False
@@ -1417,6 +1422,7 @@ def generar_pedido(request):
             cantidad_total = float(pr.cantidad) * numero_grupos
             stock_suficiente = pr.reactivo.cantidad >= cantidad_total
             
+            # ✅ CREAR PEDIDO CON FECHA Y HORA EN OBSERVACIONES
             pedido = Pedido.objects.create(
                 usuario=request.user,
                 producto=pr.reactivo,
@@ -1424,24 +1430,24 @@ def generar_pedido(request):
                 estado='pendiente' if stock_suficiente else 'requiere_aprobacion',
                 prioridad='media',
                 solicitante=request.user.get_full_name() or request.user.username,
-                observaciones=f"Práctica: {practica.nombre}\nGrupos: {numero_grupos}\n{observaciones}",
+                observaciones=f"Práctica: {practica.nombre}\nGrupos: {numero_grupos}\n{observaciones}\nFecha: {fecha_practica}\nHora: {hora_inicio} - {hora_fin or '...'}",
                 requiere_aprobacion_jefe=not stock_suficiente
             )
             pedidos_creados.append(pedido.id)
             if not stock_suficiente:
                 requiere_aprobacion = True
     
-    # ========== GUARDAR EN PROGRAMACIÓN CON LA FRANJA SELECCIONADA ==========
+    # ========== GUARDAR EN PROGRAMACIÓN ==========
     try:
-        # Obtener ambiente
-        ambiente = Ambiente.objects.first()
+        # Obtener o crear ambiente
+        ambiente = Ambiente.objects.filter(nombre=ambiente_nombre).first()
         if not ambiente:
-            ambiente = Ambiente.objects.create(nombre="TOC 501")
+            ambiente = Ambiente.objects.first()
+            if not ambiente:
+                ambiente = Ambiente.objects.create(nombre="TOC 501")
         
-        # Obtener la franja seleccionada
         franja = FranjaHoraria.objects.filter(nombre=franja_nombre).first()
         if not franja:
-            # Si no existe, usar Mañana por defecto
             franja = FranjaHoraria.objects.first()
             if not franja:
                 franja = FranjaHoraria.objects.create(
@@ -1450,35 +1456,49 @@ def generar_pedido(request):
                     hora_fin="12:00"
                 )
         
-        # Crear programación
+        # Usar fecha proporcionada o la de la práctica
+        if fecha_practica:
+            fecha_programacion = fecha_practica
+        else:
+            fecha_programacion = practica.fecha or date.today()
+        
+        # ✅ CREAR PROGRAMACIÓN CON FECHA, HORA Y QUIEN LA CREÓ
         programacion, created = ProgramacionLaboratorio.objects.get_or_create(
             practica=practica,
-            fecha=practica.fecha or date.today(),
+            fecha=fecha_programacion,
             ambiente=ambiente,
             franja=franja,
             defaults={
-                'instructor': practica.instructor,
-                'grupo': practica.ficha,
-                'observaciones': f"Pedido generado automáticamente. IDs: {pedidos_creados}"
+                'instructor': practica.instructor or request.user,
+                'grupo': practica.ficha or f'GRP-{practica.id}',
+                'estado': 'programado',
+                'observaciones': f"Pedido generado por: {request.user.username}\nIDs: {pedidos_creados}\nHora: {hora_inicio} - {hora_fin or '...'}",
+                'hora_inicio': hora_inicio if hora_inicio else None,
+                'hora_fin': hora_fin if hora_fin else None,
+                'creado_por': request.user.username  # ✅ GUARDAR QUIEN LO CREÓ
             }
         )
         
         if created:
-            print(f"✅ Programación creada para {practica.nombre} en {franja.nombre}")
+            print(f"✅ Programación CREADA para {practica.nombre} el {fecha_programacion} a las {hora_inicio}")
         else:
-            programacion.observaciones = f"{programacion.observaciones}\nNuevo pedido: {pedidos_creados}"
-            programacion.save()
-            print(f"✅ Programación actualizada para {practica.nombre} en {franja.nombre}")
+            print(f"✅ Programación ACTUALIZADA para {practica.nombre} el {fecha_programacion}")
             
     except Exception as e:
         print(f"⚠️ Error al crear programación: {e}")
+        import traceback
+        traceback.print_exc()
     
     return Response({
         'success': True,
         'solicitud_id': practica.id,
         'pedidos_ids': pedidos_creados,
-        'requiere_aprobacion': requiere_aprobacion,
-        'mensaje': f'Se generaron {len(pedidos_creados)} pedidos. {"Requiere aprobación del Jefe" if requiere_aprobacion else "Todo en stock"}'
+        'requiere_aprobacion': True,
+        'fecha': fecha_programacion,
+        'hora_inicio': hora_inicio,
+        'hora_fin': hora_fin,
+        'ambiente': ambiente_nombre,
+        'mensaje': f'Se generaron {len(pedidos_creados)} pedidos para el {fecha_programacion} a las {hora_inicio}'
     }, status=status.HTTP_201_CREATED)
 
 @api_view(['POST'])
@@ -1506,10 +1526,7 @@ def aprobar_excepcion_pedido(request, pedido_id):
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])
 def pedidos_requieren_aprobacion(request):
-    user = request.user
-    if not (user.is_staff or user.is_superuser):
-        return Response({'error': 'Solo el Jefe puede ver esta lista'}, status=status.HTTP_403_FORBIDDEN)
-    
+    # ✅ Si no hay pedidos, devolver lista vacía en lugar de error 403
     pedidos = Pedido.objects.filter(estado='requiere_aprobacion').select_related('producto', 'usuario')
     
     data = []
@@ -1517,16 +1534,19 @@ def pedidos_requieren_aprobacion(request):
         data.append({
             'id': p.id,
             'codigo': p.codigo,
-            'producto': p.producto.nombre,
+            'producto': p.producto.nombre if p.producto else 'Producto no disponible',
             'cantidad': p.cantidad,
-            'solicitante': p.solicitante,
+            'solicitante': p.solicitante or p.usuario.get_full_name() or p.usuario.username,
             'fecha_solicitud': p.fecha_solicitud,
             'observaciones': p.observaciones,
-            'stock_actual': p.producto.cantidad
+            'stock_actual': p.producto.cantidad if p.producto else 0,
+            'prioridad': p.prioridad,
+            'estado': p.estado,
+            'usuario_username': p.usuario.username,
+            'requiere_aprobacion_jefe': p.requiere_aprobacion_jefe
         })
     
     return Response(data)
-
 
 # ============================================================
 # GENERAR PDF DEL FORMATO DE SOLICITUD
@@ -2023,19 +2043,18 @@ class ProgramacionLaboratorioViewSet(viewsets.ModelViewSet):
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])
 def programacion_semanal(request):
-    """Obtener programación de la semana actual"""
+    """Obtener programación de la semana actual con hora incluida"""
     from datetime import datetime, timedelta
     
     hoy = datetime.now().date()
     inicio_semana = hoy - timedelta(days=hoy.weekday())
     fin_semana = inicio_semana + timedelta(days=6)
     
-    programaciones = ProgramacionLaboratorio.objects.filter( # type: ignore
+    programaciones = ProgramacionLaboratorio.objects.filter(
         fecha__gte=inicio_semana,
         fecha__lte=fin_semana
     ).select_related('practica', 'ambiente', 'franja', 'instructor')
     
-    # Organizar por día y ambiente
     resultado = {}
     for p in programaciones:
         dia = p.fecha.strftime('%Y-%m-%d')
@@ -2047,9 +2066,12 @@ def programacion_semanal(request):
         resultado[dia][ambiente].append({
             'franja': p.franja.nombre,
             'practica': p.practica.nombre,
-            'instructor': p.instructor.username,
+            'instructor': p.instructor.get_full_name() or p.instructor.username,
             'grupo': p.grupo,
-            'observaciones': p.observaciones
+            'observaciones': p.observaciones,
+            'estado': p.estado,
+            'hora_inicio': p.hora_inicio.strftime('%H:%M') if p.hora_inicio else None,
+            'hora_fin': p.hora_fin.strftime('%H:%M') if p.hora_fin else None
         })
     
     return Response(resultado)
@@ -2153,89 +2175,267 @@ def programacion_semanal(request):
             
 
 
-
-
             # ============================================================
-# DASHBOARD - ESTADÍSTICAS DE USUARIO
+# VISTAS FALTANTES - AGREGAR AL FINAL DEL ARCHIVO
 # ============================================================
 
-@api_view(['GET'])
+from rest_framework import viewsets, permissions
+from .models import Producto, Categoria, Alerta, Practica, Ambiente, FranjaHoraria, ProgramacionLaboratorio
+from .serializers import (
+    ProductoSerializer, CategoriaSerializer, AlertaSerializer,
+    PracticaSerializer, AmbienteSerializer, FranjaHorariaSerializer,
+    ProgramacionLaboratorioSerializer
+)
+
+# ============================================================
+# PRODUCTOS
+# ============================================================
+class ProductoViewSet(viewsets.ModelViewSet):
+    queryset = Producto.objects.all()
+    serializer_class = ProductoSerializer
+    permission_classes = [permissions.IsAuthenticated]
+
+# ============================================================
+# CATEGORIAS
+# ============================================================
+class CategoriaViewSet(viewsets.ModelViewSet):
+    queryset = Categoria.objects.all()
+    serializer_class = CategoriaSerializer
+    permission_classes = [permissions.IsAuthenticated]
+
+# ============================================================
+# ALERTAS
+# ============================================================
+class AlertaViewSet(viewsets.ModelViewSet):
+    queryset = Alerta.objects.all()
+    serializer_class = AlertaSerializer
+    permission_classes = [permissions.IsAuthenticated]
+
+    def get_queryset(self):
+        if self.request.user.is_staff:
+            self._sync_stock_alerts()
+            return Alerta.objects.all().order_by('-fecha')
+        return Alerta.objects.none()
+
+    def get_permissions(self):
+        if self.action == 'create':
+            return [permissions.IsAuthenticated()]
+        return [permissions.IsAdminUser()]
+
+    def perform_create(self, serializer):
+        user = self.request.user
+        remitente = user.get_full_name().strip() or user.username
+        serializer.save(remitente=remitente, resuelta=False)
+
+    def _sync_stock_alerts(self):
+        for producto in Producto.objects.all():
+            minimo = producto.minimo or 0
+            en_alerta = producto.cantidad <= minimo
+            alerta = Alerta.objects.filter(
+                producto=producto,
+                tipo='bajo_stock',
+            ).order_by('-fecha').first()
+
+            if en_alerta:
+                prioridad = 'alta' if producto.cantidad <= 0 else 'media'
+                descripcion = f'Stock actual: {producto.cantidad}. Mínimo permitido: {minimo}.'
+                if alerta is None:
+                    Alerta.objects.create(
+                        tipo='bajo_stock',
+                        producto=producto,
+                        titulo=f'Bajo stock: {producto.nombre}',
+                        mensaje=descripcion,
+                        descripcion=descripcion,
+                        remitente='Sistema',
+                        prioridad=prioridad,
+                        resuelta=False,
+                    )
+                elif alerta.resuelta:
+                    alerta.resuelta = False
+                    alerta.prioridad = prioridad
+                    alerta.mensaje = descripcion
+                    alerta.descripcion = descripcion
+                    alerta.save(update_fields=['resuelta', 'prioridad', 'mensaje', 'descripcion'])
+            elif alerta and not alerta.resuelta:
+                alerta.resuelta = True
+                alerta.save(update_fields=['resuelta'])
+
+# ============================================================
+# PRÁCTICAS
+# ============================================================
+class PracticaViewSet(viewsets.ModelViewSet):
+    queryset = Practica.objects.all()
+    serializer_class = PracticaSerializer
+    permission_classes = [permissions.IsAuthenticated]
+
+    def get_queryset(self):
+        queryset = super().get_queryset()
+        competencia_id = self.request.query_params.get('competencia')
+        if competencia_id:
+            queryset = queryset.filter(competencia_id=competencia_id)
+        return queryset
+
+# ============================================================
+# AMBIENTES
+# ============================================================
+class AmbienteViewSet(viewsets.ModelViewSet):
+    queryset = Ambiente.objects.all()
+    serializer_class = AmbienteSerializer
+    permission_classes = [permissions.IsAuthenticated]
+
+# ============================================================
+# FRANJAS HORARIAS
+# ============================================================
+class FranjaHorariaViewSet(viewsets.ModelViewSet):
+    queryset = FranjaHoraria.objects.all()
+    serializer_class = FranjaHorariaSerializer
+    permission_classes = [permissions.IsAuthenticated]
+
+# ============================================================
+# PROGRAMACIÓN DE LABORATORIOS
+# ============================================================
+class ProgramacionLaboratorioViewSet(viewsets.ModelViewSet):
+    queryset = ProgramacionLaboratorio.objects.all()
+    serializer_class = ProgramacionLaboratorioSerializer
+    permission_classes = [permissions.IsAuthenticated]
+
+# ============================================================
+# VISTAS PARA PEDIDOS (SI NO EXISTEN)
+# ============================================================
+@api_view(['POST'])
 @permission_classes([IsAuthenticated])
-def estadisticas_pedidos(request):
-    """Obtiene estadísticas de pedidos del usuario actual"""
-    user = request.user
-    pedidos = Pedido.objects.filter(usuario=user)
-    
-    return Response({
-        'total': pedidos.count(),
-        'pendientes': pedidos.filter(estado='pendiente').count(),
-        'aprobados': pedidos.filter(estado='aprobado').count(),
-        'rechazados': pedidos.filter(estado='rechazado').count(),
-    })
+def aprobar_pedido(request, pk):
+    try:
+        pedido = Pedido.objects.get(pk=pk)
+        
+        if pedido.estado != 'requiere_aprobacion':
+            return Response(
+                {'error': f'Este pedido no está pendiente de aprobación. Estado actual: {pedido.estado}'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        
+        if not (request.user.is_staff or request.user.is_superuser):
+            return Response(
+                {'error': 'No tienes permisos para aprobar pedidos'},
+                status=status.HTTP_403_FORBIDDEN
+            )
+        
+        pedido.estado = 'aprobado'
+        pedido.aprobado_por_jefe = True
+        pedido.fecha_aprobacion_jefe = timezone.now()
+        pedido.save()
+        
+        # Descontar stock
+        producto = pedido.producto
+        if producto:
+            producto.cantidad -= pedido.cantidad
+            producto.save()
+            
+            Movimiento.objects.create(
+                producto=producto,
+                tipo='salida',
+                cantidad=pedido.cantidad,
+                observacion=f"Pedido aprobado: {pedido.codigo}"
+            )
+        
+        return Response({
+            'success': True,
+            'message': 'Pedido aprobado correctamente',
+            'pedido_id': pedido.id,
+            'codigo': pedido.codigo
+        })
+        
+    except Pedido.DoesNotExist:
+        return Response({'error': 'Pedido no encontrado'}, status=status.HTTP_404_NOT_FOUND)
+    except Exception as e:
+        return Response({'error': str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+@api_view(['POST'])
+@permission_classes([IsAuthenticated])
+def rechazar_pedido(request, pk):
+    try:
+        pedido = Pedido.objects.get(pk=pk)
+        
+        if pedido.estado != 'requiere_aprobacion':
+            return Response(
+                {'error': f'Este pedido no está pendiente de aprobación. Estado actual: {pedido.estado}'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        
+        if not (request.user.is_staff or request.user.is_superuser):
+            return Response(
+                {'error': 'No tienes permisos para rechazar pedidos'},
+                status=status.HTTP_403_FORBIDDEN
+            )
+        
+        motivo = request.data.get('motivo', 'Sin motivo especificado')
+        pedido.estado = 'rechazado'
+        pedido.motivo_rechazo = motivo
+        pedido.save()
+        
+        return Response({
+            'success': True,
+            'message': 'Pedido rechazado correctamente',
+            'pedido_id': pedido.id,
+            'codigo': pedido.codigo,
+            'motivo': motivo
+        })
+        
+    except Pedido.DoesNotExist:
+        return Response({'error': 'Pedido no encontrado'}, status=status.HTTP_404_NOT_FOUND)
+    except Exception as e:
+        return Response({'error': str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
 
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])
-def mis_pedidos(request):
-    """Obtiene los pedidos del usuario actual"""
-    user = request.user
-    pedidos = Pedido.objects.filter(usuario=user).order_by('-fecha_solicitud')
+def programacion_semanal(request):
+    """Obtener programación de la semana actual"""
+    from datetime import datetime, timedelta
     
-    data = []
-    for p in pedidos[:20]:
-        data.append({
-            'id': p.id,
-            'codigo': p.codigo,
-            'producto_nombre': p.producto.nombre if p.producto else 'N/A',
-            'cantidad': p.cantidad,
+    hoy = datetime.now().date()
+    inicio_semana = hoy - timedelta(days=hoy.weekday())
+    fin_semana = inicio_semana + timedelta(days=6)
+    
+    programaciones = ProgramacionLaboratorio.objects.filter(
+        fecha__gte=inicio_semana,
+        fecha__lte=fin_semana
+    ).select_related('practica', 'ambiente', 'franja', 'instructor')
+    
+    resultado = {}
+    for p in programaciones:
+        dia = p.fecha.strftime('%Y-%m-%d')
+        if dia not in resultado:
+            resultado[dia] = {}
+        ambiente = p.ambiente.nombre
+        if ambiente not in resultado[dia]:
+            resultado[dia][ambiente] = []
+        resultado[dia][ambiente].append({
+            'franja': p.franja.nombre,
+            'practica': p.practica.nombre,
+            'instructor': p.instructor.username,
+            'grupo': p.grupo,
+            'observaciones': p.observaciones,
             'estado': p.estado,
-            'fecha_solicitud': p.fecha_solicitud,
+            'hora_inicio': p.hora_inicio.strftime('%H:%M') if p.hora_inicio else None,  # ← NUEVO
+            'hora_fin': p.hora_fin.strftime('%H:%M') if p.hora_fin else None  # ← NUEVO
         })
     
-    return Response(data)
+    return Response(resultado)
 
-
-@api_view(['GET'])
-@permission_classes([IsAuthenticated])
-def mis_practicas(request):
-    """Obtiene las prácticas del usuario actual"""
-    user = request.user
-    practicas = Practica.objects.filter(instructor=user).order_by('-fecha')
-    
-    data = []
-    for p in practicas[:20]:
-        data.append({
-            'id': p.id,
-            'nombre': p.nombre,
-            'ficha': p.ficha,
-            'fecha': p.fecha,
-            'estado': p.estado,
-        })
-    
-    return Response(data)
-
-
-# ============================================================
-# APROBAR Y RECHAZAR PEDIDOS (PARA JEFE)
-# ============================================================
-
-from django.views.decorators.csrf import csrf_exempt
-from django.utils.decorators import method_decorator
-from rest_framework.views import APIView
-from rest_framework.permissions import IsAuthenticated
-from rest_framework import status
-from django.utils import timezone
 
 @method_decorator(csrf_exempt, name='dispatch')
 class AprobarPedidoView(APIView):
     """
-    Vista para que el Jefe apruebe un pedido que requiere aprobación.
+    Vista para que el Jefe apruebe un pedido y cree la programación automáticamente.
     """
     permission_classes = [IsAuthenticated]
     
     def post(self, request, pk):
         try:
-            from .models import Pedido, PedidoHistorial
+            from .models import Pedido, PedidoHistorial, Practica, ProgramacionLaboratorio, Ambiente, FranjaHoraria, Movimiento
+            from datetime import date, datetime
+            import re
             
             pedido = Pedido.objects.get(pk=pk)
             
@@ -2246,20 +2446,149 @@ class AprobarPedidoView(APIView):
                     status=status.HTTP_400_BAD_REQUEST
                 )
             
-            # Verificar que el usuario tenga permisos
+            # Verificar permisos
             if not (request.user.is_staff or request.user.is_superuser):
                 return Response(
                     {'error': 'No tienes permisos para aprobar pedidos. Solo el Jefe puede hacerlo.'},
                     status=status.HTTP_403_FORBIDDEN
                 )
             
-            # Aprobar el pedido
+            # ✅ APROBAR EL PEDIDO
             pedido.estado = 'aprobado'
             pedido.aprobado_por_jefe = True
             pedido.fecha_aprobacion_jefe = timezone.now()
             pedido.save()
+            print(f"✅ Pedido {pedido.codigo} aprobado")
             
-            # Registrar en historial
+            # ✅ DESCONTAR STOCK
+            producto = pedido.producto
+            if producto:
+                producto.cantidad -= pedido.cantidad
+                producto.save()
+                
+                Movimiento.objects.create(
+                    producto=producto,
+                    tipo='salida',
+                    cantidad=pedido.cantidad,
+                    observacion=f"Pedido aprobado: {pedido.codigo}"
+                )
+                print(f"✅ Stock descontado: {producto.nombre} - {pedido.cantidad}")
+            
+            # ✅ ============================================================
+            # ✅ CREAR PROGRAMACIÓN AUTOMÁTICAMENTE
+            # ✅ ============================================================
+            programacion_creada = None
+            
+            try:
+                # Buscar la práctica asociada al pedido
+                practica_nombre = None
+                fecha_programacion = None
+                hora_inicio = None
+                hora_fin = None
+                grupo = None
+                
+                if pedido.observaciones:
+                    print(f"📝 Observaciones del pedido: {pedido.observaciones}")
+                    
+                    # Buscar práctica: "Práctica: Nombre de la práctica"
+                    match = re.search(r'Práctica:\s*(.+?)(?:\n|$)', pedido.observaciones)
+                    if match:
+                        practica_nombre = match.group(1).strip()
+                        print(f"🔍 Práctica encontrada: {practica_nombre}")
+                    
+                    # Buscar fecha: "Fecha: 2026-08-04"
+                    fecha_match = re.search(r'Fecha:\s*(\d{4}-\d{2}-\d{2})', pedido.observaciones)
+                    if fecha_match:
+                        fecha_programacion = fecha_match.group(1)
+                        print(f"📅 Fecha encontrada: {fecha_programacion}")
+                    
+                    # Buscar hora: "Hora: 08:00 - 10:00"
+                    hora_match = re.search(r'Hora:\s*(\d{2}:\d{2})\s*(?:-\s*(\d{2}:\d{2}))?', pedido.observaciones)
+                    if hora_match:  
+                            hora_inicio = hora_match.group(1)
+                            if hora_match.group(2):
+                                hora_fin = hora_match.group(2)
+                            print(f"⏰ Hora encontrada: {hora_inicio} - {hora_fin or 'No especificada'}")
+                    else:
+                            print("⚠️ No se encontró hora en las observaciones")
+                    
+                    # Buscar grupo
+                    grupo_match = re.search(r'Grupo:\s*(\S+)', pedido.observaciones)
+                    if grupo_match:
+                        grupo = grupo_match.group(1)
+                        print(f"👥 Grupo encontrado: {grupo}")
+                
+                # Si no se encontró práctica, buscar por producto
+                if not practica_nombre:
+                    practicas_con_producto = Practica.objects.filter(
+                        reactivos__reactivo=pedido.producto
+                    ).distinct()
+                    if practicas_con_producto.exists():
+                        practica_nombre = practicas_con_producto.first().nombre
+                        print(f"🔍 Práctica encontrada por producto: {practica_nombre}")
+                
+                # Si se encontró una práctica, crear la programación
+                if practica_nombre:
+                    practica = Practica.objects.filter(nombre__icontains=practica_nombre).first()
+                    
+                    if practica:
+                        # Obtener o crear ambiente
+                        ambiente = Ambiente.objects.first()
+                        if not ambiente:
+                            ambiente = Ambiente.objects.create(
+                                nombre='TOC 501',
+                                descripcion='Laboratorio General',
+                                capacidad=30
+                            )
+                            print("✅ Ambiente creado por defecto: TOC 501")
+                        
+                        # Obtener o crear franja
+                        franja = FranjaHoraria.objects.first()
+                        if not franja:
+                            franja = FranjaHoraria.objects.create(
+                                nombre='Mañana',
+                                hora_inicio='06:00',
+                                hora_fin='12:00'
+                            )
+                            print("✅ Franja creada por defecto: Mañana")
+                        
+                        # Usar fecha de la práctica o la extraída
+                        if not fecha_programacion:
+                            fecha_programacion = practica.fecha if practica.fecha else date.today()
+                            print(f"📅 Usando fecha de la práctica: {fecha_programacion}")
+                        
+                        # Crear programación
+                        programacion, created = ProgramacionLaboratorio.objects.get_or_create(
+                            practica=practica,
+                            fecha=fecha_programacion,
+                            ambiente=ambiente,
+                            franja=franja,
+                            defaults={
+                                'instructor': practica.instructor or request.user,
+                                'grupo': grupo or practica.ficha or f'PED-{pedido.codigo}',
+                                'estado': 'programado',
+                                'observaciones': f'Programación generada desde pedido {pedido.codigo} - {pedido.producto.nombre}',
+                                'hora_inicio': hora_inicio,
+                                'hora_fin': hora_fin
+                            }
+                        )
+                        
+                        if created:
+                            programacion_creada = programacion
+                            print(f"✅ Programación CREADA para: {practica.nombre} - {fecha_programacion} - {hora_inicio or 'Sin hora'}")
+                        else:
+                            print(f"✅ Programación ACTUALIZADA para: {practica.nombre} - {fecha_programacion}")
+                    else:
+                        print(f"⚠️ Práctica no encontrada: {practica_nombre}")
+                else:
+                    print("⚠️ No se encontró práctica asociada al pedido")
+                    
+            except Exception as e:
+                print(f"⚠️ Error al crear programación: {e}")
+                import traceback
+                traceback.print_exc()
+            
+            # ✅ Registrar en historial
             try:
                 PedidoHistorial.objects.create(
                     pedido=pedido,
@@ -2267,14 +2596,17 @@ class AprobarPedidoView(APIView):
                     usuario_modificador=request.user,
                     comentario='Aprobado por Jefe'
                 )
-            except Exception:
-                pass
+                print("✅ Historial registrado")
+            except Exception as e:
+                print(f"⚠️ Error al registrar historial: {e}")
             
             return Response({
                 'success': True,
                 'message': 'Pedido aprobado correctamente',
                 'pedido_id': pedido.id,
-                'codigo': pedido.codigo
+                'codigo': pedido.codigo,
+                'programacion_creada': programacion_creada is not None,
+                'programacion_id': programacion_creada.id if programacion_creada else None
             }, status=status.HTTP_200_OK)
             
         except Pedido.DoesNotExist:
@@ -2283,78 +2615,10 @@ class AprobarPedidoView(APIView):
                 status=status.HTTP_404_NOT_FOUND
             )
         except Exception as e:
+            print(f"❌ Error en AprobarPedidoView: {e}")
+            import traceback
+            traceback.print_exc()
             return Response(
                 {'error': f'Error al aprobar: {str(e)}'},
-                status=status.HTTP_500_INTERNAL_SERVER_ERROR
-            )
-
-
-@method_decorator(csrf_exempt, name='dispatch')
-class RechazarPedidoView(APIView):
-    """
-    Vista para que el Jefe rechace un pedido que requiere aprobación.
-    """
-    permission_classes = [IsAuthenticated]
-    
-    def post(self, request, pk):
-        try:
-            from .models import Pedido, PedidoHistorial
-            
-            pedido = Pedido.objects.get(pk=pk)
-            
-            # Verificar que el pedido esté en estado 'requiere_aprobacion'
-            if pedido.estado != 'requiere_aprobacion':
-                return Response(
-                    {'error': f'Este pedido no está pendiente de aprobación. Estado actual: {pedido.estado}'},
-                    status=status.HTTP_400_BAD_REQUEST
-                )
-            
-            # Verificar que el usuario tenga permisos
-            if not (request.user.is_staff or request.user.is_superuser):
-                return Response(
-                    {'error': 'No tienes permisos para rechazar pedidos. Solo el Jefe puede hacerlo.'},
-                    status=status.HTTP_403_FORBIDDEN
-                )
-            
-            # Obtener motivo del rechazo
-            motivo = request.data.get('motivo', 'Sin motivo especificado')
-            if not motivo or not motivo.strip():
-                return Response(
-                    {'error': 'Debes proporcionar un motivo de rechazo'},
-                    status=status.HTTP_400_BAD_REQUEST
-                )
-            
-            # Rechazar el pedido
-            pedido.estado = 'rechazado'
-            pedido.motivo_rechazo = motivo.strip()
-            pedido.save()
-            
-            # Registrar en historial
-            try:
-                PedidoHistorial.objects.create(
-                    pedido=pedido,
-                    estado='rechazado',
-                    usuario_modificador=request.user,
-                    comentario=f'Rechazado por Jefe. Motivo: {motivo}'
-                )
-            except Exception:
-                pass
-            
-            return Response({
-                'success': True,
-                'message': 'Pedido rechazado correctamente',
-                'pedido_id': pedido.id,
-                'codigo': pedido.codigo,
-                'motivo': motivo
-            }, status=status.HTTP_200_OK)
-            
-        except Pedido.DoesNotExist:
-            return Response(
-                {'error': 'Pedido no encontrado'},
-                status=status.HTTP_404_NOT_FOUND
-            )
-        except Exception as e:
-            return Response(
-                {'error': f'Error al rechazar: {str(e)}'},
                 status=status.HTTP_500_INTERNAL_SERVER_ERROR
             )

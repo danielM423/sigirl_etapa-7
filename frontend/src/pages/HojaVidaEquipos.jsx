@@ -1,188 +1,71 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import Layout from '../components/Layout';
 import { motion } from 'framer-motion';
 import { toast, ToastContainer } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
-import {
-  ResponsiveContainer,
-  BarChart,
-  Bar,
-  XAxis,
-  YAxis,
-  Tooltip,
-  CartesianGrid,
-  Cell,
-  Legend
+import { 
+  BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, 
+  ResponsiveContainer, PieChart, Pie, Cell, Legend
 } from 'recharts';
-import ConfirmModal from '../components/ConfirmModal';
-import jsPDF from 'jspdf';
-import 'jspdf-autotable';
-import * as XLSX from 'xlsx';
-import { saveAs } from 'file-saver';
-import { Bell, AlertTriangle, CheckCircle, Download, FileSpreadsheet, FileText } from 'lucide-react';
+import { 
+  Wrench, 
+  Calendar, 
+  DollarSign, 
+  User, 
+  FileText,
+  Plus,
+  X,
+  CheckCircle,
+  AlertTriangle,
+  Clock,
+  Search,
+  Filter,
+  Edit,
+  Trash2,
+  Package,
+  Barcode,
+  Tag,
+  MapPin,
+  Building,
+  CalendarDays
+} from 'lucide-react';
 
-// ============================================================
-// COMPONENTE DE NOTIFICACIONES
-// ============================================================
-const NotificacionesEquipos = ({ equipos }) => {
-  const [notificaciones, setNotificaciones] = useState([]);
-  const [mostrar, setMostrar] = useState(false);
-
-  useEffect(() => {
-    generarNotificaciones();
-  }, [equipos]);
-
-  const generarNotificaciones = () => {
-    const nuevas = [];
-    
-    equipos.forEach(e => {
-      const desgaste = e.desgaste_estimado || 0;
-      
-      if (desgaste > 70) {
-        nuevas.push({
-          id: `critico-${e.id}`,
-          tipo: 'critico',
-          mensaje: `${e.nombre} tiene desgaste del ${desgaste}%`,
-          equipo: e.nombre,
-          fecha: new Date().toISOString()
-        });
-      } else if (desgaste > 40) {
-        nuevas.push({
-          id: `advertencia-${e.id}`,
-          tipo: 'advertencia',
-          mensaje: `${e.nombre} tiene desgaste del ${desgaste}%`,
-          equipo: e.nombre,
-          fecha: new Date().toISOString()
-        });
-      }
-      
-      if (e.ultimo_mantenimiento) {
-        const ultimo = new Date(e.ultimo_mantenimiento);
-        const dias = Math.floor((new Date() - ultimo) / (1000 * 60 * 60 * 24));
-        if (dias > 30) {
-          nuevas.push({
-            id: `mantenimiento-${e.id}`,
-            tipo: 'info',
-            mensaje: `${e.nombre} no recibe mantenimiento desde hace ${dias} días`,
-            equipo: e.nombre,
-            fecha: new Date().toISOString()
-          });
-        }
-      }
-    });
-    
-    setNotificaciones(nuevas);
-  };
-
-  const getIcon = (tipo) => {
-    switch(tipo) {
-      case 'critico': return <AlertTriangle className="w-5 h-5 text-red-500" />;
-      case 'advertencia': return <AlertTriangle className="w-5 h-5 text-amber-500" />;
-      default: return <CheckCircle className="w-5 h-5 text-blue-500" />;
-    }
-  };
-
-  const getColor = (tipo) => {
-    switch(tipo) {
-      case 'critico': return 'bg-red-50 border-red-200';
-      case 'advertencia': return 'bg-amber-50 border-amber-200';
-      default: return 'bg-blue-50 border-blue-200';
-    }
-  };
-
-  return (
-    <div className="relative">
-      <button
-        onClick={() => setMostrar(!mostrar)}
-        className="relative p-2 hover:bg-stone-100 rounded-lg transition-colors"
-      >
-        <Bell className="w-5 h-5 text-stone-600" />
-        {notificaciones.length > 0 && (
-          <span className="absolute -top-1 -right-1 bg-red-500 text-white text-xs rounded-full w-5 h-5 flex items-center justify-center">
-            {notificaciones.length}
-          </span>
-        )}
-      </button>
-
-      {mostrar && (
-        <div className="absolute right-0 mt-2 w-80 bg-white rounded-lg shadow-lg border border-stone-200 z-50 max-h-96 overflow-y-auto">
-          <div className="p-3 border-b border-stone-200 font-semibold text-stone-700">
-            Notificaciones ({notificaciones.length})
-          </div>
-          {notificaciones.length === 0 ? (
-            <div className="p-4 text-center text-stone-500 text-sm">
-              No hay notificaciones
-            </div>
-          ) : (
-            notificaciones.map(n => (
-              <div key={n.id} className={`p-3 border-b ${getColor(n.tipo)}`}>
-                <div className="flex items-start gap-2">
-                  {getIcon(n.tipo)}
-                  <div className="flex-1">
-                    <p className="text-sm text-stone-700">{n.mensaje}</p>
-                    <p className="text-xs text-stone-400 mt-1">
-                      {new Date(n.fecha).toLocaleString()}
-                    </p>
-                  </div>
-                </div>
-              </div>
-            ))
-          )}
-        </div>
-      )}
-    </div>
-  );
+const COLORS = {
+  BAJO: '#22c55e',
+  MEDIO: '#f59e0b',
+  ALTO: '#ef4444',
 };
 
-// ============================================================
-// COLORES Y FUNCIONES AUXILIARES
-// ============================================================
-const getBarColor = (horas) => {
-  if (horas > 300) return '#EF4444';
-  if (horas > 150) return '#F59E0B';
-  return '#1FA971';
-};
+const NIVELES_USO = [
+  { value: 'todos', label: 'Todos los equipos', color: '#64748b' },
+  { value: 'bajo', label: '🟢 Bajo uso (< 3 mantenimientos)', color: COLORS.BAJO },
+  { value: 'medio', label: '🟡 Medio uso (3-5 mantenimientos)', color: COLORS.MEDIO },
+  { value: 'alto', label: '🔴 Alto uso (> 5 mantenimientos)', color: COLORS.ALTO },
+];
 
-const CustomTooltip = ({ active, payload, label }) => {
-  if (active && payload && payload.length) {
-    const data = payload[0].payload;
-    return (
-      <div className="bg-white p-4 rounded-lg shadow-lg border border-stone-200">
-        <p className="font-bold text-stone-800">{data.nombre}</p>
-        <p className="text-sm text-stone-600">
-          Horas de uso: <span className="font-bold text-emerald-600">{data.horas}h</span>
-        </p>
-        <p className="text-sm text-stone-600">
-          Mantenimientos: <span className="font-bold text-blue-600">{data.mantenimientos}</span>
-        </p>
-        <p className="text-sm text-stone-600">
-          Desgaste: <span className={`font-bold ${data.desgaste > 50 ? 'text-red-600' : 'text-emerald-600'}`}>
-            {data.desgaste}%
-          </span>
-        </p>
-      </div>
-    );
-  }
-  return null;
-};
+const AMBIENTES = ['TOC 501', 'TOC 503', 'TOC 505', 'TOC 507'];
+const ESTADOS_EQUIPO = [
+  { value: 'operativo', label: '🟢 Operativo' },
+  { value: 'mantenimiento', label: '🟡 En Mantenimiento' },
+  { value: 'reparacion', label: '🟠 En Reparación' },
+  { value: 'baja', label: '🔴 Dado de Baja' },
+];
 
-// ============================================================
-// COMPONENTE PRINCIPAL
-// ============================================================
 const HojaVidaEquipos = () => {
-  // ✅ TODOS LOS HOOKS AQUÍ
   const [equipos, setEquipos] = useState([]);
   const [loading, setLoading] = useState(true);
   const [selectedEquipo, setSelectedEquipo] = useState(null);
   const [mantenimientos, setMantenimientos] = useState([]);
   const [showModal, setShowModal] = useState(false);
   const [showMantModal, setShowMantModal] = useState(false);
+  const [showEquipoModal, setShowEquipoModal] = useState(false);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
-  const [equipoEliminar, setEquipoEliminar] = useState(null);
-  const [showFormEquipo, setShowFormEquipo] = useState(false);
-  const [ordenGrafica, setOrdenGrafica] = useState('desc');
+  const [editingMantenimiento, setEditingMantenimiento] = useState(null);
+  const [searchTerm, setSearchTerm] = useState('');
   const [filtroUso, setFiltroUso] = useState('todos');
-
+  const [ordenarPor, setOrdenarPor] = useState('nombre');
+  const [isEditingEquipo, setIsEditingEquipo] = useState(false);
+  
   const [formData, setFormData] = useState({
     tipo: 'preventivo',
     fecha: new Date().toISOString().split('T')[0],
@@ -192,21 +75,20 @@ const HojaVidaEquipos = () => {
     observaciones: ''
   });
 
-  const [nuevoEquipo, setNuevoEquipo] = useState({
+  const [equipoFormData, setEquipoFormData] = useState({
     nombre: '',
     marca: '',
     modelo: '',
-    serie: '',
-    responsable: '',
+    serial: '',
+    ubicacion: 'TOC 501',
+    cantidad: 1,
+    minimo: 1,
+    estado: 'operativo',
+    fecha_compra: '',
     proveedor: '',
-    horas_uso: 0,
-    ubicacion: '',
-    cantidad: 1
+    descripcion: ''
   });
 
-  // ============================================================
-  // FUNCIONES
-  // ============================================================
   useEffect(() => {
     cargarEquipos();
   }, []);
@@ -226,15 +108,8 @@ const HojaVidaEquipos = () => {
       
       if (response.ok) {
         const data = await response.json();
-        
-        const equiposConHoras = data.map((equipo, index) => ({
-          ...equipo,
-          horas_uso: (index * 7 + 15) % 500 + 10,
-          desgaste_estimado: (index * 3 + 5) % 100,
-          mantenimiento_requerido: index % 3 === 0
-        }));
-        
-        setEquipos(equiposConHoras);
+        console.log('Equipos cargados:', data);
+        setEquipos(data);
       } else {
         toast.error('❌ Error al cargar los equipos');
       }
@@ -265,129 +140,101 @@ const HojaVidaEquipos = () => {
     }
   };
 
-  const verDetalle = async (equipo) => {
-    setSelectedEquipo(equipo);
-    await cargarMantenimientos(equipo.id);
-    setShowModal(true);
-  };
-
-  const registrarMantenimiento = async () => {
-    if (!formData.descripcion) {
-      toast.warning('⚠️ La descripción es obligatoria');
-      return;
-    }
-
-    try {
-      const token = localStorage.getItem('access_token');
-      if (!token) {
-        toast.error('❌ No hay sesión activa');
+  // ====== CRUD - CREAR EQUIPO ======
+const crearEquipo = async () => {
+    if (!equipoFormData.nombre.trim()) {
+        toast.warning('⚠️ El nombre del equipo es obligatorio');
         return;
-      }
-
-      const data = {
-        equipo: selectedEquipo.id,
-        tipo: formData.tipo,
-        fecha: formData.fecha,
-        descripcion: formData.descripcion,
-        tecnico: formData.tecnico || '',
-        costo: parseFloat(formData.costo) || 0,
-        observaciones: formData.observaciones || ''
-      };
-
-      const response = await fetch('http://127.0.0.1:8000/api/mantenimientos-equipo/', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`
-        },
-        body: JSON.stringify(data)
-      });
-
-      if (response.ok) {
-        toast.success('✅ Mantenimiento registrado correctamente');
-        setShowMantModal(false);
-        setFormData({
-          tipo: 'preventivo',
-          fecha: new Date().toISOString().split('T')[0],
-          descripcion: '',
-          tecnico: '',
-          costo: 0,
-          observaciones: ''
-        });
-        cargarMantenimientos(selectedEquipo.id);
-        cargarEquipos();
-      } else {
-        const error = await response.json();
-        toast.error('❌ Error al registrar el mantenimiento');
-      }
-    } catch (err) {
-      console.error('Error:', err);
-      toast.error('❌ Error al registrar el mantenimiento');
-    }
-  };
-
-  const handleGuardarEquipo = async () => {
-    if (!nuevoEquipo.nombre) {
-      toast.warning('⚠️ El nombre del equipo es obligatorio');
-      return;
     }
 
     try {
-      const token = localStorage.getItem('access_token');
-      const response = await fetch('http://127.0.0.1:8000/api/productos/', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`
-        },
-        body: JSON.stringify({
-          nombre: nuevoEquipo.nombre,
-          tipo: 'equipo',
-          categoria: 3,
-          cantidad: nuevoEquipo.cantidad || 1,
-          minimo: 1,
-          ubicacion: nuevoEquipo.ubicacion || 'Laboratorio',
-          unidad: 'unidades',
-          marca: nuevoEquipo.marca || '',
-          modelo: nuevoEquipo.modelo || '',
-          serie: nuevoEquipo.serie || '',
-          responsable: nuevoEquipo.responsable || '',
-          proveedor: nuevoEquipo.proveedor || '',
-          horas_uso: nuevoEquipo.horas_uso || 0
-        })
-      });
-
-      if (response.ok) {
-        toast.success('✅ Equipo creado exitosamente');
-        setNuevoEquipo({
-          nombre: '',
-          marca: '',
-          modelo: '',
-          serie: '',
-          responsable: '',
-          proveedor: '',
-          horas_uso: 0,
-          ubicacion: '',
-          cantidad: 1
+        const token = localStorage.getItem('access_token');
+        
+        // ✅ OBTENER EL ID DE LA CATEGORÍA "Equipos de Laboratorio"
+        // Si no existe, crearla automáticamente
+        const categoriasResponse = await fetch('http://127.0.0.1:8000/api/categorias/', {
+            headers: { 'Authorization': `Bearer ${token}` }
         });
-        setShowFormEquipo(false);
-        cargarEquipos();
-      } else {
-        const error = await response.json();
+        const categorias = await categoriasResponse.json();
+        
+        // Buscar o crear categoría "Equipos de Laboratorio"
+        let categoriaId = 1; // Valor por defecto
+        const categoriaEquipos = categorias.find(c => c.nombre === 'Equipos de Laboratorio');
+        
+        if (categoriaEquipos) {
+            categoriaId = categoriaEquipos.id;
+        } else {
+            // Crear categoría si no existe
+            const createCatResponse = await fetch('http://127.0.0.1:8000/api/categorias/', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${token}`
+                },
+                body: JSON.stringify({ nombre: 'Equipos de Laboratorio' })
+            });
+            const newCat = await createCatResponse.json();
+            categoriaId = newCat.id;
+        }
+        
+        const response = await fetch('http://127.0.0.1:8000/api/productos/', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${token}`
+            },
+            body: JSON.stringify({
+                nombre: equipoFormData.nombre,
+                tipo: 'equipo',
+                cantidad: parseInt(equipoFormData.cantidad) || 1,
+                minimo: parseInt(equipoFormData.minimo) || 1,
+                ubicacion: equipoFormData.ubicacion,
+                unidad: 'unidad',
+                marca: equipoFormData.marca || '',
+                modelo: equipoFormData.modelo || '',
+                serial: equipoFormData.serial || '',
+                estado: equipoFormData.estado || 'operativo',
+                fecha_compra: equipoFormData.fecha_compra || null,
+                proveedor: equipoFormData.proveedor || '',
+                categoria: categoriaId  // ✅ AGREGAR CATEGORÍA
+            })
+        });
+
+        if (response.ok) {
+            toast.success('✅ Equipo creado correctamente');
+            setShowEquipoModal(false);
+            setEquipoFormData({
+                nombre: '',
+                marca: '',
+                modelo: '',
+                serial: '',
+                ubicacion: 'TOC 501',
+                cantidad: 1,
+                minimo: 1,
+                estado: 'operativo',
+                fecha_compra: '',
+                proveedor: '',
+                descripcion: ''
+            });
+            cargarEquipos();
+        } else {
+            const error = await response.json();
+            console.error('Error:', error);
+            toast.error(error.detail || '❌ Error al crear el equipo');
+        }
+    } catch (err) {
+        console.error('Error:', err);
         toast.error('❌ Error al crear el equipo');
-      }
-    } catch (err) {
-      console.error('Error:', err);
-      toast.error('❌ Error al crear el equipo');
     }
-  };
+};
 
-  const handleEliminarEquipo = async () => {
-    if (!equipoEliminar) return;
+  // ====== CRUD - ELIMINAR EQUIPO ======
+  const eliminarEquipo = async () => {
+    if (!selectedEquipo) return;
 
     try {
       const token = localStorage.getItem('access_token');
-      const response = await fetch(`http://127.0.0.1:8000/api/productos/${equipoEliminar.id}/`, {
+      const response = await fetch(`http://127.0.0.1:8000/api/productos/${selectedEquipo.id}/`, {
         method: 'DELETE',
         headers: {
           'Authorization': `Bearer ${token}`
@@ -395,9 +242,10 @@ const HojaVidaEquipos = () => {
       });
 
       if (response.ok) {
-        toast.success('✅ Equipo eliminado exitosamente');
+        toast.success('✅ Equipo eliminado correctamente');
         setShowDeleteModal(false);
-        setEquipoEliminar(null);
+        setSelectedEquipo(null);
+        setShowModal(false);
         cargarEquipos();
       } else {
         toast.error('❌ Error al eliminar el equipo');
@@ -408,109 +256,323 @@ const HojaVidaEquipos = () => {
     }
   };
 
-  // ============================================================
-  // EXPORTACIONES
-  // ============================================================
-  const exportarPDF = (equipo) => {
-    if (!equipo) return;
-    
-    const doc = new jsPDF();
-    
-    doc.setFontSize(18);
-    doc.setTextColor('#1FA971');
-    doc.text('Hoja de Vida de Equipo', 14, 22);
-    
-    doc.setFontSize(12);
-    doc.setTextColor('#4B5563');
-    doc.text(`Equipo: ${equipo.nombre}`, 14, 35);
-    doc.text(`Ubicación: ${equipo.ubicacion || 'No especificada'}`, 14, 42);
-    doc.text(`Horas de uso: ${equipo.horas_uso || 0}h`, 14, 49);
-    doc.text(`Total mantenimientos: ${equipo.total_mantenimientos || 0}`, 14, 56);
-    
-    if (mantenimientos.length > 0) {
-      doc.autoTable({
-        startY: 65,
-        head: [['Fecha', 'Tipo', 'Descripción', 'Técnico', 'Costo']],
-        body: mantenimientos.map(m => [
-          m.fecha,
-          m.tipo,
-          m.descripcion.substring(0, 30) + (m.descripcion.length > 30 ? '...' : ''),
-          m.tecnico || '-',
-          `$${m.costo}`
-        ]),
-        theme: 'striped',
-        headStyles: { fillColor: '#1FA971' },
-        styles: { fontSize: 8 }
+  // ====== CRUD - EDITAR EQUIPO ======
+  const editarEquipo = async () => {
+    if (!equipoFormData.nombre.trim()) {
+      toast.warning('⚠️ El nombre del equipo es obligatorio');
+      return;
+    }
+
+    try {
+      const token = localStorage.getItem('access_token');
+      const response = await fetch(`http://127.0.0.1:8000/api/productos/${selectedEquipo.id}/`, {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({
+          nombre: equipoFormData.nombre,
+          cantidad: parseInt(equipoFormData.cantidad) || 1,
+          minimo: parseInt(equipoFormData.minimo) || 1,
+          ubicacion: equipoFormData.ubicacion,
+          marca: equipoFormData.marca || '',
+          modelo: equipoFormData.modelo || '',
+          serial: equipoFormData.serial || '',
+          estado: equipoFormData.estado || 'operativo',
+          fecha_compra: equipoFormData.fecha_compra || null,
+          proveedor: equipoFormData.proveedor || ''
+        })
+      });
+
+      if (response.ok) {
+        toast.success('✅ Equipo actualizado correctamente');
+        setShowEquipoModal(false);
+        setIsEditingEquipo(false);
+        cargarEquipos();
+        if (selectedEquipo) {
+          cargarMantenimientos(selectedEquipo.id);
+        }
+      } else {
+        toast.error('❌ Error al actualizar el equipo');
+      }
+    } catch (err) {
+      console.error('Error:', err);
+      toast.error('❌ Error al actualizar el equipo');
+    }
+  };
+
+  // ====== CRUD - ELIMINAR MANTENIMIENTO ======
+  const eliminarMantenimiento = async (mantenimientoId) => {
+    if (!window.confirm('¿Estás seguro de eliminar este mantenimiento?')) return;
+
+    try {
+      const token = localStorage.getItem('access_token');
+      const response = await fetch(`http://127.0.0.1:8000/api/mantenimientos-equipo/${mantenimientoId}/`, {
+        method: 'DELETE',
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
+      });
+
+      if (response.ok) {
+        toast.success('✅ Mantenimiento eliminado correctamente');
+        await cargarMantenimientos(selectedEquipo.id);
+        await cargarEquipos();
+      } else {
+        toast.error('❌ Error al eliminar el mantenimiento');
+      }
+    } catch (err) {
+      console.error('Error:', err);
+      toast.error('❌ Error al eliminar el mantenimiento');
+    }
+  };
+
+  // ====== CRUD - REGISTRAR MANTENIMIENTO ======
+  const registrarMantenimiento = async () => {
+    if (!formData.descripcion) {
+      toast.warning('⚠️ La descripción es obligatoria');
+      return;
+    }
+
+    try {
+      const token = localStorage.getItem('access_token');
+      const data = {
+        equipo: selectedEquipo.id,
+        tipo: formData.tipo,
+        fecha: formData.fecha,
+        descripcion: formData.descripcion,
+        tecnico: formData.tecnico || '',
+        costo: parseFloat(formData.costo) || 0,
+        observaciones: formData.observaciones || ''
+      };
+
+      const url = editingMantenimiento 
+        ? `http://127.0.0.1:8000/api/mantenimientos-equipo/${editingMantenimiento.id}/`
+        : 'http://127.0.0.1:8000/api/mantenimientos-equipo/';
+      
+      const method = editingMantenimiento ? 'PATCH' : 'POST';
+
+      const response = await fetch(url, {
+        method: method,
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify(data)
+      });
+
+      if (response.ok) {
+        toast.success(editingMantenimiento ? '✅ Mantenimiento actualizado' : '✅ Mantenimiento registrado');
+        setShowMantModal(false);
+        setEditingMantenimiento(null);
+        setFormData({
+          tipo: 'preventivo',
+          fecha: new Date().toISOString().split('T')[0],
+          descripcion: '',
+          tecnico: '',
+          costo: 0,
+          observaciones: ''
+        });
+        await cargarMantenimientos(selectedEquipo.id);
+        await cargarEquipos();
+      } else {
+        toast.error('❌ Error al guardar el mantenimiento');
+      }
+    } catch (err) {
+      console.error('Error:', err);
+      toast.error('❌ Error al guardar el mantenimiento');
+    }
+  };
+
+  // ====== FUNCIONES DE FILTRADO ======
+  const getNivelUso = (mantenimientos) => {
+    const total = mantenimientos || 0;
+    if (total > 5) return 'alto';
+    if (total >= 3) return 'medio';
+    return 'bajo';
+  };
+
+  const getColorPorNivel = (nivel) => {
+    switch(nivel) {
+      case 'alto': return COLORS.ALTO;
+      case 'medio': return COLORS.MEDIO;
+      default: return COLORS.BAJO;
+    }
+  };
+
+  const getLabelPorNivel = (nivel) => {
+    switch(nivel) {
+      case 'alto': return '🔴 Alto uso';
+      case 'medio': return '🟡 Medio uso';
+      default: return '🟢 Bajo uso';
+    }
+  };
+
+  const getEstadoLabel = (estado) => {
+    const estados = {
+      'operativo': '🟢 Operativo',
+      'mantenimiento': '🟡 En Mantenimiento',
+      'reparacion': '🟠 En Reparación',
+      'baja': '🔴 Dado de Baja',
+    };
+    return estados[estado] || estado;
+  };
+
+  const verDetalle = async (equipo) => {
+    setSelectedEquipo(equipo);
+    setEquipoFormData({
+      nombre: equipo.nombre || '',
+      marca: equipo.marca || '',
+      modelo: equipo.modelo || '',
+      serial: equipo.serial || '',
+      ubicacion: equipo.ubicacion || 'TOC 501',
+      cantidad: equipo.cantidad || 1,
+      minimo: equipo.minimo || 1,
+      estado: equipo.estado || 'operativo',
+      fecha_compra: equipo.fecha_compra || '',
+      proveedor: equipo.proveedor || '',
+      descripcion: ''
+    });
+    await cargarMantenimientos(equipo.id);
+    setShowModal(true);
+  };
+
+  const abrirModalEquipo = (equipo = null) => {
+    if (equipo) {
+      setIsEditingEquipo(true);
+      setSelectedEquipo(equipo);
+      setEquipoFormData({
+        nombre: equipo.nombre || '',
+        marca: equipo.marca || '',
+        modelo: equipo.modelo || '',
+        serial: equipo.serial || '',
+        ubicacion: equipo.ubicacion || 'TOC 501',
+        cantidad: equipo.cantidad || 1,
+        minimo: equipo.minimo || 1,
+        estado: equipo.estado || 'operativo',
+        fecha_compra: equipo.fecha_compra || '',
+        proveedor: equipo.proveedor || '',
+        descripcion: ''
+      });
+    } else {
+      setIsEditingEquipo(false);
+      setSelectedEquipo(null);
+      setEquipoFormData({
+        nombre: '',
+        marca: '',
+        modelo: '',
+        serial: '',
+        ubicacion: 'TOC 501',
+        cantidad: 1,
+        minimo: 1,
+        estado: 'operativo',
+        fecha_compra: '',
+        proveedor: '',
+        descripcion: ''
       });
     }
-    
-    doc.save(`hoja-vida-${equipo.nombre}.pdf`);
+    setShowEquipoModal(true);
   };
 
-  const exportarExcel = () => {
-    const data = equipos.map(e => ({
-      'Equipo': e.nombre,
-      'Ubicación': e.ubicacion || '-',
-      'Stock': e.cantidad,
-      'Horas de Uso': e.horas_uso || 0,
-      'Último Mantenimiento': e.ultimo_mantenimiento || '-',
-      'Total Mantenimientos': e.total_mantenimientos || 0,
-      'Desgaste Estimado': `${e.desgaste_estimado || 0}%`,
-      'Mantenimiento Requerido': e.mantenimiento_requerido ? 'Sí' : 'No'
-    }));
-    
-    const ws = XLSX.utils.json_to_sheet(data);
-    const wb = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(wb, ws, 'Equipos');
-    const excelBuffer = XLSX.write(wb, { bookType: 'xlsx', type: 'array' });
-    const blob = new Blob([excelBuffer], { type: 'application/octet-stream' });
-    saveAs(blob, `reporte-equipos-${new Date().toISOString().split('T')[0]}.xlsx`);
-  };
-
-  // ============================================================
-  // DATOS PARA LA GRÁFICA CON FILTROS
-  // ============================================================
-  const filtrarEquiposPorUso = (equipos, filtro) => {
-    switch(filtro) {
-      case 'intensivo':
-        return equipos.filter(e => (e.horas_uso || 0) > 300);
-      case 'moderado':
-        return equipos.filter(e => (e.horas_uso || 0) >= 150 && (e.horas_uso || 0) <= 300);
-      case 'bajo':
-        return equipos.filter(e => (e.horas_uso || 0) < 150);
-      default:
-        return equipos;
+  const abrirModalMantenimiento = (mantenimiento = null) => {
+    if (mantenimiento) {
+      setEditingMantenimiento(mantenimiento);
+      setFormData({
+        tipo: mantenimiento.tipo || 'preventivo',
+        fecha: mantenimiento.fecha || new Date().toISOString().split('T')[0],
+        descripcion: mantenimiento.descripcion || '',
+        tecnico: mantenimiento.tecnico || '',
+        costo: mantenimiento.costo || 0,
+        observaciones: mantenimiento.observaciones || ''
+      });
+    } else {
+      setEditingMantenimiento(null);
+      setFormData({
+        tipo: 'preventivo',
+        fecha: new Date().toISOString().split('T')[0],
+        descripcion: '',
+        tecnico: '',
+        costo: 0,
+        observaciones: ''
+      });
     }
+    setShowMantModal(true);
   };
 
-  const datosGrafica = filtrarEquiposPorUso(equipos, filtroUso)
-    .map(equipo => ({
-      nombre: equipo.nombre.length > 25 ? equipo.nombre.substring(0, 25) + '...' : equipo.nombre,
-      horas: equipo.horas_uso || 0,
-      mantenimientos: equipo.total_mantenimientos || 0,
-      desgaste: equipo.desgaste_estimado || 0,
-      categoria: equipo.categoria || 'General'
-    }))
-    .sort((a, b) => {
-      if (ordenGrafica === 'asc') return a.horas - b.horas;
-      return b.horas - a.horas;
-    });
+  // ====== DATOS FILTRADOS ======
+  const equiposFiltrados = useMemo(() => {
+    let filtered = [...equipos];
 
-  const equiposConMantenimiento = equipos.filter(
-    equipo => equipo.mantenimiento_requerido
-  );
+    if (searchTerm) {
+      filtered = filtered.filter(e => 
+        e.nombre.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        (e.marca && e.marca.toLowerCase().includes(searchTerm.toLowerCase())) ||
+        (e.serial && e.serial.toLowerCase().includes(searchTerm.toLowerCase()))
+      );
+    }
 
-  // ============================================================
-  // RENDER
-  // ============================================================
+    if (filtroUso !== 'todos') {
+      filtered = filtered.filter(e => {
+        const nivel = getNivelUso(e.total_mantenimientos);
+        return nivel === filtroUso;
+      });
+    }
+
+    if (ordenarPor === 'nombre') {
+      filtered.sort((a, b) => a.nombre.localeCompare(b.nombre));
+    } else if (ordenarPor === 'mantenimientos') {
+      filtered.sort((a, b) => (b.total_mantenimientos || 0) - (a.total_mantenimientos || 0));
+    } else if (ordenarPor === 'uso') {
+      const orden = { alto: 0, medio: 1, bajo: 2 };
+      filtered.sort((a, b) => {
+        const nivelA = getNivelUso(a.total_mantenimientos);
+        const nivelB = getNivelUso(b.total_mantenimientos);
+        return orden[nivelA] - orden[nivelB];
+      });
+    }
+
+    return filtered;
+  }, [equipos, searchTerm, filtroUso, ordenarPor]);
+
+  // ====== DATOS PARA GRÁFICAS ======
+  const datosGrafica = equiposFiltrados.map(e => ({
+    nombre: e.nombre || 'Sin nombre',
+    mantenimientos: e.total_mantenimientos || 0,
+    nivel: getNivelUso(e.total_mantenimientos),
+    color: getColorPorNivel(getNivelUso(e.total_mantenimientos))
+  }));
+
+  const totalEquipos = equipos.length;
+  const equiposFiltradosCount = equiposFiltrados.length;
+  const equiposConMantenimiento = equipos.filter(e => (e.total_mantenimientos || 0) > 0).length;
+  const totalMantenimientos = equipos.reduce((sum, e) => sum + (e.total_mantenimientos || 0), 0);
+
+  const datosPieNivel = [
+    { name: '🟢 Bajo uso', value: equipos.filter(e => getNivelUso(e.total_mantenimientos) === 'bajo').length },
+    { name: '🟡 Medio uso', value: equipos.filter(e => getNivelUso(e.total_mantenimientos) === 'medio').length },
+    { name: '🔴 Alto uso', value: equipos.filter(e => getNivelUso(e.total_mantenimientos) === 'alto').length }
+  ].filter(d => d.value > 0);
+
+  const PIE_COLORS = [COLORS.BAJO, COLORS.MEDIO, COLORS.ALTO];
+
+  // ====== OBTENER TIPO DE MANTENIMIENTO ======
+  const getTipoInfo = (tipo) => {
+    const tipos = {
+      'preventivo': { icon: <CheckCircle className="w-4 h-4" />, color: 'bg-emerald-100 text-emerald-700 border-emerald-200', label: 'Preventivo' },
+      'correctivo': { icon: <Wrench className="w-4 h-4" />, color: 'bg-amber-100 text-amber-700 border-amber-200', label: 'Correctivo' },
+      'calibracion': { icon: <Clock className="w-4 h-4" />, color: 'bg-blue-100 text-blue-700 border-blue-200', label: 'Calibración' },
+      'predictivo': { icon: <AlertTriangle className="w-4 h-4" />, color: 'bg-purple-100 text-purple-700 border-purple-200', label: 'Predictivo' },
+    };
+    return tipos[tipo] || tipos['preventivo'];
+  };
+
   if (loading) {
     return (
       <Layout>
-        <div className="flex items-center justify-center h-64">
-          <div className="text-center">
-            <div className="w-3 h-3 rounded-full mx-auto mb-3 bg-emerald-500 animate-pulse" />
-            <p className="text-stone-500 font-mono text-sm">CARGANDO EQUIPOS...</p>
-          </div>
+        <div className="p-6 text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-emerald-600 mx-auto"></div>
+          <p className="mt-4 text-stone-500">Cargando equipos...</p>
         </div>
       </Layout>
     );
@@ -519,672 +581,816 @@ const HojaVidaEquipos = () => {
   return (
     <Layout>
       <ToastContainer />
-      <div className="p-6 max-w-7xl mx-auto">
-        {/* Encabezado */}
+      <div className="p-4 sm:p-6 max-w-7xl mx-auto">
+        {/* ====== ENCABEZADO ====== */}
         <motion.div 
           initial={{ opacity: 0, y: -20 }}
           animate={{ opacity: 1, y: 0 }}
-          className="mb-8 flex justify-between items-center"
+          className="mb-6"
         >
-          <div>
-            <h1 className="text-3xl font-bold text-stone-800">
-              🔧 Hoja de Vida de Equipos
-            </h1>
-            <p className="text-stone-500 mt-1">Historial de mantenimientos y estado de equipos de laboratorio</p>
-          </div>
-          <div className="flex items-center gap-3">
-            <NotificacionesEquipos equipos={equipos} />
+          <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+            <div>
+              <div className="flex items-center gap-3 mb-2">
+                <div className="p-2 rounded-xl bg-emerald-50 border border-emerald-200">
+                  <Wrench className="w-5 h-5 text-emerald-600" />
+                </div>
+                <span className="text-[10px] font-mono font-bold text-emerald-600 uppercase tracking-widest">
+                  SIGIRL · MANTENIMIENTO
+                </span>
+              </div>
+              <h1 className="text-2xl md:text-3xl font-bold font-mono text-stone-700">
+                Hoja de Vida de Equipos
+              </h1>
+              <p className="text-sm text-stone-500 mt-1">
+                Historial de mantenimientos y estado de equipos de laboratorio
+              </p>
+            </div>
             <button
-              onClick={exportarExcel}
-              className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors flex items-center gap-2 text-sm"
+              onClick={() => abrirModalEquipo()}
+              className="inline-flex items-center gap-2 px-4 py-2.5 bg-emerald-600 text-white rounded-xl hover:bg-emerald-700 transition-all font-medium shadow-sm hover:shadow-md"
             >
-              <FileSpreadsheet className="w-4 h-4" />
-              Excel
-            </button>
-            {selectedEquipo && (
-              <button
-                onClick={() => exportarPDF(selectedEquipo)}
-                className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors flex items-center gap-2 text-sm"
-              >
-                <FileText className="w-4 h-4" />
-                PDF
-              </button>
-            )}
-            <button
-              onClick={() => setShowFormEquipo(true)}
-              className="px-4 py-2 bg-emerald-600 text-white rounded-lg hover:bg-emerald-700 transition-colors flex items-center gap-2"
-            >
-              + Nuevo Equipo
+              <Plus className="w-4 h-4" />
+              Nuevo Equipo
             </button>
           </div>
         </motion.div>
 
-        {/* Alerta de mantenimiento */}
-        {equiposConMantenimiento.length > 0 && (
-          <motion.div 
-            initial={{ opacity: 0, y: -10 }}
-            animate={{ opacity: 1, y: 0 }}
-            className="mb-6 p-5 bg-gradient-to-r from-emerald-50 to-white border-l-4 border-emerald-500 rounded-xl shadow-sm"
-          >
-            <div className="flex items-start gap-3">
-              <div className="p-2 bg-emerald-100 rounded-full">
-                <AlertTriangle className="w-5 h-5 text-emerald-600" />
-              </div>
-              <div className="flex-1">
-                <h3 className="font-semibold text-emerald-800 text-sm flex items-center gap-2">
-                  ⚠️ Equipos que requieren mantenimiento
-                  <span className="ml-auto bg-emerald-100 text-emerald-700 text-xs px-2 py-0.5 rounded-full">
-                    {equiposConMantenimiento.length}
-                  </span>
-                </h3>
-                <div className="mt-2 flex flex-wrap gap-2">
-                  {equiposConMantenimiento.slice(0, 6).map((equipo) => (
-                    <span 
-                      key={equipo.id} 
-                      className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-white border border-emerald-200 rounded-lg text-xs text-stone-600 shadow-sm"
-                    >
-                      <span className="w-2 h-2 rounded-full bg-emerald-400"></span>
-                      {equipo.nombre.length > 20 ? equipo.nombre.substring(0, 20) + '...' : equipo.nombre}
-                      <span className="text-emerald-600 font-medium ml-1">
-                        {Number(equipo.desgaste_estimado || 0).toFixed(0)}%
-                      </span>
-                    </span>
-                  ))}
-                  {equiposConMantenimiento.length > 6 && (
-                    <span className="inline-flex items-center px-3 py-1.5 bg-stone-100 rounded-lg text-xs text-stone-500">
-                      +{equiposConMantenimiento.length - 6} más
-                    </span>
-                  )}
-                </div>
-              </div>
+        {/* ====== FILTROS Y BÚSQUEDA ====== */}
+        <motion.div 
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.1 }}
+          className="bg-white rounded-xl border border-stone-200 shadow-sm p-4 mb-6"
+        >
+          <div className="flex flex-col md:flex-row gap-4">
+            <div className="flex-1 relative">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-stone-400" />
+              <input
+                type="text"
+                placeholder="Buscar por nombre, marca o serial..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className="w-full pl-10 pr-4 py-2.5 border border-stone-200 rounded-xl text-sm focus:outline-none focus:border-emerald-400 focus:ring-2 focus:ring-emerald-100 transition-all"
+              />
             </div>
-          </motion.div>
-        )}
 
-        {/* Formulario nuevo equipo */}
-        {showFormEquipo && (
-          <motion.div 
-            initial={{ opacity: 0, y: -20 }}
-            animate={{ opacity: 1, y: 0 }}
-            className="mb-6 p-4 border rounded-lg bg-gray-50"
-          >
-            <h2 className="font-bold mb-4 text-stone-700">Nuevo Equipo</h2>
-            <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
-              <input
-                type="text"
-                placeholder="Nombre del equipo *"
-                className="border p-2 rounded-lg focus:ring-2 focus:ring-emerald-400"
-                value={nuevoEquipo.nombre}
-                onChange={(e) => setNuevoEquipo({...nuevoEquipo, nombre: e.target.value})}
-              />
-              <input
-                type="text"
-                placeholder="Marca"
-                className="border p-2 rounded-lg focus:ring-2 focus:ring-emerald-400"
-                value={nuevoEquipo.marca}
-                onChange={(e) => setNuevoEquipo({...nuevoEquipo, marca: e.target.value})}
-              />
-              <input
-                type="text"
-                placeholder="Modelo"
-                className="border p-2 rounded-lg focus:ring-2 focus:ring-emerald-400"
-                value={nuevoEquipo.modelo}
-                onChange={(e) => setNuevoEquipo({...nuevoEquipo, modelo: e.target.value})}
-              />
-              <input
-                type="text"
-                placeholder="Serie"
-                className="border p-2 rounded-lg focus:ring-2 focus:ring-emerald-400"
-                value={nuevoEquipo.serie}
-                onChange={(e) => setNuevoEquipo({...nuevoEquipo, serie: e.target.value})}
-              />
-              <input
-                type="text"
-                placeholder="Responsable"
-                className="border p-2 rounded-lg focus:ring-2 focus:ring-emerald-400"
-                value={nuevoEquipo.responsable}
-                onChange={(e) => setNuevoEquipo({...nuevoEquipo, responsable: e.target.value})}
-              />
-              <input
-                type="text"
-                placeholder="Proveedor"
-                className="border p-2 rounded-lg focus:ring-2 focus:ring-emerald-400"
-                value={nuevoEquipo.proveedor}
-                onChange={(e) => setNuevoEquipo({...nuevoEquipo, proveedor: e.target.value})}
-              />
-              <input
-                type="number"
-                placeholder="Horas de uso"
-                className="border p-2 rounded-lg focus:ring-2 focus:ring-emerald-400"
-                value={nuevoEquipo.horas_uso}
-                onChange={(e) => setNuevoEquipo({...nuevoEquipo, horas_uso: Number(e.target.value)})}
-              />
-              <input
-                type="text"
-                placeholder="Ubicación"
-                className="border p-2 rounded-lg focus:ring-2 focus:ring-emerald-400"
-                value={nuevoEquipo.ubicacion}
-                onChange={(e) => setNuevoEquipo({...nuevoEquipo, ubicacion: e.target.value})}
-              />
-              <input
-                type="number"
-                placeholder="Cantidad"
-                className="border p-2 rounded-lg focus:ring-2 focus:ring-emerald-400"
-                value={nuevoEquipo.cantidad}
-                onChange={(e) => setNuevoEquipo({...nuevoEquipo, cantidad: Number(e.target.value)})}
-              />
+            <div className="flex items-center gap-2">
+              <Filter className="w-4 h-4 text-stone-400" />
+              <select
+                value={filtroUso}
+                onChange={(e) => setFiltroUso(e.target.value)}
+                className="border border-stone-200 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:border-emerald-400 focus:ring-2 focus:ring-emerald-100 transition-all bg-white min-w-[200px]"
+              >
+                {NIVELES_USO.map(n => (
+                  <option key={n.value} value={n.value}>{n.label}</option>
+                ))}
+              </select>
             </div>
-            <div className="mt-4 flex gap-2">
-              <button onClick={handleGuardarEquipo} className="px-4 py-2 bg-emerald-600 text-white rounded-lg hover:bg-emerald-700">
-                Guardar
-              </button>
-              <button onClick={() => setShowFormEquipo(false)} className="px-4 py-2 bg-gray-500 text-white rounded-lg hover:bg-gray-600">
-                Cancelar
-              </button>
-            </div>
-          </motion.div>
-        )}
 
-        {/* ============================================================
-            GRÁFICA CON FILTROS - SECCIÓN COMPLETA
-            ============================================================ */}
-        {equipos.length > 0 && (
+            <div className="flex items-center gap-2">
+              <span className="text-xs text-stone-400 font-medium uppercase tracking-wider">Ordenar:</span>
+              <select
+                value={ordenarPor}
+                onChange={(e) => setOrdenarPor(e.target.value)}
+                className="border border-stone-200 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:border-emerald-400 focus:ring-2 focus:ring-emerald-100 transition-all bg-white min-w-[150px]"
+              >
+                <option value="nombre">Nombre (A-Z)</option>
+                <option value="mantenimientos">Más mantenimientos</option>
+                <option value="uso">Nivel de uso</option>
+              </select>
+            </div>
+          </div>
+
+          <div className="flex flex-wrap gap-2 mt-3 pt-3 border-t border-stone-100">
+            <span className="text-xs text-stone-500">
+              Mostrando <strong className="text-stone-700">{equiposFiltradosCount}</strong> de <strong className="text-stone-700">{totalEquipos}</strong> equipos
+            </span>
+            {filtroUso !== 'todos' && (
+              <span className="text-xs bg-emerald-50 text-emerald-700 px-3 py-1 rounded-full border border-emerald-200">
+                {NIVELES_USO.find(n => n.value === filtroUso)?.label}
+              </span>
+            )}
+            {searchTerm && (
+              <span className="text-xs bg-blue-50 text-blue-700 px-3 py-1 rounded-full border border-blue-200">
+                🔍 "{searchTerm}"
+              </span>
+            )}
+          </div>
+        </motion.div>
+
+        {/* ====== TARJETAS DE RESUMEN ====== */}
+        <motion.div 
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.15 }}
+          className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6"
+        >
+          <div className="bg-white rounded-xl border border-stone-200 shadow-sm p-4 text-center hover:shadow-md transition-shadow">
+            <div className="text-3xl font-bold text-emerald-600">{totalEquipos}</div>
+            <div className="text-xs text-stone-500 font-medium uppercase tracking-wider">Total Equipos</div>
+          </div>
+          <div className="bg-white rounded-xl border border-stone-200 shadow-sm p-4 text-center hover:shadow-md transition-shadow">
+            <div className="text-3xl font-bold text-blue-500">{equiposConMantenimiento}</div>
+            <div className="text-xs text-stone-500 font-medium uppercase tracking-wider">Con Mantenimiento</div>
+          </div>
+          <div className="bg-white rounded-xl border border-stone-200 shadow-sm p-4 text-center hover:shadow-md transition-shadow">
+            <div className="text-3xl font-bold text-amber-500">{totalMantenimientos}</div>
+            <div className="text-xs text-stone-500 font-medium uppercase tracking-wider">Total Mantenimientos</div>
+          </div>
+          <div className="bg-white rounded-xl border border-stone-200 shadow-sm p-4 text-center hover:shadow-md transition-shadow">
+            <div className="text-3xl font-bold text-stone-600">
+              {totalEquipos > 0 ? Math.round((equiposConMantenimiento / totalEquipos) * 100) : 0}%
+            </div>
+            <div className="text-xs text-stone-500 font-medium uppercase tracking-wider">Cobertura</div>
+          </div>
+        </motion.div>
+
+        {/* ====== GRÁFICAS ====== */}
+        {equiposFiltrados.length > 0 && (
           <motion.div 
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
-            className="bg-white rounded-2xl shadow-sm p-6 mb-6 border border-stone-200"
+            transition={{ delay: 0.2 }}
+            className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6"
           >
-            {/* Encabezado con filtros */}
-            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 mb-4">
-              <div>
-                <h2 className="text-xl font-bold text-stone-700">📊 Uso de Equipos</h2>
-                <p className="text-sm text-stone-400">
-                  {filtroUso === 'todos' && 'Todos los equipos de laboratorio'}
-                  {filtroUso === 'intensivo' && '🔴 Equipos con uso intensivo (>300h)'}
-                  {filtroUso === 'moderado' && '🟡 Equipos con uso moderado (150-300h)'}
-                  {filtroUso === 'bajo' && '🟢 Equipos con poco uso (<150h)'}
-                </p>
-              </div>
-              <div className="flex flex-wrap gap-2">
-                <button 
-                  onClick={() => setFiltroUso('todos')}
-                  className={`px-3 py-1.5 text-xs rounded-lg transition-all ${
-                    filtroUso === 'todos' 
-                      ? 'bg-stone-700 text-white shadow-sm' 
-                      : 'bg-stone-100 text-stone-600 hover:bg-stone-200'
-                  }`}
-                >
-                  📊 Todos
-                </button>
-                <button 
-                  onClick={() => setFiltroUso('intensivo')}
-                  className={`px-3 py-1.5 text-xs rounded-lg transition-all ${
-                    filtroUso === 'intensivo' 
-                      ? 'bg-red-500 text-white shadow-sm' 
-                      : 'bg-red-50 text-red-600 hover:bg-red-100'
-                  }`}
-                >
-                  🔴 Intensivo
-                </button>
-                <button 
-                  onClick={() => setFiltroUso('moderado')}
-                  className={`px-3 py-1.5 text-xs rounded-lg transition-all ${
-                    filtroUso === 'moderado' 
-                      ? 'bg-amber-500 text-white shadow-sm' 
-                      : 'bg-amber-50 text-amber-600 hover:bg-amber-100'
-                  }`}
-                >
-                  🟡 Moderado
-                </button>
-                <button 
-                  onClick={() => setFiltroUso('bajo')}
-                  className={`px-3 py-1.5 text-xs rounded-lg transition-all ${
-                    filtroUso === 'bajo' 
-                      ? 'bg-emerald-500 text-white shadow-sm' 
-                      : 'bg-emerald-50 text-emerald-600 hover:bg-emerald-100'
-                  }`}
-                >
-                  🟢 Bajo
-                </button>
-              </div>
-            </div>
-
-            {/* Estadísticas rápidas */}
-            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-4">
-              <div className="bg-red-50 rounded-lg p-3 text-center border border-red-100">
-                <p className="text-lg font-bold text-red-600">
-                  {equipos.filter(e => (e.horas_uso || 0) > 300).length}
-                </p>
-                <p className="text-xs text-red-500 font-medium">Uso Intensivo</p>
-              </div>
-              <div className="bg-amber-50 rounded-lg p-3 text-center border border-amber-100">
-                <p className="text-lg font-bold text-amber-600">
-                  {equipos.filter(e => (e.horas_uso || 0) >= 150 && (e.horas_uso || 0) <= 300).length}
-                </p>
-                <p className="text-xs text-amber-500 font-medium">Uso Moderado</p>
-              </div>
-              <div className="bg-emerald-50 rounded-lg p-3 text-center border border-emerald-100">
-                <p className="text-lg font-bold text-emerald-600">
-                  {equipos.filter(e => (e.horas_uso || 0) < 150).length}
-                </p>
-                <p className="text-xs text-emerald-500 font-medium">Poco Uso</p>
-              </div>
-              <div className="bg-stone-50 rounded-lg p-3 text-center border border-stone-200">
-                <p className="text-lg font-bold text-stone-600">
-                  {equipos.length}
-                </p>
-                <p className="text-xs text-stone-500 font-medium">Total Equipos</p>
-              </div>
-            </div>
-
-            {/* Ordenamiento */}
-            <div className="flex flex-wrap items-center justify-between gap-3 mb-4">
-              <div className="flex items-center gap-2">
-                <span className="text-xs text-stone-400 font-medium">Ordenar:</span>
-                <button 
-                  onClick={() => setOrdenGrafica('desc')}
-                  className={`px-3 py-1 text-xs rounded-lg transition-all ${
-                    ordenGrafica === 'desc' 
-                      ? 'bg-emerald-600 text-white shadow-sm' 
-                      : 'bg-stone-100 text-stone-600 hover:bg-stone-200'
-                  }`}
-                >
-                  ↓ Mayor a menor
-                </button>
-                <button 
-                  onClick={() => setOrdenGrafica('asc')}
-                  className={`px-3 py-1 text-xs rounded-lg transition-all ${
-                    ordenGrafica === 'asc' 
-                      ? 'bg-emerald-600 text-white shadow-sm' 
-                      : 'bg-stone-100 text-stone-600 hover:bg-stone-200'
-                  }`}
-                >
-                  ↑ Menor a mayor
-                </button>
-              </div>
-              <span className="text-xs text-stone-400">
-                Mostrando {datosGrafica.length} equipos
-                {filtroUso !== 'todos' && ` (filtrados)`}
-              </span>
-            </div>
-
-            {/* Gráfica */}
-            {datosGrafica.length > 0 ? (
-              <div className="overflow-x-auto">
-                <ResponsiveContainer width="100%" height={Math.max(400, datosGrafica.length * 35)}>
-                  <BarChart 
-                    data={datosGrafica} 
-                    layout="vertical"
-                    margin={{ top: 20, right: 40, left: 160, bottom: 10 }}
+            <div className="bg-white rounded-xl border border-stone-200 shadow-sm p-4 sm:p-6 hover:shadow-md transition-shadow">
+              <h3 className="text-sm font-semibold text-stone-700 mb-4 flex items-center gap-2">
+                <span className="text-xl">📊</span>
+                Mantenimientos por Equipo
+                <span className="text-xs font-normal text-stone-400 ml-2">
+                  ({equiposFiltrados.length} equipos)
+                </span>
+              </h3>
+              <ResponsiveContainer width="100%" height={300}>
+                <BarChart data={datosGrafica} margin={{ top: 10, right: 10, left: 0, bottom: 60 }}>
+                  <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
+                  <XAxis 
+                    dataKey="nombre" 
+                    angle={-45} 
+                    textAnchor="end" 
+                    height={70} 
+                    interval={0}
+                    tick={{ fontSize: 9, fill: '#64748b' }}
+                  />
+                  <YAxis tick={{ fontSize: 10, fill: '#64748b' }} />
+                  <Tooltip 
+                    formatter={(value) => [`${value} mantenimientos`, 'Cantidad']}
+                    labelFormatter={(label) => `Equipo: ${label}`}
+                    contentStyle={{ borderRadius: '8px', border: '1px solid #e2e8f0' }}
+                  />
+                  <Bar 
+                    dataKey="mantenimientos" 
+                    radius={[4, 4, 0, 0]}
+                    barSize={30}
                   >
-                    <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" horizontal={false} />
-                    <XAxis 
-                      type="number" 
-                      stroke="#9ca3af" 
-                      fontSize={12}
-                      tickLine={false}
-                      axisLine={false}
-                      domain={[0, 'dataMax + 20']}
-                    />
-                    <YAxis 
-                      type="category" 
-                      dataKey="nombre" 
-                      stroke="#6b7280" 
-                      fontSize={11}
-                      width={150}
-                      tick={{ fontSize: 10, fontWeight: 500 }}
-                      tickLine={false}
-                      axisLine={false}
-                    />
-                    <Tooltip content={<CustomTooltip />} cursor={{ fill: 'rgba(31, 169, 113, 0.05)' }} />
-                    <Bar 
-                      dataKey="horas" 
-                      fill="#1FA971"
-                      radius={[0, 6, 6, 0]}
-                      barSize={20}
-                      animationDuration={1000}
-                      animationEasing="ease-in-out"
-                      label={{ 
-                        position: 'right', 
-                        fontSize: 11, 
-                        fill: '#4b5563',
-                        fontWeight: 600,
-                        formatter: (value) => `${value}h`
-                      }}
-                    >
-                      {datosGrafica.map((entry, index) => (
-                        <Cell key={`cell-${index}`} fill={getBarColor(entry.horas)} />
-                      ))}
-                    </Bar>
-                  </BarChart>
-                </ResponsiveContainer>
+                    {datosGrafica.map((entry, index) => (
+                      <Cell key={`cell-${index}`} fill={entry.color || COLORS.BAJO} />
+                    ))}
+                  </Bar>
+                </BarChart>
+              </ResponsiveContainer>
+              <div className="flex flex-wrap justify-center gap-4 mt-4 pt-3 border-t border-stone-100">
+                <div className="flex items-center gap-1.5 text-xs">
+                  <span className="w-3 h-3 rounded-full" style={{ backgroundColor: COLORS.BAJO }}></span>
+                  Bajo uso (&lt;3)
+                </div>
+                <div className="flex items-center gap-1.5 text-xs">
+                  <span className="w-3 h-3 rounded-full" style={{ backgroundColor: COLORS.MEDIO }}></span>
+                  Medio uso (3-5)
+                </div>
+                <div className="flex items-center gap-1.5 text-xs">
+                  <span className="w-3 h-3 rounded-full" style={{ backgroundColor: COLORS.ALTO }}></span>
+                  Alto uso (&gt;5)
+                </div>
               </div>
-            ) : (
-              <div className="flex flex-col items-center justify-center py-12 text-stone-400">
-                <p className="text-lg">📭</p>
-                <p className="text-sm mt-2">No hay equipos en esta categoría</p>
-              </div>
-            )}
-            
-            {/* Estadísticas adicionales */}
-            <div className="mt-4 pt-4 border-t border-stone-100 grid grid-cols-2 sm:grid-cols-4 gap-4 text-sm text-stone-500">
-              <span>
-                Total equipos: <span className="font-bold text-stone-700">{equipos.length}</span>
-              </span>
-              <span>
-                Total horas: <span className="font-bold text-emerald-600">
-                  {equipos.reduce((sum, e) => sum + (e.horas_uso || 0), 0)}h
-                </span>
-              </span>
-              <span>
-                Promedio: <span className="font-bold text-stone-700">
-                  {(equipos.reduce((sum, e) => sum + (e.horas_uso || 0), 0) / equipos.length).toFixed(0)}h
-                </span>
-              </span>
-              <span>
-                Máximo: <span className="font-bold text-red-600">
-                  {Math.max(...equipos.map(e => e.horas_uso || 0))}h
-                </span>
-              </span>
+            </div>
+
+            <div className="bg-white rounded-xl border border-stone-200 shadow-sm p-4 sm:p-6 hover:shadow-md transition-shadow">
+              <h3 className="text-sm font-semibold text-stone-700 mb-4 flex items-center gap-2">
+                <span className="text-xl">🧩</span>
+                Distribución por Nivel de Uso
+              </h3>
+              <ResponsiveContainer width="100%" height={280}>
+                <PieChart>
+                  <Pie
+                    data={datosPieNivel}
+                    cx="50%"
+                    cy="50%"
+                    labelLine={true}
+                    label={({ name, percent }) => 
+                      percent > 0 ? `${(percent * 100).toFixed(0)}%` : ''
+                    }
+                    outerRadius={90}
+                    fill="#8884d8"
+                    dataKey="value"
+                  >
+                    {datosPieNivel.map((entry, index) => (
+                      <Cell key={`cell-${index}`} fill={PIE_COLORS[index % PIE_COLORS.length]} />
+                    ))}
+                  </Pie>
+                  <Tooltip 
+                    formatter={(value) => [`${value} equipos`, 'Cantidad']}
+                    contentStyle={{ borderRadius: '8px', border: '1px solid #e2e8f0' }}
+                  />
+                  <Legend 
+                    verticalAlign="bottom" 
+                    height={36}
+                  />
+                </PieChart>
+              </ResponsiveContainer>
             </div>
           </motion.div>
         )}
 
-        {/* Tabla de equipos */}
+        {/* ====== TABLA DE EQUIPOS ====== */}
         <motion.div 
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          className="bg-white rounded-xl border border-stone-200 overflow-hidden shadow-sm"
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.3 }}
+          className="bg-white rounded-xl border border-stone-200 overflow-hidden shadow-sm hover:shadow-md transition-shadow"
         >
-          <div className="px-6 py-4 border-b bg-stone-50 flex justify-between items-center">
-            <span className="font-semibold text-stone-700">
-              📋 Lista de Equipos
-              <span className="ml-2 px-2 py-0.5 rounded-full text-xs bg-emerald-100 text-emerald-700">
-                {equipos.length}
-              </span>
-            </span>
-          </div>
-
           <div className="overflow-x-auto">
             <table className="min-w-full">
-              <thead className="bg-stone-100">
+              <thead className="bg-stone-50 border-b border-stone-200">
                 <tr>
-                  <th className="px-6 py-3 text-left text-xs font-semibold text-stone-600 uppercase">Equipo</th>
-                  <th className="px-6 py-3 text-left text-xs font-semibold text-stone-600 uppercase">Ubicación</th>
-                  <th className="px-6 py-3 text-left text-xs font-semibold text-stone-600 uppercase">Stock</th>
-                  <th className="px-6 py-3 text-left text-xs font-semibold text-stone-600 uppercase">Horas Uso</th>
-                  <th className="px-6 py-3 text-left text-xs font-semibold text-stone-600 uppercase">Desgaste</th>
-                  <th className="px-6 py-3 text-left text-xs font-semibold text-stone-600 uppercase">Mantenimiento</th>
-                  <th className="px-6 py-3 text-left text-xs font-semibold text-stone-600 uppercase">Acciones</th>
+                  <th className="px-4 py-3 text-left text-[10px] font-mono font-bold text-stone-500 uppercase tracking-wider">Equipo</th>
+                  <th className="px-4 py-3 text-left text-[10px] font-mono font-bold text-stone-500 uppercase tracking-wider">Marca / Modelo</th>
+                  <th className="px-4 py-3 text-left text-[10px] font-mono font-bold text-stone-500 uppercase tracking-wider">Serial</th>
+                  <th className="px-4 py-3 text-left text-[10px] font-mono font-bold text-stone-500 uppercase tracking-wider">Estado</th>
+                  <th className="px-4 py-3 text-left text-[10px] font-mono font-bold text-stone-500 uppercase tracking-wider">Total Mant.</th>
+                  <th className="px-4 py-3 text-left text-[10px] font-mono font-bold text-stone-500 uppercase tracking-wider">Acciones</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-stone-100">
-                {equipos.map((e) => (
-                  <tr key={e.id} className="hover:bg-stone-50 transition-colors">
-                    <td className="px-6 py-3 text-sm font-medium text-stone-700">{e.nombre}</td>
-                    <td className="px-6 py-3 text-sm text-stone-600">{e.ubicacion || '-'}</td>
-                    <td className="px-6 py-3 text-sm text-stone-600">{e.cantidad} uds.</td>
-                    <td className="px-6 py-3 text-sm text-stone-600">{e.horas_uso || 0}h</td>
-                    <td className="px-6 py-3 text-sm">
-                      <span className={`px-2 py-1 rounded-full text-xs font-medium ${(e.desgaste_estimado || 0) > 50 ? 'bg-red-100 text-red-700' : 'bg-emerald-100 text-emerald-700'}`}>
-                        {Number(e.desgaste_estimado || 0).toFixed(1)}%
-                      </span>
-                    </td>
-                    <td className="px-6 py-3 text-sm">
-                      <span className={`px-2 py-1 rounded-full text-xs font-medium ${e.mantenimiento_requerido ? 'bg-yellow-100 text-yellow-700' : 'bg-emerald-100 text-emerald-700'}`}>
-                        {e.mantenimiento_requerido ? '⚠️ Requerido' : '✅ OK'}
-                      </span>
-                    </td>
-                    <td className="px-6 py-3">
-                      <div className="flex gap-2">
-                        <button
-                          onClick={() => verDetalle(e)}
-                          className="px-3 py-1.5 bg-emerald-600 text-white rounded text-xs hover:bg-emerald-700 transition-colors"
-                        >
-                          Ver Hoja de Vida
-                        </button>
-                        <button
-                          onClick={() => {
-                            setEquipoEliminar(e);
-                            setShowDeleteModal(true);
-                          }}
-                          className="px-3 py-1.5 bg-red-500 text-white rounded text-xs hover:bg-red-600 transition-colors"
-                        >
-                          Eliminar
-                        </button>
-                      </div>
+                {equiposFiltrados.length > 0 ? (
+                  equiposFiltrados.map((e, index) => {
+                    const nivel = getNivelUso(e.total_mantenimientos);
+                    const color = getColorPorNivel(nivel);
+                    return (
+                      <motion.tr 
+                        key={e.id} 
+                        initial={{ opacity: 0, x: -20 }}
+                        animate={{ opacity: 1, x: 0 }}
+                        transition={{ delay: index * 0.03 }}
+                        className="hover:bg-emerald-50/40 transition-colors"
+                      >
+                        <td className="px-4 py-3 text-sm font-medium text-stone-700">{e.nombre}</td>
+                        <td className="px-4 py-3 text-sm text-stone-600">
+                          {e.marca || '-'} / {e.modelo || '-'}
+                        </td>
+                        <td className="px-4 py-3 text-sm font-mono text-stone-600">
+                          {e.serial || '-'}
+                        </td>
+                        <td className="px-4 py-3 text-sm">
+                          <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium border ${
+                            e.estado === 'operativo' ? 'bg-emerald-50 text-emerald-700 border-emerald-200' :
+                            e.estado === 'mantenimiento' ? 'bg-amber-50 text-amber-700 border-amber-200' :
+                            e.estado === 'reparacion' ? 'bg-orange-50 text-orange-700 border-orange-200' :
+                            'bg-rose-50 text-rose-700 border-rose-200'
+                          }`}>
+                            <span className={`w-1.5 h-1.5 rounded-full ${
+                              e.estado === 'operativo' ? 'bg-emerald-500' :
+                              e.estado === 'mantenimiento' ? 'bg-amber-500' :
+                              e.estado === 'reparacion' ? 'bg-orange-500' :
+                              'bg-rose-500'
+                            }`}></span>
+                            {getEstadoLabel(e.estado)}
+                          </span>
+                        </td>
+                        <td className="px-4 py-3 text-sm">
+                          <span className={`inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium border ${
+                            (e.total_mantenimientos || 0) > 0 
+                              ? 'bg-emerald-50 text-emerald-700 border-emerald-200' 
+                              : 'bg-amber-50 text-amber-700 border-amber-200'
+                          }`}>
+                            {(e.total_mantenimientos || 0)} mantenimientos
+                          </span>
+                        </td>
+                        <td className="px-4 py-3">
+                          <div className="flex items-center gap-1.5">
+                            <button
+                              onClick={() => verDetalle(e)}
+                              className="px-3 py-1.5 bg-emerald-600 text-white rounded-lg text-xs hover:bg-emerald-700 transition-all font-medium shadow-sm hover:shadow-md"
+                              title="Ver detalle completo"
+                            >
+                              Ver Detalle
+                            </button>
+                            <button
+                              onClick={() => abrirModalEquipo(e)}
+                              className="p-1.5 text-blue-500 hover:text-blue-700 hover:bg-blue-50 rounded-lg transition-colors"
+                              title="Editar equipo"
+                            >
+                              <Edit className="w-4 h-4" />
+                            </button>
+                            <button
+                              onClick={() => {
+                                setSelectedEquipo(e);
+                                setShowDeleteModal(true);
+                              }}
+                              className="p-1.5 text-rose-500 hover:text-rose-700 hover:bg-rose-50 rounded-lg transition-colors"
+                              title="Eliminar equipo"
+                            >
+                              <Trash2 className="w-4 h-4" />
+                            </button>
+                          </div>
+                        </td>
+                      </motion.tr>
+                    );
+                  })
+                ) : (
+                  <tr>
+                    <td colSpan="6" className="px-4 py-12 text-center text-stone-400">
+                      <Search className="w-8 h-8 mx-auto mb-2 text-stone-300" />
+                      <p className="text-sm">No se encontraron equipos con los filtros seleccionados</p>
+                      <button 
+                        onClick={() => { setSearchTerm(''); setFiltroUso('todos'); }}
+                        className="mt-2 text-emerald-600 hover:text-emerald-700 text-sm font-medium"
+                      >
+                        Limpiar filtros
+                      </button>
                     </td>
                   </tr>
-                ))}
+                )}
               </tbody>
             </table>
           </div>
-          {equipos.length === 0 && (
-            <div className="text-center py-12 text-stone-500">
-              No hay equipos registrados en el inventario
-            </div>
-          )}
         </motion.div>
+      </div>
 
-        {/* Modales */}
-        <ConfirmModal
-          open={showDeleteModal}
-          titulo="Eliminar equipo"
-          mensaje={`¿Deseas eliminar "${equipoEliminar?.nombre}"?`}
-          onClose={() => {
-            setShowDeleteModal(false);
-            setEquipoEliminar(null);
-          }}
-          onConfirm={handleEliminarEquipo}
-        />
-
-        {/* Modal de Detalle */}
-        {showModal && selectedEquipo && (
-          <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-            <motion.div 
-              initial={{ scale: 0.9, opacity: 0 }}
-              animate={{ scale: 1, opacity: 1 }}
-              className="bg-white rounded-xl shadow-xl w-full max-w-4xl max-h-[90vh] overflow-y-auto m-4"
-            >
-              <div className="sticky top-0 bg-white border-b border-stone-200 p-4 flex justify-between items-center">
+      {/* ====== MODAL DE DETALLE ====== */}
+      {showModal && selectedEquipo && (
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+          <motion.div 
+            initial={{ scale: 0.9, opacity: 0 }}
+            animate={{ scale: 1, opacity: 1 }}
+            exit={{ scale: 0.9, opacity: 0 }}
+            className="bg-white rounded-2xl shadow-2xl w-full max-w-4xl max-h-[90vh] overflow-y-auto"
+          >
+            <div className="sticky top-0 bg-white border-b border-stone-200 p-4 sm:p-6 flex justify-between items-center rounded-t-2xl">
+              <div>
+                <h2 className="text-xl font-bold text-stone-800 flex items-center gap-2">
+                  <Wrench className="w-5 h-5 text-emerald-600" />
+                  Hoja de Vida: {selectedEquipo.nombre}
+                </h2>
+                <p className="text-sm text-stone-500 mt-1">Información y historial de mantenimientos</p>
+              </div>
+              <button 
+                onClick={() => setShowModal(false)} 
+                className="p-2 hover:bg-stone-100 rounded-xl transition-colors"
+              >
+                <X className="w-5 h-5 text-stone-400" />
+              </button>
+            </div>
+            
+            <div className="p-4 sm:p-6">
+              {/* Información del equipo - Detallada */}
+              <div className="grid grid-cols-2 md:grid-cols-3 gap-4 mb-6 p-4 bg-stone-50 rounded-xl border border-stone-200">
                 <div>
-                  <h2 className="text-xl font-bold text-stone-800">
-                    Hoja de Vida: {selectedEquipo.nombre}
-                  </h2>
-                  <p className="text-sm text-stone-500">
-                    {selectedEquipo.marca} {selectedEquipo.modelo} - {selectedEquipo.serie}
-                  </p>
+                  <p className="text-[10px] text-stone-400 font-medium uppercase tracking-wider">Marca</p>
+                  <p className="font-medium text-stone-700 text-sm">{selectedEquipo.marca || '-'}</p>
                 </div>
-                <div className="flex gap-2">
-                  <button
-                    onClick={() => exportarPDF(selectedEquipo)}
-                    className="px-3 py-1.5 bg-red-600 text-white rounded text-sm hover:bg-red-700 flex items-center gap-1"
-                  >
-                    <FileText className="w-4 h-4" /> PDF
-                  </button>
-                  <button 
-                    onClick={() => setShowModal(false)} 
-                    className="text-stone-400 hover:text-stone-600 text-2xl"
-                  >
-                    ×
-                  </button>
+                <div>
+                  <p className="text-[10px] text-stone-400 font-medium uppercase tracking-wider">Modelo</p>
+                  <p className="font-medium text-stone-700 text-sm">{selectedEquipo.modelo || '-'}</p>
                 </div>
+                <div>
+                  <p className="text-[10px] text-stone-400 font-medium uppercase tracking-wider">Serial</p>
+                  <p className="font-mono text-stone-700 text-sm">{selectedEquipo.serial || '-'}</p>
+                </div>
+                <div>
+                  <p className="text-[10px] text-stone-400 font-medium uppercase tracking-wider">Ubicación</p>
+                  <p className="font-medium text-stone-700 text-sm">{selectedEquipo.ubicacion || '-'}</p>
+                </div>
+                <div>
+                  <p className="text-[10px] text-stone-400 font-medium uppercase tracking-wider">Stock</p>
+                  <p className="font-medium text-stone-700 text-sm">{selectedEquipo.cantidad} unidades</p>
+                </div>
+                <div>
+                  <p className="text-[10px] text-stone-400 font-medium uppercase tracking-wider">Proveedor</p>
+                  <p className="font-medium text-stone-700 text-sm">{selectedEquipo.proveedor || '-'}</p>
+                </div>
+                <div>
+                  <p className="text-[10px] text-stone-400 font-medium uppercase tracking-wider">Fecha Compra</p>
+                  <p className="font-medium text-stone-700 text-sm">{selectedEquipo.fecha_compra || '-'}</p>
+                </div>
+                <div>
+                  <p className="text-[10px] text-stone-400 font-medium uppercase tracking-wider">Estado</p>
+                  <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium border ${
+                    selectedEquipo.estado === 'operativo' ? 'bg-emerald-50 text-emerald-700 border-emerald-200' :
+                    selectedEquipo.estado === 'mantenimiento' ? 'bg-amber-50 text-amber-700 border-amber-200' :
+                    selectedEquipo.estado === 'reparacion' ? 'bg-orange-50 text-orange-700 border-orange-200' :
+                    'bg-rose-50 text-rose-700 border-rose-200'
+                  }`}>
+                    <span className={`w-1.5 h-1.5 rounded-full ${
+                      selectedEquipo.estado === 'operativo' ? 'bg-emerald-500' :
+                      selectedEquipo.estado === 'mantenimiento' ? 'bg-amber-500' :
+                      selectedEquipo.estado === 'reparacion' ? 'bg-orange-500' :
+                      'bg-rose-500'
+                    }`}></span>
+                    {getEstadoLabel(selectedEquipo.estado)}
+                  </span>
+                </div>
+                <div>
+                  <p className="text-[10px] text-stone-400 font-medium uppercase tracking-wider">Total Mantenimientos</p>
+                  <p className="font-medium text-stone-700 text-sm">{selectedEquipo.total_mantenimientos}</p>
+                </div>
+              </div>
+
+              <div className="flex justify-between items-center mb-4">
+                <h3 className="text-sm font-semibold text-stone-700 flex items-center gap-2">
+                  <FileText className="w-4 h-4 text-emerald-600" />
+                  Historial de Mantenimientos
+                </h3>
+                <button
+                  onClick={() => abrirModalMantenimiento()}
+                  className="inline-flex items-center gap-2 px-4 py-2 bg-emerald-600 text-white rounded-xl text-sm hover:bg-emerald-700 transition-all font-medium shadow-sm hover:shadow-md"
+                >
+                  <Plus className="w-4 h-4" />
+                  Registrar
+                </button>
+              </div>
+
+              <div className="overflow-x-auto rounded-xl border border-stone-200">
+                <table className="min-w-full">
+                  <thead className="bg-stone-50 border-b border-stone-200">
+                    <tr>
+                      <th className="px-4 py-2.5 text-left text-[10px] font-mono font-bold text-stone-500 uppercase tracking-wider">Fecha</th>
+                      <th className="px-4 py-2.5 text-left text-[10px] font-mono font-bold text-stone-500 uppercase tracking-wider">Tipo</th>
+                      <th className="px-4 py-2.5 text-left text-[10px] font-mono font-bold text-stone-500 uppercase tracking-wider">Descripción</th>
+                      <th className="px-4 py-2.5 text-left text-[10px] font-mono font-bold text-stone-500 uppercase tracking-wider">Técnico</th>
+                      <th className="px-4 py-2.5 text-left text-[10px] font-mono font-bold text-stone-500 uppercase tracking-wider">Costo</th>
+                      <th className="px-4 py-2.5 text-left text-[10px] font-mono font-bold text-stone-500 uppercase tracking-wider">Acciones</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-stone-100">
+                    {mantenimientos.length > 0 ? (
+                      mantenimientos.map((m) => {
+                        const tipoInfo = getTipoInfo(m.tipo);
+                        return (
+                          <tr key={m.id} className="hover:bg-stone-50 transition-colors">
+                            <td className="px-4 py-3 text-sm text-stone-600">{m.fecha}</td>
+                            <td className="px-4 py-3 text-sm">
+                              <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium border ${tipoInfo.color}`}>
+                                {tipoInfo.icon}
+                                {tipoInfo.label}
+                              </span>
+                            </td>
+                            <td className="px-4 py-3 text-sm text-stone-600 max-w-[200px] truncate">{m.descripcion}</td>
+                            <td className="px-4 py-3 text-sm text-stone-600">{m.tecnico || '-'}</td>
+                            <td className="px-4 py-3 text-sm text-stone-600 font-medium">
+                              {m.costo ? `$${new Intl.NumberFormat('es-CO').format(m.costo)}` : '-'}
+                            </td>
+                            <td className="px-4 py-3">
+                              <div className="flex items-center gap-1">
+                                <button
+                                  onClick={() => abrirModalMantenimiento(m)}
+                                  className="p-1.5 text-blue-500 hover:text-blue-700 hover:bg-blue-50 rounded-lg transition-colors"
+                                  title="Editar mantenimiento"
+                                >
+                                  <Edit className="w-4 h-4" />
+                                </button>
+                                <button
+                                  onClick={() => eliminarMantenimiento(m.id)}
+                                  className="p-1.5 text-rose-500 hover:text-rose-700 hover:bg-rose-50 rounded-lg transition-colors"
+                                  title="Eliminar mantenimiento"
+                                >
+                                  <Trash2 className="w-4 h-4" />
+                                </button>
+                              </div>
+                            </td>
+                          </tr>
+                        );
+                      })
+                    ) : (
+                      <tr>
+                        <td colSpan="6" className="px-4 py-8 text-center text-stone-400">
+                          <Calendar className="w-8 h-8 mx-auto mb-2 text-stone-300" />
+                          <p className="text-sm">No hay mantenimientos registrados</p>
+                        </td>
+                      </tr>
+                    )}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </motion.div>
+        </div>
+      )}
+
+      {/* ====== MODAL EQUIPO (CREAR/EDITAR) ====== */}
+      {showEquipoModal && (
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+          <motion.div 
+            initial={{ scale: 0.9, opacity: 0 }}
+            animate={{ scale: 1, opacity: 1 }}
+            exit={{ scale: 0.9, opacity: 0 }}
+            className="bg-white rounded-2xl shadow-2xl w-full max-w-lg max-h-[90vh] overflow-y-auto"
+          >
+            <div className="p-6">
+              <div className="flex justify-between items-center mb-4">
+                <h3 className="text-xl font-bold text-stone-800 flex items-center gap-2">
+                  {isEditingEquipo ? <Edit className="w-5 h-5 text-blue-500" /> : <Plus className="w-5 h-5 text-emerald-600" />}
+                  {isEditingEquipo ? 'Editar Equipo' : 'Nuevo Equipo'}
+                </h3>
+                <button 
+                  onClick={() => setShowEquipoModal(false)} 
+                  className="p-1.5 hover:bg-stone-100 rounded-lg transition-colors"
+                >
+                  <X className="w-5 h-5 text-stone-400" />
+                </button>
               </div>
               
-              <div className="p-6">
-                <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6 p-4 bg-stone-50 rounded-lg">
+              <div className="space-y-4">
+                <div className="grid grid-cols-2 gap-4">
                   <div>
-                    <label className="text-xs text-stone-400 uppercase">Ubicación</label>
-                    <p className="font-medium text-stone-700">{selectedEquipo.ubicacion || '-'}</p>
-                  </div>
-                  <div>
-                    <label className="text-xs text-stone-400 uppercase">Stock actual</label>
-                    <p className="font-medium text-stone-700">{selectedEquipo.cantidad} unidades</p>
-                  </div>
-                  <div>
-                    <label className="text-xs text-stone-400 uppercase">Horas de uso</label>
-                    <p className="font-medium text-stone-700">{selectedEquipo.horas_uso || 0}h</p>
-                  </div>
-                  <div>
-                    <label className="text-xs text-stone-400 uppercase">Desgaste</label>
-                    <p className="font-medium text-stone-700">{Number(selectedEquipo.desgaste_estimado || 0).toFixed(1)}%</p>
-                  </div>
-                </div>
-
-                <div className="flex justify-between items-center mb-4">
-                  <h3 className="text-lg font-semibold text-stone-700">Historial de Mantenimientos</h3>
-                  <button
-                    onClick={() => setShowMantModal(true)}
-                    className="bg-emerald-600 text-white px-4 py-2 rounded-lg text-sm hover:bg-emerald-700 transition-colors"
-                  >
-                    + Registrar Mantenimiento
-                  </button>
-                </div>
-
-                <div className="overflow-x-auto">
-                  <table className="min-w-full border border-stone-200 rounded-lg overflow-hidden">
-                    <thead className="bg-stone-100">
-                      <tr>
-                        <th className="px-4 py-2 text-left text-xs font-semibold text-stone-600 uppercase">Fecha</th>
-                        <th className="px-4 py-2 text-left text-xs font-semibold text-stone-600 uppercase">Tipo</th>
-                        <th className="px-4 py-2 text-left text-xs font-semibold text-stone-600 uppercase">Descripción</th>
-                        <th className="px-4 py-2 text-left text-xs font-semibold text-stone-600 uppercase">Técnico</th>
-                        <th className="px-4 py-2 text-left text-xs font-semibold text-stone-600 uppercase">Costo</th>
-                      </tr>
-                    </thead>
-                    <tbody className="divide-y divide-stone-100">
-                      {mantenimientos.map((m) => (
-                        <tr key={m.id} className="hover:bg-stone-50">
-                          <td className="px-4 py-2 text-sm">{m.fecha}</td>
-                          <td className="px-4 py-2 text-sm">
-                            <span className={`px-2 py-1 rounded-full text-xs font-medium ${
-                              m.tipo === 'preventivo' ? 'bg-blue-100 text-blue-700' :
-                              m.tipo === 'correctivo' ? 'bg-amber-100 text-amber-700' :
-                              m.tipo === 'calibracion' ? 'bg-purple-100 text-purple-700' :
-                              'bg-green-100 text-green-700'
-                            }`}>
-                              {m.tipo}
-                            </span>
-                          </td>
-                          <td className="px-4 py-2 text-sm">{m.descripcion}</td>
-                          <td className="px-4 py-2 text-sm">{m.tecnico || '-'}</td>
-                          <td className="px-4 py-2 text-sm">${m.costo}</td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                  {mantenimientos.length === 0 && (
-                    <div className="text-center py-8 text-stone-500">
-                      No hay mantenimientos registrados para este equipo
-                    </div>
-                  )}
-                </div>
-              </div>
-            </motion.div>
-          </div>
-        )}
-
-        {/* Modal de Registrar Mantenimiento */}
-        {showMantModal && (
-          <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-            <motion.div 
-              initial={{ scale: 0.9, opacity: 0 }}
-              animate={{ scale: 1, opacity: 1 }}
-              className="bg-white rounded-xl shadow-xl w-full max-w-md m-4"
-            >
-              <div className="p-6">
-                <h3 className="text-xl font-bold text-stone-800 mb-4">Registrar Mantenimiento</h3>
-                
-                <div className="space-y-4">
-                  <div>
-                    <label className="block text-sm font-medium text-stone-700 mb-1">Tipo *</label>
-                    <select
-                      value={formData.tipo}
-                      onChange={(e) => setFormData({...formData, tipo: e.target.value})}
-                      className="w-full border border-stone-200 rounded-lg px-4 py-2 focus:ring-2 focus:ring-emerald-400"
-                    >
-                      <option value="preventivo">Preventivo</option>
-                      <option value="correctivo">Correctivo</option>
-                      <option value="calibracion">Calibración</option>
-                      <option value="predictivo">Predictivo</option>
-                    </select>
-                  </div>
-
-                  <div>
-                    <label className="block text-sm font-medium text-stone-700 mb-1">Fecha *</label>
-                    <input
-                      type="date"
-                      value={formData.fecha}
-                      onChange={(e) => setFormData({...formData, fecha: e.target.value})}
-                      className="w-full border border-stone-200 rounded-lg px-4 py-2 focus:ring-2 focus:ring-emerald-400"
-                    />
-                  </div>
-
-                  <div>
-                    <label className="block text-sm font-medium text-stone-700 mb-1">Descripción *</label>
-                    <textarea
-                      value={formData.descripcion}
-                      onChange={(e) => setFormData({...formData, descripcion: e.target.value})}
-                      rows="3"
-                      className="w-full border border-stone-200 rounded-lg px-4 py-2 focus:ring-2 focus:ring-emerald-400"
-                      placeholder="Describa el mantenimiento realizado..."
-                    />
-                  </div>
-
-                  <div>
-                    <label className="block text-sm font-medium text-stone-700 mb-1">Técnico</label>
+                    <label className="block text-xs font-medium text-stone-700 mb-1 uppercase tracking-wider">Nombre *</label>
                     <input
                       type="text"
-                      value={formData.tecnico}
-                      onChange={(e) => setFormData({...formData, tecnico: e.target.value})}
-                      className="w-full border border-stone-200 rounded-lg px-4 py-2 focus:ring-2 focus:ring-emerald-400"
-                      placeholder="Nombre del técnico"
+                      value={equipoFormData.nombre}
+                      onChange={(e) => setEquipoFormData({...equipoFormData, nombre: e.target.value})}
+                      className="w-full border border-stone-200 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:border-emerald-400 focus:ring-2 focus:ring-emerald-100 transition-all"
+                      placeholder="Nombre del equipo"
                     />
                   </div>
-
                   <div>
-                    <label className="block text-sm font-medium text-stone-700 mb-1">Costo</label>
+                    <label className="block text-xs font-medium text-stone-700 mb-1 uppercase tracking-wider">Serial</label>
+                    <input
+                      type="text"
+                      value={equipoFormData.serial}
+                      onChange={(e) => setEquipoFormData({...equipoFormData, serial: e.target.value})}
+                      className="w-full border border-stone-200 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:border-emerald-400 focus:ring-2 focus:ring-emerald-100 transition-all"
+                      placeholder="Número de serie"
+                    />
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-xs font-medium text-stone-700 mb-1 uppercase tracking-wider">Marca</label>
+                    <input
+                      type="text"
+                      value={equipoFormData.marca}
+                      onChange={(e) => setEquipoFormData({...equipoFormData, marca: e.target.value})}
+                      className="w-full border border-stone-200 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:border-emerald-400 focus:ring-2 focus:ring-emerald-100 transition-all"
+                      placeholder="Marca"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-medium text-stone-700 mb-1 uppercase tracking-wider">Modelo</label>
+                    <input
+                      type="text"
+                      value={equipoFormData.modelo}
+                      onChange={(e) => setEquipoFormData({...equipoFormData, modelo: e.target.value})}
+                      className="w-full border border-stone-200 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:border-emerald-400 focus:ring-2 focus:ring-emerald-100 transition-all"
+                      placeholder="Modelo"
+                    />
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-xs font-medium text-stone-700 mb-1 uppercase tracking-wider">Ubicación</label>
+                    <select
+                      value={equipoFormData.ubicacion}
+                      onChange={(e) => setEquipoFormData({...equipoFormData, ubicacion: e.target.value})}
+                      className="w-full border border-stone-200 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:border-emerald-400 focus:ring-2 focus:ring-emerald-100 transition-all"
+                    >
+                      {AMBIENTES.map(a => (
+                        <option key={a} value={a}>{a}</option>
+                      ))}
+                    </select>
+                  </div>
+                  <div>
+                    <label className="block text-xs font-medium text-stone-700 mb-1 uppercase tracking-wider">Estado</label>
+                    <select
+                      value={equipoFormData.estado}
+                      onChange={(e) => setEquipoFormData({...equipoFormData, estado: e.target.value})}
+                      className="w-full border border-stone-200 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:border-emerald-400 focus:ring-2 focus:ring-emerald-100 transition-all"
+                    >
+                      {ESTADOS_EQUIPO.map(e => (
+                        <option key={e.value} value={e.value}>{e.label}</option>
+                      ))}
+                    </select>
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-xs font-medium text-stone-700 mb-1 uppercase tracking-wider">Cantidad</label>
                     <input
                       type="number"
-                      step="0.01"
-                      value={formData.costo}
-                      onChange={(e) => setFormData({...formData, costo: parseFloat(e.target.value)})}
-                      className="w-full border border-stone-200 rounded-lg px-4 py-2 focus:ring-2 focus:ring-emerald-400"
-                      placeholder="0.00"
+                      value={equipoFormData.cantidad}
+                      onChange={(e) => setEquipoFormData({...equipoFormData, cantidad: parseInt(e.target.value) || 1})}
+                      className="w-full border border-stone-200 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:border-emerald-400 focus:ring-2 focus:ring-emerald-100 transition-all"
+                      min="1"
                     />
                   </div>
-
                   <div>
-                    <label className="block text-sm font-medium text-stone-700 mb-1">Observaciones</label>
-                    <textarea
-                      value={formData.observaciones}
-                      onChange={(e) => setFormData({...formData, observaciones: e.target.value})}
-                      rows="2"
-                      className="w-full border border-stone-200 rounded-lg px-4 py-2 focus:ring-2 focus:ring-emerald-400"
-                      placeholder="Observaciones adicionales..."
+                    <label className="block text-xs font-medium text-stone-700 mb-1 uppercase tracking-wider">Stock Mínimo</label>
+                    <input
+                      type="number"
+                      value={equipoFormData.minimo}
+                      onChange={(e) => setEquipoFormData({...equipoFormData, minimo: parseInt(e.target.value) || 1})}
+                      className="w-full border border-stone-200 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:border-emerald-400 focus:ring-2 focus:ring-emerald-100 transition-all"
+                      min="1"
                     />
                   </div>
                 </div>
 
-                <div className="flex justify-end gap-3 mt-6">
-                  <button
-                    onClick={() => setShowMantModal(false)}
-                    className="px-4 py-2 border border-stone-200 rounded-lg text-stone-600 hover:bg-stone-50"
-                  >
-                    Cancelar
-                  </button>
-                  <button
-                    onClick={registrarMantenimiento}
-                    className="px-4 py-2 bg-emerald-600 text-white rounded-lg hover:bg-emerald-700"
-                  >
-                    Guardar Mantenimiento
-                  </button>
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-xs font-medium text-stone-700 mb-1 uppercase tracking-wider">Fecha Compra</label>
+                    <input
+                      type="date"
+                      value={equipoFormData.fecha_compra}
+                      onChange={(e) => setEquipoFormData({...equipoFormData, fecha_compra: e.target.value})}
+                      className="w-full border border-stone-200 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:border-emerald-400 focus:ring-2 focus:ring-emerald-100 transition-all"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-medium text-stone-700 mb-1 uppercase tracking-wider">Proveedor</label>
+                    <input
+                      type="text"
+                      value={equipoFormData.proveedor}
+                      onChange={(e) => setEquipoFormData({...equipoFormData, proveedor: e.target.value})}
+                      className="w-full border border-stone-200 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:border-emerald-400 focus:ring-2 focus:ring-emerald-100 transition-all"
+                      placeholder="Nombre del proveedor"
+                    />
+                  </div>
                 </div>
               </div>
-            </motion.div>
-          </div>
-        )}
-      </div>
+
+              <div className="flex gap-3 mt-6">
+                <button
+                  onClick={() => setShowEquipoModal(false)}
+                  className="flex-1 px-4 py-2.5 border border-stone-200 rounded-xl text-stone-600 hover:bg-stone-50 transition-all text-sm font-medium"
+                >
+                  Cancelar
+                </button>
+                <button
+                  onClick={isEditingEquipo ? editarEquipo : crearEquipo}
+                  className="flex-1 px-4 py-2.5 bg-emerald-600 text-white rounded-xl hover:bg-emerald-700 transition-all text-sm font-medium shadow-sm hover:shadow-md"
+                >
+                  {isEditingEquipo ? 'Actualizar' : 'Crear'}
+                </button>
+              </div>
+            </div>
+          </motion.div>
+        </div>
+      )}
+
+      {/* ====== MODAL MANTENIMIENTO (REGISTRAR/EDITAR) ====== */}
+      {showMantModal && selectedEquipo && (
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+          <motion.div 
+            initial={{ scale: 0.9, opacity: 0 }}
+            animate={{ scale: 1, opacity: 1 }}
+            exit={{ scale: 0.9, opacity: 0 }}
+            className="bg-white rounded-2xl shadow-2xl w-full max-w-md"
+          >
+            <div className="p-6">
+              <div className="flex justify-between items-center mb-4">
+                <h3 className="text-xl font-bold text-stone-800 flex items-center gap-2">
+                  {editingMantenimiento ? <Edit className="w-5 h-5 text-blue-500" /> : <Plus className="w-5 h-5 text-emerald-600" />}
+                  {editingMantenimiento ? 'Editar Mantenimiento' : 'Registrar Mantenimiento'}
+                </h3>
+                <button 
+                  onClick={() => { setShowMantModal(false); setEditingMantenimiento(null); }} 
+                  className="p-1.5 hover:bg-stone-100 rounded-lg transition-colors"
+                >
+                  <X className="w-5 h-5 text-stone-400" />
+                </button>
+              </div>
+              <p className="text-sm text-stone-500 mb-4">
+                Equipo: <span className="font-semibold text-stone-700">{selectedEquipo.nombre}</span>
+              </p>
+              
+              <div className="space-y-4">
+                <div>
+                  <label className="block text-xs font-medium text-stone-700 mb-1 uppercase tracking-wider">Tipo *</label>
+                  <select
+                    value={formData.tipo}
+                    onChange={(e) => setFormData({...formData, tipo: e.target.value})}
+                    className="w-full border border-stone-200 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:border-emerald-400 focus:ring-2 focus:ring-emerald-100 transition-all"
+                  >
+                    <option value="preventivo">Preventivo</option>
+                    <option value="correctivo">Correctivo</option>
+                    <option value="calibracion">Calibración</option>
+                    <option value="predictivo">Predictivo</option>
+                  </select>
+                </div>
+
+                <div>
+                  <label className="block text-xs font-medium text-stone-700 mb-1 uppercase tracking-wider">Fecha *</label>
+                  <input
+                    type="date"
+                    value={formData.fecha}
+                    onChange={(e) => setFormData({...formData, fecha: e.target.value})}
+                    className="w-full border border-stone-200 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:border-emerald-400 focus:ring-2 focus:ring-emerald-100 transition-all"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-xs font-medium text-stone-700 mb-1 uppercase tracking-wider">Descripción *</label>
+                  <textarea
+                    value={formData.descripcion}
+                    onChange={(e) => setFormData({...formData, descripcion: e.target.value})}
+                    rows="3"
+                    className="w-full border border-stone-200 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:border-emerald-400 focus:ring-2 focus:ring-emerald-100 transition-all"
+                    placeholder="Describa el mantenimiento realizado..."
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-xs font-medium text-stone-700 mb-1 uppercase tracking-wider">Técnico</label>
+                  <input
+                    type="text"
+                    value={formData.tecnico}
+                    onChange={(e) => setFormData({...formData, tecnico: e.target.value})}
+                    className="w-full border border-stone-200 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:border-emerald-400 focus:ring-2 focus:ring-emerald-100 transition-all"
+                    placeholder="Nombre del técnico"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-xs font-medium text-stone-700 mb-1 uppercase tracking-wider">Costo</label>
+                  <input
+                    type="number"
+                    step="0.01"
+                    value={formData.costo}
+                    onChange={(e) => setFormData({...formData, costo: parseFloat(e.target.value) || 0})}
+                    className="w-full border border-stone-200 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:border-emerald-400 focus:ring-2 focus:ring-emerald-100 transition-all"
+                    placeholder="0.00"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-xs font-medium text-stone-700 mb-1 uppercase tracking-wider">Observaciones</label>
+                  <textarea
+                    value={formData.observaciones}
+                    onChange={(e) => setFormData({...formData, observaciones: e.target.value})}
+                    rows="2"
+                    className="w-full border border-stone-200 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:border-emerald-400 focus:ring-2 focus:ring-emerald-100 transition-all"
+                    placeholder="Observaciones adicionales..."
+                  />
+                </div>
+              </div>
+
+              <div className="flex gap-3 mt-6">
+                <button
+                  onClick={() => { setShowMantModal(false); setEditingMantenimiento(null); }}
+                  className="flex-1 px-4 py-2.5 border border-stone-200 rounded-xl text-stone-600 hover:bg-stone-50 transition-all text-sm font-medium"
+                >
+                  Cancelar
+                </button>
+                <button
+                  onClick={registrarMantenimiento}
+                  className="flex-1 px-4 py-2.5 bg-emerald-600 text-white rounded-xl hover:bg-emerald-700 transition-all text-sm font-medium shadow-sm hover:shadow-md"
+                >
+                  {editingMantenimiento ? 'Actualizar' : 'Guardar'}
+                </button>
+              </div>
+            </div>
+          </motion.div>
+        </div>
+      )}
+
+      {/* ====== MODAL ELIMINAR ====== */}
+      {showDeleteModal && selectedEquipo && (
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+          <motion.div 
+            initial={{ scale: 0.9, opacity: 0 }}
+            animate={{ scale: 1, opacity: 1 }}
+            exit={{ scale: 0.9, opacity: 0 }}
+            className="bg-white rounded-2xl shadow-2xl w-full max-w-md"
+          >
+            <div className="p-6 text-center">
+              <div className="w-16 h-16 rounded-full bg-rose-50 border border-rose-200 flex items-center justify-center mx-auto mb-4">
+                <Trash2 className="w-8 h-8 text-rose-500" />
+              </div>
+              <h3 className="text-xl font-bold text-stone-800 mb-2">¿Eliminar equipo?</h3>
+              <p className="text-sm text-stone-500 mb-6">
+                ¿Estás seguro de eliminar el equipo <strong className="text-stone-700">{selectedEquipo.nombre}</strong>?<br />
+                Esta acción eliminará también todos sus mantenimientos.
+              </p>
+              <div className="flex gap-3">
+                <button
+                  onClick={() => setShowDeleteModal(false)}
+                  className="flex-1 px-4 py-2.5 border border-stone-200 rounded-xl text-stone-600 hover:bg-stone-50 transition-all text-sm font-medium"
+                >
+                  Cancelar
+                </button>
+                <button
+                  onClick={eliminarEquipo}
+                  className="flex-1 px-4 py-2.5 bg-rose-500 text-white rounded-xl hover:bg-rose-600 transition-all text-sm font-medium shadow-sm hover:shadow-md"
+                >
+                  Eliminar
+                </button>
+              </div>
+            </div>
+          </motion.div>
+        </div>
+      )}
     </Layout>
   );
 };

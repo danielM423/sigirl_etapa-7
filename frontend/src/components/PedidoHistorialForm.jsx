@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { createPedidoHistorial } from '../services/pedidoHistorialService';
-import { getPedidoHistorial } from "../services/pedidoHistorialService";
+
 export default function PedidoHistorialForm({ onSuccess }) {
   const [form, setForm] = useState({ usuario: '', pedido: '', accion: '', fecha: '' });
   const [error, setError] = useState('');

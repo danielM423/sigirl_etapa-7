@@ -7,7 +7,6 @@ import Layout from '../components/Layout';
 import { UserContext } from '../context/UserContext';
 import { exportToExcel } from '../utils/reportExport';
 import { getProductos, createProducto, updateProducto, deleteProducto, getMovimientos, createMovimiento } from '../services/api';
-import api from '../services/api';
 
 const inputCls = 'w-full bg-stone-50 border border-stone-200 rounded-md px-3 py-2.5 text-sm font-mono text-stone-700 placeholder-stone-400 focus:outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500/50 transition-colors';
 const selectCls = `${inputCls} appearance-none cursor-pointer`;
@@ -84,117 +83,68 @@ const Inventario = () => {
   const [filterCategory, setFilterCategory] = useState('todas');
   const [showModal, setShowModal] = useState(false);
   const [selectedProduct, setSelectedProduct] = useState(null);
-  const [formProducto, setFormProducto] = useState({ 
-    nombre: '', 
-    categoria: '', 
-    unidad: '', 
-    ubicacion: '', 
-    cantidad: '', 
-    umbral_minimo: '', 
-    tipo: 'reactivo' 
-  });
+  const [formProducto, setFormProducto] = useState({ nombre: '', categoria: 'Solventes', unidad: '', ubicacion: '', cantidad: '', umbral_minimo: '', tipo: 'reactivo' });
   const [productoDetalle, setProductoDetalle] = useState(null);
   const [deleteConfirm, setDeleteConfirm] = useState(null);
   const [movimientosModal, setMovimientosModal] = useState(null);
-  const [movimientos, setMovimientos] = useState([]);
-  const [loadingMovs, setLoadingMovs] = useState(false);
-  const [formMov, setFormMov] = useState({ tipo: 'entrada', cantidad: '', observacion: '' });
-  const [categorias, setCategorias] = useState([]);
+  const [movimientos, setMovimientos]           = useState([]);
+  const [loadingMovs, setLoadingMovs]           = useState(false);
+  const [formMov, setFormMov]                   = useState({ tipo: 'entrada', cantidad: '', observacion: '' });
+  const [paginaActual, setPaginaActual]         = useState(1);
+  const [itemsPorPagina] = useState(10);
 
-  // Cargar productos y categorías
   useEffect(() => {
-    const cargarDatos = async () => {
-      try {
-        setLoading(true);
-        const [productosRes, categoriasRes] = await Promise.all([
-          getProductos(),
-          api.get('categorias/')
-        ]);
-        setProductos(productosRes.data.results ?? productosRes.data ?? []);
-        setCategorias(categoriasRes.data);
-      } catch (err) {
-        console.error('Error cargando datos:', err);
-        toast.error('Error al cargar el inventario');
-      } finally {
-        setLoading(false);
-      }
-    };
-    cargarDatos();
+    getProductos()
+      .then((res) => setProductos(res.data.results ?? res.data ?? []))
+      .catch(() => toast.error('Error al cargar el inventario'))
+      .finally(() => setLoading(false));
   }, []);
 
   const normalizedProducts = useMemo(() => productos.map((p, i) => ({
     id: Number(p.id ?? i + 1),
     nombre: p.nombre || 'Sin nombre',
     categoria: typeof p.categoria === 'string' ? p.categoria : p.categoria?.nombre || p.categoria_nombre || 'General',
-    categoria_id: typeof p.categoria === 'object' ? p.categoria?.id : null,
     cantidad: Number(p.cantidad ?? 0),
     unidad: p.unidad || '',
     umbral_minimo: Number(p.umbral_minimo ?? p.minimo ?? 0),
     ubicacion: p.ubicacion || 'Sin ubicacion',
-    tipo: p.tipo || 'reactivo',
     estado: p.estado || (Number(p.cantidad ?? 0) <= 0 ? 'agotado' : Number(p.cantidad ?? 0) <= Number(p.umbral_minimo ?? p.minimo ?? 0) ? 'bajo_stock' : 'ok'),
   })), [productos]);
 
   const categories = useMemo(() => ['todas', ...new Set(normalizedProducts.map((p) => p.categoria).filter(Boolean))], [normalizedProducts]);
 
-  const filteredProducts = normalizedProducts.filter((p) => {
-    const t = searchTerm.toLowerCase();
-    return (p.nombre.toLowerCase().includes(t) || p.categoria.toLowerCase().includes(t) || p.ubicacion.toLowerCase().includes(t))
-      && (filterStatus === 'todos' || p.estado === filterStatus)
-      && (filterCategory === 'todas' || p.categoria === filterCategory);
-  });
+  const filteredProducts = useMemo(() => {
+    const filtered = normalizedProducts.filter((p) => {
+      const t = searchTerm.toLowerCase();
+      return (p.nombre.toLowerCase().includes(t) || p.categoria.toLowerCase().includes(t) || p.ubicacion.toLowerCase().includes(t))
+        && (filterStatus === 'todos' || p.estado === filterStatus)
+        && (filterCategory === 'todas' || p.categoria === filterCategory);
+    });
+    return filtered;
+  }, [normalizedProducts, searchTerm, filterStatus, filterCategory]);
 
-  const stats = { 
-    total: normalizedProducts.length, 
-    ok: normalizedProducts.filter((p) => p.estado === 'ok').length, 
-    bajoStock: normalizedProducts.filter((p) => p.estado === 'bajo_stock').length, 
-    agotado: normalizedProducts.filter((p) => p.estado === 'agotado').length 
-  };
+  // Paginación
+  const indexUltimoItem = paginaActual * itemsPorPagina;
+  const indexPrimerItem = indexUltimoItem - itemsPorPagina;
+  const itemsActuales = filteredProducts.slice(indexPrimerItem, indexUltimoItem);
+  const totalPaginas = Math.ceil(filteredProducts.length / itemsPorPagina);
 
-  const resetForm = () => { 
-    setShowModal(false); 
-    setSelectedProduct(null); 
-    setFormProducto({ 
-      nombre: '', 
-      categoria: '', 
-      ubicacion: '', 
-      cantidad: '', 
-      umbral_minimo: '', 
-      tipo: 'reactivo',
-      unidad: '' 
-    }); 
-  };
+  const stats = { total: normalizedProducts.length, ok: normalizedProducts.filter((p) => p.estado === 'ok').length, bajoStock: normalizedProducts.filter((p) => p.estado === 'bajo_stock').length, agotado: normalizedProducts.filter((p) => p.estado === 'agotado').length };
+
+  const resetForm = () => { setShowModal(false); setSelectedProduct(null); setFormProducto({ nombre: '', categoria: 'Solventes', ubicacion: '', cantidad: '', umbral_minimo: '', tipo: 'reactivo' }); };
 
   const handleGuardarProducto = async () => {
-    if (!canManage) { 
-      toast.error('Solo consulta permitida.'); 
-      return; 
-    }
-    
-    if (!formProducto.nombre || !formProducto.cantidad || !formProducto.umbral_minimo) { 
-      toast.error('Completa todos los campos obligatorios'); 
-      return; 
-    }
-
-    // ✅ Obtener el ID de la categoría seleccionada
-    const categoriaId = parseInt(formProducto.categoria, 10);
-    if (!categoriaId) {
-      toast.error('Selecciona una categoría válida');
-      return;
-    }
-    
+    if (!canManage) { toast.error('Solo consulta permitida.'); return; }
+    if (!formProducto.nombre || !formProducto.cantidad || !formProducto.umbral_minimo || !formProducto.ubicacion) { toast.error('Completa todos los campos'); return; }
     const payload = {
       nombre: formProducto.nombre,
-      tipo: formProducto.tipo || 'reactivo',
-      categoria: categoriaId,
+      categoria_texto: formProducto.categoria,
+      unidad: formProducto.unidad,
+      ubicacion: formProducto.ubicacion,
       cantidad: parseInt(formProducto.cantidad, 10),
-      minimo: parseInt(formProducto.umbral_minimo, 10),
-      ubicacion: formProducto.ubicacion || '',
-      unidad: formProducto.unidad || 'unidades'
+      umbral_minimo: parseInt(formProducto.umbral_minimo, 10),
+      tipo: formProducto.tipo || 'reactivo'
     };
-    
-    console.log('📤 Enviando producto:', payload);
-    
     try {
       if (selectedProduct) {
         await updateProducto(selectedProduct.id, payload);
@@ -206,11 +156,9 @@ const Inventario = () => {
       const res = await getProductos();
       setProductos(res.data.results ?? res.data ?? []);
       resetForm();
+      setPaginaActual(1);
     } catch (err) {
-      console.error('❌ Error:', err);
-      console.error('❌ Respuesta:', err.response?.data);
-      const errorMsg = err.response?.data?.detail || err.response?.data?.error || 'Error al guardar producto';
-      toast.error(errorMsg);
+      toast.error(err.response?.data?.detail || 'Error al guardar producto');
     }
   };
 
@@ -222,29 +170,16 @@ const Inventario = () => {
       const res = await getMovimientos();
       const todos = res.data.results ?? res.data ?? [];
       setMovimientos(todos.filter(m => Number(m.producto) === Number(producto.id) || m.producto_nombre === producto.nombre));
-    } catch { 
-      setMovimientos([]); 
-    } finally { 
-      setLoadingMovs(false); 
-    }
+    } catch { setMovimientos([]); }
+    finally { setLoadingMovs(false); }
   };
 
   const handleGuardarMovimiento = async () => {
-    if (!formMov.cantidad || Number(formMov.cantidad) <= 0) { 
-      toast.error('La cantidad debe ser mayor que cero'); 
-      return; 
-    }
+    if (!formMov.cantidad || Number(formMov.cantidad) <= 0) { toast.error('La cantidad debe ser mayor que cero'); return; }
     try {
-      await createMovimiento({ 
-        producto: movimientosModal.id, 
-        tipo: formMov.tipo, 
-        cantidad: parseInt(formMov.cantidad, 10), 
-        observacion: formMov.observacion 
-      });
-      
+      await createMovimiento({ producto: movimientosModal.id, tipo: formMov.tipo, cantidad: parseInt(formMov.cantidad, 10), observacion: formMov.observacion });
       const delta = formMov.tipo === 'entrada' ? parseInt(formMov.cantidad, 10) : -parseInt(formMov.cantidad, 10);
       setProductos(prev => prev.map(p => p.id === movimientosModal.id ? { ...p, cantidad: Math.max(0, (Number(p.cantidad) + delta)) } : p));
-      
       const res = await getMovimientos();
       const todos = res.data.results ?? res.data ?? [];
       setMovimientos(todos.filter(m => Number(m.producto) === Number(movimientosModal.id) || m.producto_nombre === movimientosModal.nombre));
@@ -256,10 +191,7 @@ const Inventario = () => {
   };
 
   const handleEliminarProducto = (id) => {
-    if (!canManage) { 
-      toast.error('Sin permisos.'); 
-      return; 
-    }
+    if (!canManage) { toast.error('Sin permisos.'); return; }
     const producto = productos.find((p) => p.id === id);
     setDeleteConfirm({ id, nombre: producto?.nombre || 'Producto', motivo: '' });
   };
@@ -270,6 +202,7 @@ const Inventario = () => {
       await deleteProducto(deleteConfirm.id);
       setProductos((prev) => prev.filter((p) => p.id !== deleteConfirm.id));
       toast.success('Producto eliminado');
+      setPaginaActual(1);
     } catch {
       toast.error('Error al eliminar');
     } finally {
@@ -278,35 +211,16 @@ const Inventario = () => {
   };
 
   const handleExportar = () => {
-    if (!canManage) { 
-      toast.info('Solo consulta.'); 
-      return; 
-    }
-    exportToExcel(
-      filteredProducts.map((p) => ({ 
-        Nombre: p.nombre, 
-        Categoria: p.categoria, 
-        Cantidad: p.cantidad, 
-        'Umbral min': p.umbral_minimo, 
-        Ubicacion: p.ubicacion, 
-        Estado: p.estado 
-      })), 
-      `inventario-sigirl-${new Date().toISOString().slice(0,10)}.xlsx`, 
-      'Inventario'
-    );
+    if (!canManage) { toast.info('Solo consulta.'); return; }
+    exportToExcel(filteredProducts.map((p) => ({ Nombre: p.nombre, Categoria: p.categoria, Cantidad: p.cantidad, 'Umbral min': p.umbral_minimo, Ubicacion: p.ubicacion, Estado: p.estado })), `inventario-sigirl-${new Date().toISOString().slice(0,10)}.xlsx`, 'Inventario');
     toast.success('Exportado a Excel');
   };
 
-  if (loading) return (
-    <Layout>
-      <div className="flex items-center justify-center h-64">
-        <div className="text-center">
-          <div className="w-3 h-3 rounded-full mx-auto mb-3 bg-emerald-500 animate-pulse" />
-          <p className="text-stone-500 font-mono text-sm">CARGANDO INVENTARIO...</p>
-        </div>
-      </div>
-    </Layout>
-  );
+  const cambiarPagina = (direccion) => {
+    setPaginaActual(p => Math.max(1, Math.min(totalPaginas, p + direccion)));
+  };
+
+  if (loading) return <Layout><div className="flex items-center justify-center h-64"><div className="text-center"><div className="w-3 h-3 rounded-full mx-auto mb-3 bg-emerald-500 animate-pulse" /><p className="text-stone-500 font-mono text-sm">CARGANDO INVENTARIO...</p></div></div></Layout>;
 
   return (
     <Layout>
@@ -333,10 +247,10 @@ const Inventario = () => {
         </div>
 
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
-          <StatCard label="Total Productos" value={stats.total} icon={<Package className="w-4 h-4" />} color="blue" />
-          <StatCard label="Stock OK" value={stats.ok} icon={<TrendingUp className="w-4 h-4" />} color="emerald" />
-          <StatCard label="Bajo Stock" value={stats.bajoStock} icon={<AlertCircle className="w-4 h-4" />} color="amber" />
-          <StatCard label="Agotados" value={stats.agotado} icon={<AlertCircle className="w-4 h-4" />} color="rose" />
+          <StatCard label="Total Productos" value={stats.total}     icon={<Package className="w-4 h-4" />}     color="blue" />
+          <StatCard label="Stock OK"        value={stats.ok}        icon={<TrendingUp className="w-4 h-4" />}  color="emerald" />
+          <StatCard label="Bajo Stock"      value={stats.bajoStock} icon={<AlertCircle className="w-4 h-4" />} color="amber" />
+          <StatCard label="Agotados"        value={stats.agotado}   icon={<AlertCircle className="w-4 h-4" />} color="rose" />
         </div>
 
         {/* Filtros de búsqueda y categoría */}
@@ -344,13 +258,7 @@ const Inventario = () => {
           <div className="flex gap-3">
             <div className="relative flex-1">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-stone-400" />
-              <input 
-                type="text" 
-                placeholder="Buscar por nombre, categoría o ubicación..." 
-                value={searchTerm} 
-                onChange={(e) => setSearchTerm(e.target.value)} 
-                className={`${inputCls} pl-9`} 
-              />
+              <input type="text" placeholder="Buscar por nombre, categoría o ubicación..." value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} className={`${inputCls} pl-9`} />
             </div>
             <div className="relative w-44">
               <select value={filterStatus} onChange={(e) => setFilterStatus(e.target.value)} className={`${selectCls} pr-8`}>
@@ -391,50 +299,28 @@ const Inventario = () => {
                 </tr>
               </thead>
               <tbody className="divide-y divide-stone-100">
-                {filteredProducts.length === 0 ? (
+                {itemsActuales.length === 0 ? (
                   <tr><td colSpan={8} className="py-12 text-center"><Package className="w-8 h-8 text-stone-300 mx-auto mb-2" /><p className="text-stone-500 font-mono text-sm">No se encontraron productos</p></td></tr>
-                ) : filteredProducts.map((p) => (
+                ) : itemsActuales.map((p) => (
                   <tr key={p.id} className="hover:bg-[#E8F5F0]/40 transition-colors">
                     <td className={`${compactView ? 'py-1.5' : 'py-3'} pr-4`}>
-                      <p className="text-sm font-mono font-semibold text-stone-700">{p.nombre}</p>
+                      <p className="text-sm font-mono font-semibold text-stone-700">{typeof p.nombre === 'object' ? (p.nombre?.nombre || JSON.stringify(p.nombre)) : p.nombre}</p>
                       {!compactView && <p className="text-[10px] font-mono text-stone-400 mt-0.5">#{String(p.id).padStart(4,'0')}</p>}
                     </td>
-                    <td className={`${compactView ? 'py-1.5' : 'py-3'} pr-4`}>
-                      <span className="px-2 py-0.5 rounded text-[10px] font-mono font-bold bg-indigo-100 text-indigo-700 border border-indigo-200">{p.categoria}</span>
-                    </td>
-                    <td className={`${compactView ? 'py-1.5' : 'py-3'} pr-4`}>
-                      <span className="font-bold text-sm font-mono text-[#157A55]">{p.cantidad}</span>
-                    </td>
-                    <td className={`${compactView ? 'py-1.5' : 'py-3'} pr-4 text-sm font-mono text-stone-500`}>{p.unidad}</td>
+                    <td className={`${compactView ? 'py-1.5' : 'py-3'} pr-4`}><span className="px-2 py-0.5 rounded text-[10px] font-mono font-bold bg-indigo-100 text-indigo-700 border border-indigo-200">{typeof p.categoria === 'object' ? (p.categoria?.nombre || JSON.stringify(p.categoria)) : p.categoria}</span></td>
+                    <td className={`${compactView ? 'py-1.5' : 'py-3'} pr-4`}><span className="font-bold text-sm font-mono text-[#157A55]">{p.cantidad}</span></td>
+                    <td className={`${compactView ? 'py-1.5' : 'py-3'} pr-4 text-sm font-mono text-stone-500`}>{typeof p.unidad === 'object' ? (p.unidad?.nombre || JSON.stringify(p.unidad)) : p.unidad}</td>
                     <td className={`${compactView ? 'py-1.5' : 'py-3'} pr-4 text-sm font-mono text-stone-500`}>{p.umbral_minimo}</td>
-                    <td className={`${compactView ? 'py-1.5' : 'py-3'} pr-4 text-sm font-mono text-stone-500`}>{p.ubicacion}</td>
+                    <td className={`${compactView ? 'py-1.5' : 'py-3'} pr-4 text-sm font-mono text-stone-500`}>{typeof p.ubicacion === 'object' ? (p.ubicacion?.nombre || JSON.stringify(p.ubicacion)) : p.ubicacion}</td>
                     <td className="py-3 pr-4"><EstadoBadge estado={p.estado} /></td>
                     <td className="py-3">
                       <div className="flex items-center justify-center gap-1">
                         <button onClick={() => setProductoDetalle(p)} className="p-1.5 text-blue-600 hover:bg-blue-50 rounded transition-colors" title="Ver detalle"><Eye className="w-3.5 h-3.5" /></button>
-                        {canManage && (
-                          <>
-                            <button onClick={() => handleOpenMovimientos(p)} className="p-1.5 text-emerald-600 hover:bg-emerald-50 rounded transition-colors" title="Registrar movimiento"><ArrowUpDown className="w-3.5 h-3.5" /></button>
-                            <button onClick={() => { 
-                              setSelectedProduct(p); 
-                              setFormProducto({ 
-                                nombre: p.nombre, 
-                                categoria: String(p.categoria_id || ''), 
-                                ubicacion: p.ubicacion, 
-                                cantidad: String(p.cantidad), 
-                                umbral_minimo: String(p.umbral_minimo), 
-                                tipo: p.tipo || 'reactivo',
-                                unidad: p.unidad || ''
-                              }); 
-                              setShowModal(true); 
-                            }} className="p-1.5 text-amber-600 hover:bg-amber-50 rounded transition-colors" title="Editar">
-                              <Edit2 className="w-3.5 h-3.5" />
-                            </button>
-                            <button onClick={() => handleEliminarProducto(p.id)} className="p-1.5 text-rose-600 hover:bg-rose-50 rounded transition-colors" title="Eliminar">
-                              <Trash2 className="w-3.5 h-3.5" />
-                            </button>
-                          </>
-                        )}
+                        {canManage && (<>
+                          <button onClick={() => handleOpenMovimientos(p)} className="p-1.5 text-emerald-600 hover:bg-emerald-50 rounded transition-colors" title="Registrar movimiento"><ArrowUpDown className="w-3.5 h-3.5" /></button>
+                          <button onClick={() => { setSelectedProduct(p); setFormProducto({ nombre: p.nombre, categoria: p.categoria, ubicacion: p.ubicacion, cantidad: String(p.cantidad), umbral_minimo: String(p.umbral_minimo), tipo: p.tipo || 'reactivo' }); setShowModal(true); }} className="p-1.5 text-amber-600 hover:bg-amber-50 rounded transition-colors" title="Editar"><Edit2 className="w-3.5 h-3.5" /></button>
+                          <button onClick={() => handleEliminarProducto(p.id)} className="p-1.5 text-rose-600 hover:bg-rose-50 rounded transition-colors" title="Eliminar"><Trash2 className="w-3.5 h-3.5" /></button>
+                        </>)}
                       </div>
                     </td>
                   </tr>
@@ -443,16 +329,30 @@ const Inventario = () => {
             </table>
           </div>
           <div className="mt-4 pt-4 border-t border-stone-100 flex items-center justify-between">
-            <p className="text-[10px] font-mono text-stone-500">Mostrando {filteredProducts.length} de {normalizedProducts.length} productos</p>
+            <p className="text-[10px] font-mono text-stone-500">Mostrando {itemsActuales.length} de {filteredProducts.length} productos</p>
             <div className="flex gap-2">
-              <button className="px-3 py-1.5 text-[10px] font-mono border border-stone-200 rounded text-stone-500 opacity-50 cursor-not-allowed" disabled>Anterior</button>
-              <button className="px-3 py-1.5 text-[10px] font-mono border border-stone-200 rounded text-stone-500 opacity-50 cursor-not-allowed" disabled>Siguiente</button>
+              <button 
+                onClick={() => cambiarPagina(-1)} 
+                disabled={paginaActual === 1}
+                className={`px-3 py-1.5 text-[10px] font-mono border border-stone-200 rounded text-stone-500 transition-colors ${paginaActual === 1 ? 'opacity-50 cursor-not-allowed' : 'hover:border-emerald-300 hover:text-emerald-600'}`}
+              >
+                Anterior
+              </button>
+              <span className="px-3 py-1.5 text-[10px] font-mono text-stone-500">Pág. {paginaActual} de {totalPaginas}</span>
+              <button 
+                onClick={() => cambiarPagina(1)} 
+                disabled={paginaActual === totalPaginas}
+                className={`px-3 py-1.5 text-[10px] font-mono border border-stone-200 rounded text-stone-500 transition-colors ${paginaActual === totalPaginas ? 'opacity-50 cursor-not-allowed' : 'hover:border-emerald-300 hover:text-emerald-600'}`}
+              >
+                Siguiente
+              </button>
             </div>
           </div>
         </LabSection>
       </div>
 
-      {/* ── MODAL CREAR/EDITAR PRODUCTO ─────────────────────────────────── */}
+      {/* ===== MODALES ===== */}
+      {/* Modal Crear/Editar Producto */}
       {showModal && canManage && (
         <div className="fixed inset-0 z-50 bg-black/50 backdrop-blur-sm flex items-center justify-center p-4">
           <div className="w-full max-w-xl bg-white border border-[#E0E0E0] rounded-xl overflow-hidden shadow-2xl">
@@ -461,103 +361,56 @@ const Inventario = () => {
                 <h2 className="text-sm font-mono font-bold text-[#157A55] uppercase tracking-wider">{selectedProduct ? 'EDITAR PRODUCTO' : 'NUEVO PRODUCTO'}</h2>
                 <p className="text-[10px] font-mono text-stone-500 mt-0.5">Complete la información del inventario</p>
               </div>
-              <button onClick={resetForm} className="p-1.5 text-stone-400 hover:text-rose-600 hover:bg-rose-50 rounded transition-colors">
-                <XCircle className="w-4 h-4" />
-              </button>
+              <button onClick={resetForm} className="p-1.5 text-stone-400 hover:text-rose-600 hover:bg-rose-50 rounded transition-colors"><XCircle className="w-4 h-4" /></button>
             </div>
             <div className="p-6 grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div className="col-span-2">
-                <label className="block text-[9px] font-mono font-bold text-stone-500 uppercase tracking-wider mb-1.5">Nombre *</label>
-                <input 
-                  type="text" 
-                  value={formProducto.nombre} 
-                  onChange={(e) => setFormProducto({...formProducto, nombre: e.target.value})} 
-                  className={inputCls} 
-                  placeholder="Nombre del producto" 
-                />
+                <label className="block text-[9px] font-mono font-bold text-stone-500 uppercase tracking-wider mb-1.5">Nombre</label>
+                <input type="text" value={formProducto.nombre} onChange={(e) => setFormProducto({...formProducto, nombre: e.target.value})} className={inputCls} placeholder="Nombre del producto" />
               </div>
               <div>
-                <label className="block text-[9px] font-mono font-bold text-stone-500 uppercase tracking-wider mb-1.5">Categoría *</label>
-                <select 
-                  value={formProducto.categoria} 
-                  onChange={(e) => setFormProducto({...formProducto, categoria: e.target.value})} 
-                  className={selectCls}
-                >
-                  <option value="">Seleccionar categoría</option>
-                  {categorias.map((cat) => (
-                    <option key={cat.id} value={cat.id}>{cat.nombre}</option>
-                  ))}
+                <label className="block text-[9px] font-mono font-bold text-stone-500 uppercase tracking-wider mb-1.5">Categoría</label>
+                <select value={formProducto.categoria} onChange={(e) => setFormProducto({...formProducto, categoria: e.target.value})} className={selectCls}>
+                  {['Solventes','Ácidos','Bases','EPP','Vidrio','Materiales'].map((c) => <option key={c} value={c}>{c}</option>)}
                 </select>
               </div>
               <div>
                 <label className="block text-[9px] font-mono font-bold text-stone-500 uppercase tracking-wider mb-1.5">Ubicación</label>
-                <input 
-                  type="text" 
-                  value={formProducto.ubicacion} 
-                  onChange={(e) => setFormProducto({...formProducto, ubicacion: e.target.value})} 
-                  className={inputCls} 
-                  placeholder="Ej. Almacén A" 
-                />
+                <input type="text" value={formProducto.ubicacion} onChange={(e) => setFormProducto({...formProducto, ubicacion: e.target.value})} className={inputCls} placeholder="Ej. Almacén A" />
               </div>
               <div>
-                <label className="block text-[9px] font-mono font-bold text-stone-500 uppercase tracking-wider mb-1.5">Tipo *</label>
-                <select 
-                  value={formProducto.tipo} 
-                  onChange={(e) => setFormProducto({...formProducto, tipo: e.target.value})} 
-                  className={selectCls}
-                >
+                <label className="block text-[9px] font-mono font-bold text-stone-500 uppercase tracking-wider mb-1.5">Tipo</label>
+                <select value={formProducto.tipo} onChange={(e) => setFormProducto({...formProducto, tipo: e.target.value})} className={selectCls}>
                   <option value="reactivo">Reactivo</option>
                   <option value="insumo">Insumo</option>
                   <option value="equipo">Equipo</option>
                 </select>
               </div>
               <div>
-                <label className="block text-[9px] font-mono font-bold text-stone-500 uppercase tracking-wider mb-1.5">Cantidad *</label>
-                <input 
-                  type="number" 
-                  min="0" 
-                  value={formProducto.cantidad} 
-                  onChange={(e) => setFormProducto({...formProducto, cantidad: e.target.value})} 
-                  className={inputCls} 
-                  placeholder="0" 
-                />
+                <label className="block text-[9px] font-mono font-bold text-stone-500 uppercase tracking-wider mb-1.5">Cantidad</label>
+                <input type="number" min="0" value={formProducto.cantidad} onChange={(e) => setFormProducto({...formProducto, cantidad: e.target.value})} className={inputCls} placeholder="0" />
               </div>
               <div>
                 <label className="block text-[9px] font-mono font-bold text-stone-500 uppercase tracking-wider mb-1.5">Unidad</label>
-                <input 
-                  type="text" 
-                  value={formProducto.unidad} 
-                  onChange={(e) => setFormProducto({...formProducto, unidad: e.target.value})} 
-                  className={inputCls} 
-                  placeholder="Ej. ml, g, unidades" 
-                />
+                <input type="text" value={formProducto.unidad} onChange={(e) => setFormProducto({...formProducto, unidad: e.target.value})} className={inputCls} placeholder="Ej. ml, g, unidades" />
               </div>
               <div>
-                <label className="block text-[9px] font-mono font-bold text-stone-500 uppercase tracking-wider mb-1.5">Umbral mínimo *</label>
-                <input 
-                  type="number" 
-                  min="0" 
-                  value={formProducto.umbral_minimo} 
-                  onChange={(e) => setFormProducto({...formProducto, umbral_minimo: e.target.value})} 
-                  className={inputCls} 
-                  placeholder="0" 
-                />
+                <label className="block text-[9px] font-mono font-bold text-stone-500 uppercase tracking-wider mb-1.5">Umbral mínimo</label>
+                <input type="number" min="0" value={formProducto.umbral_minimo} onChange={(e) => setFormProducto({...formProducto, umbral_minimo: e.target.value})} className={inputCls} placeholder="0" />
               </div>
             </div>
             <div className="flex justify-end gap-3 px-6 py-4 border-t border-[#E0E0E0] bg-[#F5F7F6]">
               <button onClick={resetForm} className="px-4 py-2 rounded-lg text-xs font-mono font-bold border border-stone-200 text-stone-600 hover:text-stone-800 hover:border-stone-300 transition-colors">Cancelar</button>
-              <button onClick={handleGuardarProducto} className="px-4 py-2 rounded-lg text-xs font-mono font-bold bg-[#1FA971] text-white hover:bg-[#157A55] transition-colors shadow-sm">
-                {selectedProduct ? 'Guardar cambios' : 'Crear producto'}
-              </button>
+              <button onClick={handleGuardarProducto} className="px-4 py-2 rounded-lg text-xs font-mono font-bold bg-[#1FA971] text-white hover:bg-[#157A55] transition-colors shadow-sm">{selectedProduct ? 'Guardar cambios' : 'Crear producto'}</button>
             </div>
           </div>
         </div>
       )}
 
-      {/* ── MODAL CONFIRMAR ELIMINACIÓN ─────────────────────────────────── */}
+      {/* Modal Confirmar Eliminación */}
       {deleteConfirm && (
         <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4">
-          <div className="w-full max-w-md bg-white border border-[#E0E0E0] rounded-xl overflow-hidden shadow-2xl">
+          <div className="w-full max-w-md bg-white border border-[#E0E0E0] rounded-xl overflow-hidden shadow-2xl animate-[fadeInScale_0.18s_ease]">
             <div className="px-6 py-5 border-b border-[#E0E0E0] bg-rose-50">
               <div className="flex items-center gap-3">
                 <div className="w-9 h-9 rounded-full bg-rose-100 border border-rose-200 flex items-center justify-center flex-shrink-0">
@@ -573,40 +426,65 @@ const Inventario = () => {
               <p className="text-xs font-mono text-stone-600 leading-relaxed">
                 Esta acción <span className="font-bold text-rose-500">no se puede deshacer</span>. El producto será eliminado permanentemente del inventario.
               </p>
+              <div>
+                <label className="block text-[9px] font-mono font-bold text-stone-500 uppercase tracking-wider mb-1.5">Motivo de eliminación <span className="text-stone-400 normal-case">(opcional)</span></label>
+                <select
+                  value={deleteConfirm.motivo}
+                  onChange={(e) => setDeleteConfirm((prev) => ({ ...prev, motivo: e.target.value }))}
+                  className="w-full px-3 py-2 text-xs font-mono border border-[#E0E0E0] rounded-lg bg-white text-stone-700 focus:outline-none focus:border-rose-300 focus:ring-1 focus:ring-rose-200 transition-colors"
+                >
+                  <option value="">Seleccionar motivo...</option>
+                  <option value="agotado">Producto agotado / sin reponer</option>
+                  <option value="vencido">Producto vencido o caducado</option>
+                  <option value="descontinuado">Descontinuado / fuera de uso</option>
+                  <option value="reemplazado">Reemplazado por otro producto</option>
+                  <option value="error">Registro duplicado o erróneo</option>
+                  <option value="otro">Otro motivo</option>
+                </select>
+              </div>
+              {deleteConfirm.motivo === 'otro' && (
+                <div>
+                  <label className="block text-[9px] font-mono font-bold text-stone-500 uppercase tracking-wider mb-1.5">Especifica el motivo</label>
+                  <textarea
+                    rows={2}
+                    value={deleteConfirm.motivoTexto || ''}
+                    onChange={(e) => setDeleteConfirm((prev) => ({ ...prev, motivoTexto: e.target.value }))}
+                    placeholder="Describe brevemente el motivo..."
+                    className="w-full px-3 py-2 text-xs font-mono border border-[#E0E0E0] rounded-lg bg-white text-stone-700 placeholder-stone-300 focus:outline-none focus:border-rose-300 focus:ring-1 focus:ring-rose-200 transition-colors resize-none"
+                  />
+                </div>
+              )}
             </div>
             <div className="flex justify-end gap-3 px-6 py-4 border-t border-[#E0E0E0] bg-stone-50">
               <button onClick={() => setDeleteConfirm(null)} className="px-4 py-2 rounded-lg text-xs font-mono font-bold border border-[#E0E0E0] text-stone-500 hover:text-stone-700 hover:border-stone-400 transition-colors">Cancelar</button>
-              <button onClick={confirmarEliminacion} className="px-4 py-2 rounded-lg text-xs font-mono font-bold bg-rose-500 text-white hover:bg-rose-600 transition-colors shadow-sm flex items-center gap-1.5">
-                <Trash2 className="w-3.5 h-3.5" /> Eliminar
-              </button>
+              <button onClick={confirmarEliminacion} className="px-4 py-2 rounded-lg text-xs font-mono font-bold bg-rose-500 text-white hover:bg-rose-600 active:bg-rose-700 transition-colors shadow-sm flex items-center gap-1.5"><Trash2 className="w-3.5 h-3.5" /> Eliminar</button>
             </div>
           </div>
         </div>
       )}
 
-      {/* ── MODAL DETALLE PRODUCTO ───────────────────────────────────── */}
+      {/* Modal Detalle Producto */}
       {productoDetalle && (
         <div className="fixed inset-0 z-50 bg-black/70 backdrop-blur-sm flex items-center justify-center p-4">
           <div className="w-full max-w-md bg-white border border-[#E0E0E0] rounded-lg overflow-hidden shadow-2xl">
             <div className="flex items-center justify-between px-6 py-4 border-b border-[#E0E0E0]">
               <div>
                 <h2 className="text-sm font-mono font-bold text-[#1FA971] uppercase tracking-wider">DETALLE DEL PRODUCTO</h2>
-                <p className="text-[10px] font-mono text-stone-500 mt-0.5">{productoDetalle.nombre}</p>
+                <p className="text-[10px] font-mono text-stone-500 mt-0.5">{productoDetalle.codigo || productoDetalle.nombre}</p>
               </div>
-              <button onClick={() => setProductoDetalle(null)} className="p-1.5 text-stone-400 hover:text-rose-500 hover:bg-rose-50 rounded transition-colors">
-                <XCircle className="w-4 h-4" />
-              </button>
+              <button onClick={() => setProductoDetalle(null)} className="p-1.5 text-stone-400 hover:text-rose-500 hover:bg-rose-50 rounded transition-colors"><XCircle className="w-4 h-4" /></button>
             </div>
             <div className="p-6">
               <dl className="space-y-0">
                 {[
-                  { label: 'Nombre', value: productoDetalle.nombre },
-                  { label: 'Categoría', value: productoDetalle.categoria },
-                  { label: 'Tipo', value: productoDetalle.tipo },
-                  { label: 'Ubicación', value: productoDetalle.ubicacion },
-                  { label: 'Cantidad', value: productoDetalle.cantidad },
-                  { label: 'Mín. Stock', value: productoDetalle.umbral_minimo },
-                  { label: 'Estado', value: productoDetalle.estado },
+                  { label: 'Nombre',       value: productoDetalle.nombre },
+                  { label: 'Categoría',    value: productoDetalle.categoria },
+                  { label: 'Tipo',         value: productoDetalle.tipo },
+                  { label: 'Ubicación',    value: productoDetalle.ubicacion },
+                  { label: 'Cantidad',     value: productoDetalle.cantidad },
+                  { label: 'Mín. Stock',   value: productoDetalle.umbral_minimo },
+                  { label: 'Estado',       value: productoDetalle.estado },
+                  productoDetalle.descripcion && { label: 'Descripción', value: productoDetalle.descripcion },
                 ].filter(Boolean).map(({ label, value }) => (
                   <div key={label} className="flex items-start gap-3 py-2.5 border-b border-[#E0E0E0] last:border-0">
                     <dt className="w-28 flex-shrink-0 text-[9px] font-mono font-bold text-stone-400 uppercase tracking-wider pt-0.5">{label}</dt>
@@ -622,25 +500,20 @@ const Inventario = () => {
         </div>
       )}
 
-      {/* ── MODAL MOVIMIENTOS ────────────────────────────────────────── */}
+      {/* Modal Movimientos */}
       {movimientosModal && canManage && (
         <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4">
-          <div className="w-full max-w-2xl bg-white border border-[#E0E0E0] rounded-xl overflow-hidden shadow-2xl">
+          <div className="w-full max-w-2xl bg-white border border-[#E0E0E0] rounded-xl overflow-hidden shadow-2xl animate-[fadeInScale_0.18s_ease]">
             <div className="flex items-center justify-between px-6 py-4 border-b border-[#E0E0E0] bg-[#E8F5F0]">
               <div>
                 <h2 className="text-sm font-mono font-bold text-[#157A55] uppercase tracking-wider">REGISTRAR MOVIMIENTO</h2>
                 <p className="text-[10px] font-mono text-stone-500 mt-0.5">{movimientosModal.nombre} · Stock actual: <span className="font-bold text-[#1FA971]">{movimientosModal.cantidad}</span></p>
               </div>
-              <button onClick={() => setMovimientosModal(null)} className="p-1.5 text-stone-400 hover:text-rose-500 hover:bg-rose-50 rounded transition-colors">
-                <XCircle className="w-4 h-4" />
-              </button>
+              <button onClick={() => setMovimientosModal(null)} className="p-1.5 text-stone-400 hover:text-rose-500 hover:bg-rose-50 rounded transition-colors"><XCircle className="w-4 h-4" /></button>
             </div>
-
             <div className="grid grid-cols-1 md:grid-cols-2 divide-y md:divide-y-0 md:divide-x divide-[#E0E0E0]">
-              {/* Form */}
               <div className="p-5 space-y-4">
                 <p className="text-[9px] font-mono font-bold text-stone-500 uppercase tracking-wider">Nueva entrada / salida</p>
-
                 <div className="grid grid-cols-2 gap-2">
                   {[{ v: 'entrada', label: 'Entrada', icon: <ArrowUp className="w-3.5 h-3.5" />, cls: 'border-emerald-400 bg-emerald-50 text-emerald-700' },
                     { v: 'salida',  label: 'Salida',  icon: <ArrowDown className="w-3.5 h-3.5" />, cls: 'border-rose-400 bg-rose-50 text-rose-700' }].map(({ v, label, icon, cls }) => (
@@ -650,44 +523,27 @@ const Inventario = () => {
                     </button>
                   ))}
                 </div>
-
                 <div>
-                  <label className="block text-[9px] font-mono font-bold text-stone-500 uppercase tracking-wider mb-1.5">Cantidad *</label>
-                  <input 
-                    type="number" 
-                    min="1" 
-                    value={formMov.cantidad}
-                    onChange={e => setFormMov(f => ({ ...f, cantidad: e.target.value }))}
-                    className={inputCls} 
-                    placeholder="0" 
-                  />
+                  <label className="block text-[9px] font-mono font-bold text-stone-500 uppercase tracking-wider mb-1.5">Cantidad</label>
+                  <input type="number" min="1" value={formMov.cantidad} onChange={e => setFormMov(f => ({ ...f, cantidad: e.target.value }))} className={inputCls} placeholder="0" />
                 </div>
-
+                <div>
+                  <label className="block text-[9px] font-mono font-bold text-stone-500 uppercase tracking-wider mb-1.5">Unidad</label>
+                  <input type="text" value={formProducto.unidad} onChange={(e) => setFormProducto({ ...formProducto, unidad: e.target.value })} className={inputCls} placeholder="Ej. ml, g, unidades" />
+                </div>
                 <div>
                   <label className="block text-[9px] font-mono font-bold text-stone-500 uppercase tracking-wider mb-1.5">Observación <span className="normal-case text-stone-400">(opcional)</span></label>
-                  <textarea 
-                    rows={3} 
-                    value={formMov.observacion}
-                    onChange={e => setFormMov(f => ({ ...f, observacion: e.target.value }))}
-                    className={`${inputCls} resize-none`} 
-                    placeholder="Describe brevemente el movimiento..." 
-                  />
+                  <textarea rows={3} value={formMov.observacion} onChange={e => setFormMov(f => ({ ...f, observacion: e.target.value }))} className={`${inputCls} resize-none`} placeholder="Describe brevemente el movimiento..." />
                 </div>
-
-                <button onClick={handleGuardarMovimiento}
-                  className={`w-full py-2.5 rounded-lg text-xs font-mono font-bold text-white transition-colors shadow-sm flex items-center justify-center gap-2 ${formMov.tipo === 'entrada' ? 'bg-[#1FA971] hover:bg-[#157A55]' : 'bg-rose-500 hover:bg-rose-600'}`}>
+                <button onClick={handleGuardarMovimiento} className={`w-full py-2.5 rounded-lg text-xs font-mono font-bold text-white transition-colors shadow-sm flex items-center justify-center gap-2 ${formMov.tipo === 'entrada' ? 'bg-[#1FA971] hover:bg-[#157A55]' : 'bg-rose-500 hover:bg-rose-600'}`}>
                   {formMov.tipo === 'entrada' ? <ArrowUp className="w-3.5 h-3.5" /> : <ArrowDown className="w-3.5 h-3.5" />}
                   Registrar {formMov.tipo === 'entrada' ? 'entrada' : 'salida'}
                 </button>
               </div>
-
-              {/* Historial */}
               <div className="p-5">
                 <p className="text-[9px] font-mono font-bold text-stone-500 uppercase tracking-wider mb-3">Historial de movimientos</p>
                 {loadingMovs ? (
-                  <div className="flex items-center justify-center py-8">
-                    <div className="w-2.5 h-2.5 rounded-full bg-[#1FA971] animate-pulse" />
-                  </div>
+                  <div className="flex items-center justify-center py-8"><div className="w-2.5 h-2.5 rounded-full bg-[#1FA971] animate-pulse" /></div>
                 ) : movimientos.length === 0 ? (
                   <div className="flex flex-col items-center justify-center py-8 text-stone-400">
                     <ArrowUpDown className="w-7 h-7 mb-2 opacity-30" />
@@ -714,7 +570,6 @@ const Inventario = () => {
                 )}
               </div>
             </div>
-
             <div className="flex justify-end px-6 py-3 border-t border-[#E0E0E0] bg-stone-50">
               <button onClick={() => setMovimientosModal(null)} className="px-4 py-2 rounded text-xs font-mono font-bold border border-[#E0E0E0] text-stone-500 hover:text-stone-700 hover:border-slate-500 transition-colors">Cerrar</button>
             </div>

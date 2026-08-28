@@ -4,7 +4,6 @@ import api from '../services/api';
 import { motion } from 'framer-motion';
 import { toast, ToastContainer } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
-import { Search, X, Filter, ChevronDown, ChevronUp } from 'lucide-react';
 
 const SelectorPractica = () => {
   const [programas, setProgramas] = useState([]);
@@ -20,15 +19,12 @@ const SelectorPractica = () => {
   const [observaciones, setObservaciones] = useState('');
   const [alertasSensibles, setAlertasSensibles] = useState([]);
   const [franjaSeleccionada, setFranjaSeleccionada] = useState('');
+  const [errorCronograma, setErrorCronograma] = useState(null);
   
-  // NUEVOS ESTADOS PARA BUSCADOR
-  const [filtroPrograma, setFiltroPrograma] = useState('');
-  const [filtroCompetencia, setFiltroCompetencia] = useState('');
-  const [filtroPractica, setFiltroPractica] = useState('');
-  const [mostrarFiltros, setMostrarFiltros] = useState(false);
-  
-  // NUEVOS ESTADOS PARA FECHA Y HORA
-  const [fechaPractica, setFechaPractica] = useState(new Date().toISOString().split('T')[0]);
+  // ====== FECHA Y HORA ======
+  const [fechaPractica, setFechaPractica] = useState(
+    new Date().toISOString().split('T')[0]
+  );
   const [horaInicio, setHoraInicio] = useState('08:00');
   const [horaFin, setHoraFin] = useState('12:00');
 
@@ -43,6 +39,7 @@ const SelectorPractica = () => {
       setPracticaDetalle(null);
       setResultado(null);
       setAlertasSensibles([]);
+      setErrorCronograma(null);
     }
   }, [selectedPrograma]);
 
@@ -53,6 +50,7 @@ const SelectorPractica = () => {
       setPracticaDetalle(null);
       setResultado(null);
       setAlertasSensibles([]);
+      setErrorCronograma(null);
     }
   }, [selectedCompetencia]);
 
@@ -61,76 +59,43 @@ const SelectorPractica = () => {
       cargarDetallePractica(selectedPractica);
       setResultado(null);
       setAlertasSensibles([]);
+      setErrorCronograma(null);
     }
   }, [selectedPractica]);
 
   const cargarProgramas = async () => {
     try {
       const res = await api.get('programas/');
-      // ✅ Verificar que sea un array
-      const data = Array.isArray(res.data) ? res.data : (res.data?.results || []);
-      setProgramas(data);
-    } catch (err) { 
-      console.error('Error cargando programas:', err);
-      setProgramas([]);
-    }
+      setProgramas(res.data);
+    } catch (err) { console.error('Error cargando programas:', err); }
   };
 
   const cargarCompetencias = async (programaId) => {
     try {
       const res = await api.get(`competencias/?programa=${programaId}`);
-      const data = Array.isArray(res.data) ? res.data : (res.data?.results || []);
-      setCompetencias(data);
-    } catch (err) { 
-      console.error('Error cargando competencias:', err);
-      setCompetencias([]);
-    }
+      setCompetencias(res.data);
+    } catch (err) { console.error('Error cargando competencias:', err); }
   };
 
   const cargarPracticas = async (competenciaId) => {
     try {
       const res = await api.get(`practicas/?competencia=${competenciaId}`);
-      const data = Array.isArray(res.data) ? res.data : (res.data?.results || []);
-      setPracticas(data);
-    } catch (err) { 
-      console.error('Error cargando prácticas:', err);
-      setPracticas([]);
-    }
+      setPracticas(res.data);
+      if (res.data.length === 0) {
+        toast.info('📋 No hay prácticas disponibles para esta competencia');
+      }
+    } catch (err) { console.error('Error cargando prácticas:', err); }
   };
 
   const cargarDetallePractica = async (practicaId) => {
     try {
       const res = await api.get(`practicas/${practicaId}/`);
       setPracticaDetalle(res.data);
-    } catch (err) { 
-      console.error('Error cargando detalle:', err);
-      setPracticaDetalle(null);
-    }
+    } catch (err) { console.error('Error cargando detalle:', err); }
   };
-
-  // ✅ FILTROS CON VERIFICACIÓN DE ARRAY
-  const programasLista = Array.isArray(programas) ? programas : [];
-  const competenciasLista = Array.isArray(competencias) ? competencias : [];
-  const practicasLista = Array.isArray(practicas) ? practicas : [];
-
-  const programasFiltrados = programasLista.filter(p => 
-    p.nombre?.toLowerCase().includes(filtroPrograma.toLowerCase()) ||
-    p.codigo?.toLowerCase().includes(filtroPrograma.toLowerCase())
-  );
-
-  const competenciasFiltradas = competenciasLista.filter(c => 
-    c.nombre?.toLowerCase().includes(filtroCompetencia.toLowerCase()) ||
-    c.codigo?.toLowerCase().includes(filtroCompetencia.toLowerCase())
-  );
-
-  const practicasFiltradas = practicasLista.filter(p => 
-    p.nombre?.toLowerCase().includes(filtroPractica.toLowerCase())
-  );
 
   const verificarReactivosSensibles = async (reactivos) => {
     const sensiblesEncontrados = [];
-    if (!Array.isArray(reactivos)) return sensiblesEncontrados;
-    
     for (const reactivo of reactivos) {
       try {
         const token = localStorage.getItem('access_token');
@@ -159,6 +124,7 @@ const SelectorPractica = () => {
       return;
     }
     setCalculando(true);
+    setErrorCronograma(null);
     try {
       const res = await api.post('calculo-pedido/calcular/', {
         practica_id: selectedPractica,
@@ -191,31 +157,66 @@ const SelectorPractica = () => {
       toast.warning('⚠️ Por favor seleccione una fecha para la práctica');
       return;
     }
-    const obs = prompt('Observaciones (opcional):', observaciones);
+    if (!horaInicio) {
+      toast.warning('⚠️ Por favor seleccione una hora de inicio');
+      return;
+    }
+
     try {
-      const res = await api.post('calculo-pedido/generar_pedido/', {
-        practica_id: selectedPractica,
-        numero_grupos: numeroGrupos,
-        observaciones: obs || '',
-        franja: franjaSeleccionada,
-        fecha: fechaPractica,
-        hora_inicio: horaInicio,
-        hora_fin: horaFin
+      const token = localStorage.getItem('access_token');
+      const response = await fetch('http://127.0.0.1:8000/api/calculo-pedido/generar_pedido/', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({
+          practica_id: selectedPractica,
+          numero_grupos: numeroGrupos,
+          observaciones: observaciones || '',
+          franja: franjaSeleccionada,
+          fecha: fechaPractica,
+          hora_inicio: horaInicio,
+          hora_fin: horaFin || null,
+          ambiente: 'TOC 501'
+        })
       });
-      toast.success(`✅ Pedido generado exitosamente! Solicitud ID: ${res.data.solicitud_id}`);
-      setSelectedPrograma('');
-      setSelectedCompetencia('');
-      setSelectedPractica('');
-      setResultado(null);
-      setPracticaDetalle(null);
-      setAlertasSensibles([]);
-      setFranjaSeleccionada('');
-      setFechaPractica(new Date().toISOString().split('T')[0]);
-      setHoraInicio('08:00');
-      setHoraFin('12:00');
-      setFiltroPrograma('');
-      setFiltroCompetencia('');
-      setFiltroPractica('');
+
+      if (response.ok) {
+        const data = await response.json();
+        toast.success(`✅ Pedido generado exitosamente!`);
+        toast.info(`📅 Programado para: ${fechaPractica} - ${horaInicio}${horaFin ? ` a ${horaFin}` : ''}`);
+        
+        setErrorCronograma(null);
+        setSelectedPrograma('');
+        setSelectedCompetencia('');
+        setSelectedPractica('');
+        setResultado(null);
+        setPracticaDetalle(null);
+        setAlertasSensibles([]);
+        setFranjaSeleccionada('');
+        setFechaPractica(new Date().toISOString().split('T')[0]);
+        setHoraInicio('08:00');
+        setHoraFin('12:00');
+        setObservaciones('');
+      } else {
+        const error = await response.json();
+        
+        if (error.error && error.error.includes('Cronograma completo')) {
+          toast.error(`⚠️ ${error.error}`);
+          toast.info(`📊 ${error.detalle}`);
+          setErrorCronograma({
+            mensaje: error.error,
+            detalle: error.detalle,
+            programaciones: error.programaciones_existentes,
+            limite: error.limite,
+            fecha: error.fecha,
+            ambiente: error.ambiente
+          });
+        } else {
+          toast.error('❌ Error al generar el pedido: ' + (error.error || 'Error desconocido'));
+        }
+      }
     } catch (err) {
       console.error('Error generando pedido:', err);
       toast.error('❌ Error al generar el pedido');
@@ -237,7 +238,6 @@ const SelectorPractica = () => {
           numero_grupos: numeroGrupos,
           observaciones: observaciones || '',
           fecha: fechaPractica,
-          franja: franjaSeleccionada,
           hora_inicio: horaInicio,
           hora_fin: horaFin
         })
@@ -267,7 +267,6 @@ const SelectorPractica = () => {
     <Layout>
       <ToastContainer />
       <div className="p-6 max-w-4xl mx-auto">
-        {/* Encabezado */}
         <div className="mb-6">
           <div className="flex items-center gap-3">
             <span className="text-4xl">📋</span>
@@ -278,7 +277,31 @@ const SelectorPractica = () => {
           </div>
         </div>
 
-        {/* Alerta de reactivos sensibles */}
+        {/* Alerta de cronograma lleno */}
+        {errorCronograma && (
+          <div className="bg-red-50 border-l-4 border-red-500 text-red-700 px-4 py-3 rounded-xl mb-6">
+            <div className="flex items-start gap-3">
+              <span className="text-2xl">🚫</span>
+              <div>
+                <p className="font-bold">{errorCronograma.mensaje}</p>
+                <p className="text-sm">{errorCronograma.detalle}</p>
+                <p className="text-xs mt-1">
+                  Prácticas actuales: <strong>{errorCronograma.programaciones}</strong> de <strong>{errorCronograma.limite}</strong> disponibles
+                </p>
+                <button
+                  onClick={() => {
+                    setErrorCronograma(null);
+                    setFechaPractica(new Date().toISOString().split('T')[0]);
+                  }}
+                  className="mt-2 text-sm bg-red-600 text-white px-4 py-1.5 rounded-lg hover:bg-red-700 transition-colors"
+                >
+                  Seleccionar otra fecha
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
         {alertasSensibles.length > 0 && (
           <div className="bg-amber-50 border-l-4 border-amber-500 text-amber-700 px-4 py-3 rounded-xl mb-6">
             <div className="flex items-start gap-3">
@@ -295,231 +318,69 @@ const SelectorPractica = () => {
           </div>
         )}
 
-        {/* TARJETA PRINCIPAL */}
         <div className="bg-white rounded-2xl border border-stone-200 shadow-sm p-8">
-          <div className="flex justify-between items-center mb-6">
-            <h2 className="text-xl font-semibold text-stone-800 flex items-center gap-2">
-              <span>📋</span> Nueva Solicitud
-            </h2>
-            <button
-              onClick={() => setMostrarFiltros(!mostrarFiltros)}
-              className="flex items-center gap-2 px-3 py-1.5 text-sm bg-stone-100 rounded-lg hover:bg-stone-200 transition-colors"
-            >
-              <Filter className="w-4 h-4" />
-              {mostrarFiltros ? 'Ocultar Filtros' : 'Mostrar Filtros'}
-              {mostrarFiltros ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
-            </button>
-          </div>
+          <h2 className="text-xl font-semibold text-stone-800 mb-6 flex items-center gap-2">
+            <span>📋</span> Nueva Solicitud
+          </h2>
 
-          {/* FILTROS DE BÚSQUEDA */}
-          {mostrarFiltros && (
-            <div className="mb-6 p-4 bg-stone-50 rounded-xl border border-stone-200">
-              <h3 className="text-sm font-medium text-stone-700 mb-3 flex items-center gap-2">
-                <Search className="w-4 h-4" />
-                Buscar por nombre o código
-              </h3>
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                <div className="relative">
-                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-stone-400" />
-                  <input
-                    type="text"
-                    placeholder="Buscar programa..."
-                    value={filtroPrograma}
-                    onChange={(e) => setFiltroPrograma(e.target.value)}
-                    className="w-full pl-10 pr-4 py-2 border border-stone-200 rounded-lg focus:outline-none focus:border-emerald-400"
-                  />
-                  {filtroPrograma && (
-                    <button
-                      onClick={() => setFiltroPrograma('')}
-                      className="absolute right-3 top-1/2 -translate-y-1/2 text-stone-400 hover:text-stone-600"
-                    >
-                      <X className="w-4 h-4" />
-                    </button>
-                  )}
-                </div>
-                <div className="relative">
-                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-stone-400" />
-                  <input
-                    type="text"
-                    placeholder="Buscar competencia..."
-                    value={filtroCompetencia}
-                    onChange={(e) => setFiltroCompetencia(e.target.value)}
-                    className="w-full pl-10 pr-4 py-2 border border-stone-200 rounded-lg focus:outline-none focus:border-emerald-400"
-                  />
-                  {filtroCompetencia && (
-                    <button
-                      onClick={() => setFiltroCompetencia('')}
-                      className="absolute right-3 top-1/2 -translate-y-1/2 text-stone-400 hover:text-stone-600"
-                    >
-                      <X className="w-4 h-4" />
-                    </button>
-                  )}
-                </div>
-                <div className="relative">
-                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-stone-400" />
-                  <input
-                    type="text"
-                    placeholder="Buscar práctica..."
-                    value={filtroPractica}
-                    onChange={(e) => setFiltroPractica(e.target.value)}
-                    className="w-full pl-10 pr-4 py-2 border border-stone-200 rounded-lg focus:outline-none focus:border-emerald-400"
-                  />
-                  {filtroPractica && (
-                    <button
-                      onClick={() => setFiltroPractica('')}
-                      className="absolute right-3 top-1/2 -translate-y-1/2 text-stone-400 hover:text-stone-600"
-                    >
-                      <X className="w-4 h-4" />
-                    </button>
-                  )}
-                </div>
-              </div>
-              <p className="text-xs text-stone-400 mt-2">
-                {programasFiltrados.length} programas encontrados
-              </p>
-            </div>
-          )}
-
-          {/* Fila 1: Programa */}
           <div className="mb-5">
-            <label className="block text-sm font-medium text-stone-700 mb-2">
-              Programa de formación
-              {filtroPrograma && (
-                <span className="ml-2 text-xs text-emerald-600 font-normal">
-                  ({programasFiltrados.length} resultados)
-                </span>
-              )}
-            </label>
+            <label className="block text-sm font-medium text-stone-700 mb-2">📚 Programa de formación</label>
             <select 
               value={selectedPrograma} 
               onChange={(e) => setSelectedPrograma(e.target.value)}
               className="w-full border border-stone-200 rounded-xl px-4 py-3 focus:outline-none focus:border-emerald-400 focus:ring-2 focus:ring-emerald-100 transition-all bg-white text-stone-700"
             >
               <option value="">Seleccione un programa</option>
-              {programasFiltrados.map(p => (
-                <option key={p.id} value={p.id}>
-                  {p.codigo} - {p.nombre}
-                </option>
-              ))}
+              {programas.map(p => <option key={p.id} value={p.id}>{p.nombre}</option>)}
             </select>
           </div>
 
-          {/* Fila 2: Competencia */}
           {selectedPrograma && (
             <div className="mb-5">
-              <label className="block text-sm font-medium text-stone-700 mb-2">
-                Competencia
-                {filtroCompetencia && (
-                  <span className="ml-2 text-xs text-emerald-600 font-normal">
-                    ({competenciasFiltradas.length} resultados)
-                  </span>
-                )}
-              </label>
+              <label className="block text-sm font-medium text-stone-700 mb-2">🎯 Competencia</label>
               <select 
                 value={selectedCompetencia} 
                 onChange={(e) => setSelectedCompetencia(e.target.value)}
                 className="w-full border border-stone-200 rounded-xl px-4 py-3 focus:outline-none focus:border-emerald-400 focus:ring-2 focus:ring-emerald-100 transition-all bg-white text-stone-700"
-                disabled={competenciasFiltradas.length === 0}
+                disabled={competencias.length === 0}
               >
                 <option value="">Seleccione una competencia</option>
-                {competenciasFiltradas.map(c => (
-                  <option key={c.id} value={c.id}>
-                    {c.codigo} - {c.nombre}
-                  </option>
-                ))}
+                {competencias.map(c => <option key={c.id} value={c.id}>{c.nombre}</option>)}
               </select>
-              {competenciasFiltradas.length === 0 && filtroCompetencia && (
-                <p className="text-sm text-amber-600 mt-1">No hay competencias que coincidan con tu búsqueda</p>
+              {competencias.length === 0 && selectedPrograma && (
+                <p className="text-xs text-amber-500 mt-1">No hay competencias disponibles para este programa</p>
               )}
             </div>
           )}
 
-          {/* Fila 3: Práctica */}
           {selectedCompetencia && (
             <div className="mb-5">
-              <label className="block text-sm font-medium text-stone-700 mb-2">
-                Práctica / Actividad
-                {filtroPractica && (
-                  <span className="ml-2 text-xs text-emerald-600 font-normal">
-                    ({practicasFiltradas.length} resultados)
-                  </span>
-                )}
-              </label>
+              <label className="block text-sm font-medium text-stone-700 mb-2">🧪 Práctica / Actividad</label>
               <select 
                 value={selectedPractica} 
                 onChange={(e) => setSelectedPractica(e.target.value)}
                 className="w-full border border-stone-200 rounded-xl px-4 py-3 focus:outline-none focus:border-emerald-400 focus:ring-2 focus:ring-emerald-100 transition-all bg-white text-stone-700"
-                disabled={practicasFiltradas.length === 0}
+                disabled={practicas.length === 0}
               >
                 <option value="">Seleccione una práctica</option>
-                {practicasFiltradas.map(p => (
-                  <option key={p.id} value={p.id}>
-                    {p.nombre}
-                  </option>
-                ))}
+                {practicas.map(p => <option key={p.id} value={p.id}>{p.nombre}</option>)}
               </select>
-              {practicasFiltradas.length === 0 && filtroPractica && (
-                <p className="text-sm text-amber-600 mt-1">No hay prácticas que coincidan con tu búsqueda</p>
+              {practicas.length > 0 && (
+                <p className="text-xs text-stone-400 mt-1">
+                  {practicas.length} práctica{practicas.length !== 1 ? 's' : ''} disponible{practicas.length !== 1 ? 's' : ''}
+                </p>
+              )}
+              {practicas.length === 0 && selectedCompetencia && (
+                <p className="text-xs text-amber-500 mt-1">No hay prácticas disponibles para esta competencia</p>
               )}
             </div>
           )}
 
-          {/* Detalles adicionales */}
           {practicaDetalle && (
             <>
-              {/* Fila 4: Fecha y Franja */}
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-5">
                 <div>
-                  <label className="block text-sm font-medium text-stone-700 mb-2">📅 Fecha de la práctica</label>
-                  <input 
-                    type="date" 
-                    value={fechaPractica} 
-                    onChange={(e) => setFechaPractica(e.target.value)}
-                    min={new Date().toISOString().split('T')[0]}
-                    className="w-full border border-stone-200 rounded-xl px-4 py-3 focus:outline-none focus:border-emerald-400 focus:ring-2 focus:ring-emerald-100 transition-all bg-white text-stone-700"
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-stone-700 mb-2">🕐 Franja Horaria</label>
-                  <select 
-                    value={franjaSeleccionada} 
-                    onChange={(e) => setFranjaSeleccionada(e.target.value)}
-                    className="w-full border border-stone-200 rounded-xl px-4 py-3 focus:outline-none focus:border-emerald-400 focus:ring-2 focus:ring-emerald-100 transition-all bg-white text-stone-700"
-                  >
-                    <option value="">Seleccione una franja</option>
-                    <option value="Mañana">🌅 Mañana (6:00-12:00)</option>
-                    <option value="Tarde">☀️ Tarde (12:00-18:00)</option>
-                    <option value="Noche">🌙 Noche (18:00-22:00)</option>
-                  </select>
-                </div>
-              </div>
-
-              {/* Fila 5: Hora Inicio y Hora Fin */}
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-5">
-                <div>
-                  <label className="block text-sm font-medium text-stone-700 mb-2">⏰ Hora de inicio</label>
-                  <input 
-                    type="time" 
-                    value={horaInicio} 
-                    onChange={(e) => setHoraInicio(e.target.value)}
-                    className="w-full border border-stone-200 rounded-xl px-4 py-3 focus:outline-none focus:border-emerald-400 focus:ring-2 focus:ring-emerald-100 transition-all bg-white text-stone-700"
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-stone-700 mb-2">⏰ Hora de fin</label>
-                  <input 
-                    type="time" 
-                    value={horaFin} 
-                    onChange={(e) => setHoraFin(e.target.value)}
-                    className="w-full border border-stone-200 rounded-xl px-4 py-3 focus:outline-none focus:border-emerald-400 focus:ring-2 focus:ring-emerald-100 transition-all bg-white text-stone-700"
-                  />
-                </div>
-              </div>
-
-              {/* Fila 6: Número de grupos y botón calcular */}
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-5">
-                <div>
-                  <label className="block text-sm font-medium text-stone-700 mb-2">Número de grupos</label>
+                  <label className="block text-sm font-medium text-stone-700 mb-2">👥 Número de grupos</label>
                   <input 
                     type="number" 
                     min="1" 
@@ -534,14 +395,13 @@ const SelectorPractica = () => {
                     disabled={calculando}
                     className="w-full bg-emerald-600 text-white px-6 py-3 rounded-xl hover:bg-emerald-700 disabled:opacity-50 transition-all shadow-sm hover:shadow-md font-medium"
                   >
-                    {calculando ? 'Calculando...' : 'Calcular Cantidades'}
+                    {calculando ? '⏳ Calculando...' : '📊 Calcular Cantidades'}
                   </button>
                 </div>
               </div>
 
-              {/* Fila 7: Observaciones */}
               <div className="mb-5">
-                <label className="block text-sm font-medium text-stone-700 mb-2">Observaciones</label>
+                <label className="block text-sm font-medium text-stone-700 mb-2">📝 Observaciones</label>
                 <textarea 
                   value={observaciones} 
                   onChange={(e) => setObservaciones(e.target.value)}
@@ -550,10 +410,66 @@ const SelectorPractica = () => {
                   placeholder="Escribir el motivo de la solicitud..." 
                 />
               </div>
+
+              <div className="mb-5">
+                <label className="block text-sm font-medium text-stone-700 mb-2">⏰ Franja Horaria</label>
+                <select 
+                  value={franjaSeleccionada} 
+                  onChange={(e) => setFranjaSeleccionada(e.target.value)}
+                  className="w-full border border-stone-200 rounded-xl px-4 py-3 focus:outline-none focus:border-emerald-400 focus:ring-2 focus:ring-emerald-100 transition-all bg-white text-stone-700"
+                >
+                  <option value="">Seleccione una franja</option>
+                  <option value="Mañana">🌅 Mañana (6:00-12:00)</option>
+                  <option value="Tarde">☀️ Tarde (12:00-18:00)</option>
+                  <option value="Noche">🌙 Noche (18:00-22:00)</option>
+                </select>
+                <p className="text-xs text-stone-400 mt-1">La práctica se programará en esta franja horaria</p>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-5">
+                <div>
+                  <label className="block text-sm font-medium text-stone-700 mb-2">📅 Fecha de la práctica</label>
+                  <input
+                    type="date"
+                    value={fechaPractica}
+                    onChange={(e) => setFechaPractica(e.target.value)}
+                    min={new Date().toISOString().split('T')[0]}
+                    className="w-full border border-stone-200 rounded-xl px-4 py-3 focus:outline-none focus:border-emerald-400 focus:ring-2 focus:ring-emerald-100 transition-all bg-white text-stone-700"
+                  />
+                  <p className="text-xs text-stone-400 mt-1">Selecciona la fecha para la práctica</p>
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-stone-700 mb-2">⏰ Hora de inicio</label>
+                  <input
+                    type="time"
+                    value={horaInicio}
+                    onChange={(e) => setHoraInicio(e.target.value)}
+                    className="w-full border border-stone-200 rounded-xl px-4 py-3 focus:outline-none focus:border-emerald-400 focus:ring-2 focus:ring-emerald-100 transition-all bg-white text-stone-700"
+                  />
+                  <p className="text-xs text-stone-400 mt-1">Hora de inicio de la práctica</p>
+                </div>
+              </div>
+
+              <div className="mb-5">
+                <label className="block text-sm font-medium text-stone-700 mb-2">⏰ Hora de finalización (opcional)</label>
+                <input
+                  type="time"
+                  value={horaFin}
+                  onChange={(e) => setHoraFin(e.target.value)}
+                  className="w-full border border-stone-200 rounded-xl px-4 py-3 focus:outline-none focus:border-emerald-400 focus:ring-2 focus:ring-emerald-100 transition-all bg-white text-stone-700"
+                />
+                <p className="text-xs text-stone-400 mt-1">Hora de finalización de la práctica</p>
+              </div>
+
+              <button 
+                onClick={generarPDF} 
+                className="w-full bg-blue-50 text-blue-600 border border-blue-200 px-6 py-3 rounded-xl hover:bg-blue-100 transition-all font-medium flex items-center justify-center gap-2 mb-4"
+              >
+                📄 Generar PDF de Solicitud
+              </button>
             </>
           )}
 
-          {/* Resultado del cálculo */}
           {resultado && (
             <>
               <div className="border-t border-stone-200 my-6"></div>
@@ -571,12 +487,12 @@ const SelectorPractica = () => {
                   <p className="font-medium text-stone-800">{resultado.numero_grupos}</p>
                 </div>
                 <div>
-                  <p className="text-sm text-stone-500">📅 Fecha</p>
-                  <p className="font-medium text-stone-800">{fechaPractica || 'No definida'}</p>
+                  <p className="text-sm text-stone-500">Fecha</p>
+                  <p className="font-medium text-stone-800">{fechaPractica}</p>
                 </div>
                 <div>
-                  <p className="text-sm text-stone-500">🕐 Franja</p>
-                  <p className="font-medium text-stone-800">{franjaSeleccionada || 'No definida'}</p>
+                  <p className="text-sm text-stone-500">Hora</p>
+                  <p className="font-medium text-stone-800">{horaInicio}{horaFin ? ` - ${horaFin}` : ''}</p>
                 </div>
               </div>
               
@@ -619,18 +535,12 @@ const SelectorPractica = () => {
                 </div>
               )}
 
-              <div className="mt-6 flex flex-wrap gap-3">
+              <div className="mt-6 flex gap-3">
                 <button 
                   onClick={generarPedido} 
                   className="flex-1 bg-emerald-600 text-white px-6 py-3 rounded-xl hover:bg-emerald-700 transition-all shadow-sm hover:shadow-md font-medium"
                 >
                   ✅ Enviar Solicitud
-                </button>
-                <button 
-                  onClick={generarPDF} 
-                  className="flex-1 bg-blue-600 text-white px-6 py-3 rounded-xl hover:bg-blue-700 transition-all shadow-sm hover:shadow-md font-medium flex items-center justify-center gap-2"
-                >
-                  📄 Generar PDF
                 </button>
                 <button 
                   onClick={() => {
@@ -642,10 +552,9 @@ const SelectorPractica = () => {
                     setFranjaSeleccionada('');
                     setFechaPractica(new Date().toISOString().split('T')[0]);
                     setHoraInicio('08:00');
-                    setHoraFin('12:00');
-                    setFiltroPrograma('');
-                    setFiltroCompetencia('');
-                    setFiltroPractica('');
+                    setHoraFin('10:00');
+                    setObservaciones('');
+                    setErrorCronograma(null);
                   }} 
                   className="flex-1 border border-stone-200 text-stone-600 px-6 py-3 rounded-xl hover:bg-stone-50 transition-all font-medium"
                 >

@@ -1,9 +1,3 @@
-import api from './api';
+import api from "./pedidoHistorial";
 
-export const getPedidoHistorial = () => api.get('pedido-historial/');
-export const createPedidoHistorial = (data) => api.post('pedido-historial/', data);
-
-export default {
-    getPedidoHistorial,
-    createPedidoHistorial
-};
+export const createPedidoHistorial = (data) => api.post("pedido-historial/", data);
