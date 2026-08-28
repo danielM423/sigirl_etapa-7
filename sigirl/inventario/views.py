@@ -2213,7 +2213,10 @@ class AlertaViewSet(viewsets.ModelViewSet):
 
     def get_queryset(self):
         if self.request.user.is_staff:
-            self._sync_stock_alerts()
+            try:
+                self._sync_stock_alerts()
+            except Exception:
+                pass
             return Alerta.objects.all().order_by('-fecha')
         return Alerta.objects.none()
 
