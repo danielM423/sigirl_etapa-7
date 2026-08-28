@@ -36,11 +36,12 @@ CSRF_TRUSTED_ORIGINS = os.environ.get('CSRF_TRUSTED_ORIGINS', '').split(',') if 
 
 # For local development, ensure these are always set
 if not ALLOWED_HOSTS or ALLOWED_HOSTS == ['']:
-    ALLOWED_HOSTS = ["localhost", "127.0.0.1"]
+    ALLOWED_HOSTS = ["localhost", "127.0.0.1", "faibermz.pythonanywhere.com"]
 if not CSRF_TRUSTED_ORIGINS or CSRF_TRUSTED_ORIGINS == ['']:
     CSRF_TRUSTED_ORIGINS = [
         "http://localhost",
         "http://127.0.0.1",
+        "https://faibermz.pythonanywhere.com",
     ]
 SECURE_SSL_REDIRECT = os.environ.get('SECURE_SSL_REDIRECT', 'False') == 'True'
 
