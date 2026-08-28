@@ -3,6 +3,13 @@
 from django.db import migrations, models
 
 
+def limpiar_productos_invalidos(apps, schema_editor):
+    Alerta = apps.get_model('inventario', 'Alerta')
+    Producto = apps.get_model('inventario', 'Producto')
+    ids_validos = Producto.objects.values_list('id', flat=True)
+    Alerta.objects.filter(producto_id__isnull=False).exclude(producto_id__in=ids_validos).update(producto=None)
+
+
 class Migration(migrations.Migration):
 
     dependencies = [
@@ -10,6 +17,7 @@ class Migration(migrations.Migration):
     ]
 
     operations = [
+        migrations.RunPython(limpiar_productos_invalidos, migrations.RunPython.noop),
         migrations.AddField(
             model_name='alerta',
             name='acciones_tomadas',
