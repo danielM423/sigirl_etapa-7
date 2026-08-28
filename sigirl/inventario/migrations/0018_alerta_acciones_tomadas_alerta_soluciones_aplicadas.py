@@ -6,6 +6,13 @@ from django.db import migrations, models
 def limpiar_productos_invalidos(apps, schema_editor):
     Alerta = apps.get_model('inventario', 'Alerta')
     Producto = apps.get_model('inventario', 'Producto')
+    columnas = {
+        columna.name for columna in schema_editor.connection.introspection.get_table_description(
+            schema_editor.connection.cursor(), Alerta._meta.db_table
+        )
+    }
+    if 'producto_id' not in columnas:
+        return
     ids_validos = Producto.objects.values_list('id', flat=True)
     Alerta.objects.filter(producto_id__isnull=False).exclude(producto_id__in=ids_validos).update(producto=None)
 
