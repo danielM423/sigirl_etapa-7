@@ -3,18 +3,21 @@
 from django.db import migrations, models
 
 
-def limpiar_productos_invalidos(apps, schema_editor):
-    Alerta = apps.get_model('inventario', 'Alerta')
-    Producto = apps.get_model('inventario', 'Producto')
-    columnas = {
-        columna.name for columna in schema_editor.connection.introspection.get_table_description(
-            schema_editor.connection.cursor(), Alerta._meta.db_table
-        )
-    }
-    if 'producto_id' not in columnas:
-        return
-    ids_validos = Producto.objects.values_list('id', flat=True)
-    Alerta.objects.filter(producto_id__isnull=False).exclude(producto_id__in=ids_validos).update(producto=None)
+def asegurar_columnas_alerta(apps, schema_editor):
+    connection = schema_editor.connection
+    table = schema_editor.quote_name('inventario_alerta')
+    with connection.cursor() as cursor:
+        columnas = {columna.name for columna in connection.introspection.get_table_description(cursor, 'inventario_alerta')}
+
+        if 'producto_id' not in columnas:
+            cursor.execute(f'ALTER TABLE {table} ADD COLUMN producto_id integer REFERENCES inventario_producto(id)')
+        else:
+            cursor.execute(f'UPDATE {table} SET producto_id = NULL WHERE producto_id IS NOT NULL AND CAST(producto_id AS INTEGER) NOT IN (SELECT id FROM inventario_producto)')
+
+        if 'acciones_tomadas' not in columnas:
+            cursor.execute(f"ALTER TABLE {table} ADD COLUMN acciones_tomadas text NOT NULL DEFAULT ''")
+        if 'soluciones_aplicadas' not in columnas:
+            cursor.execute(f"ALTER TABLE {table} ADD COLUMN soluciones_aplicadas text NOT NULL DEFAULT '[]'")
 
 
 class Migration(migrations.Migration):
@@ -24,15 +27,19 @@ class Migration(migrations.Migration):
     ]
 
     operations = [
-        migrations.RunPython(limpiar_productos_invalidos, migrations.RunPython.noop),
-        migrations.AddField(
-            model_name='alerta',
-            name='acciones_tomadas',
-            field=models.TextField(blank=True, default=''),
-        ),
-        migrations.AddField(
-            model_name='alerta',
-            name='soluciones_aplicadas',
-            field=models.JSONField(blank=True, default=list),
+        migrations.SeparateDatabaseAndState(
+            database_operations=[migrations.RunPython(asegurar_columnas_alerta, migrations.RunPython.noop)],
+            state_operations=[
+                migrations.AddField(
+                    model_name='alerta',
+                    name='acciones_tomadas',
+                    field=models.TextField(blank=True, default=''),
+                ),
+                migrations.AddField(
+                    model_name='alerta',
+                    name='soluciones_aplicadas',
+                    field=models.JSONField(blank=True, default=list),
+                ),
+            ],
         ),
     ]
