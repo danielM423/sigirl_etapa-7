@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import Layout from '../components/Layout';
-import api from '../services/api';
+import api, { asArray } from '../services/api';
 import { motion } from 'framer-motion';
 import { toast, ToastContainer } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
@@ -22,7 +22,7 @@ const DiligenciarFormularios = () => {
   const cargarFormularios = async () => {
     try {
       const res = await api.get('mis-formularios/');
-      setFormularios(res.data);
+      setFormularios(asArray(res.data));
     } catch (err) {
       console.error('Error:', err);
       toast.error('❌ Error al cargar los formularios');
@@ -34,7 +34,7 @@ const DiligenciarFormularios = () => {
   const cargarPracticas = async () => {
     try {
       const res = await api.get('practicas/');
-      setPracticas(res.data);
+      setPracticas(asArray(res.data));
     } catch (err) {
       console.error('Error cargando prácticas:', err);
     }

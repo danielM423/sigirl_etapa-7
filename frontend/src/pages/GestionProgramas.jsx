@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import Layout from '../components/Layout';
-import api from '../services/api';
+import api, { asArray } from '../services/api';
 
 const GestionProgramas = () => {
   const [programas, setProgramas] = useState([]);
@@ -22,7 +22,7 @@ const GestionProgramas = () => {
   const cargarProgramas = async () => {
     try {
       const res = await api.get('programas/');
-      setProgramas(res.data);
+      setProgramas(asArray(res.data));
     } catch (err) {
       console.error('Error cargando programas:', err);
     } finally {

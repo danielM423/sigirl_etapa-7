@@ -1,5 +1,6 @@
 import { useEffect, useState, useContext } from "react";
 import { getListadosDiarios, deleteListadoDiario, updateListadoDiario } from "../services/listadoDiario";
+import { asArray } from "../services/api";
 import { toast } from "react-toastify";
 import { UserContext } from "../context/UserContext";
 
@@ -12,7 +13,7 @@ export default function ListadoDiarioList() {
   const { role } = useContext(UserContext);
 
   useEffect(() => {
-    getListadosDiarios().then(res => setData(res.data));
+    getListadosDiarios().then(res => setData(asArray(res.data)));
   }, []);
 
   const handleView = (item) => {

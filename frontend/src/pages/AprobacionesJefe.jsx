@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import Layout from '../components/Layout';
-import api from '../services/api';
+import api, { asArray } from '../services/api';
 
 const AprobacionesJefe = () => {
   const [pedidos, setPedidos] = useState([]);
@@ -10,7 +10,7 @@ const AprobacionesJefe = () => {
   const cargarPedidos = async () => {
     try {
       const res = await api.get('pedidos-requieren-aprobacion/');
-      setPedidos(res.data);
+      setPedidos(asArray(res.data));
     } catch (err) {
       console.error('Error cargando pedidos:', err);
     } finally {

@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import Layout from '../components/Layout';
-import api from '../services/api';
+import api, { asArray } from '../services/api';
 import { motion } from 'framer-motion';
 import { ToastContainer } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
@@ -67,21 +67,21 @@ const SelectorPractica = () => {
   const cargarProgramas = async () => {
     try {
       const res = await api.get('programas/');
-      setProgramas(res.data);
+      setProgramas(asArray(res.data));
     } catch (err) { console.error('Error cargando programas:', err); }
   };
 
   const cargarCompetencias = async (programaId) => {
     try {
       const res = await api.get(`competencias/?programa=${programaId}`);
-      setCompetencias(res.data);
+      setCompetencias(asArray(res.data));
     } catch (err) { console.error('Error cargando competencias:', err); }
   };
 
   const cargarPracticas = async (competenciaId) => {
     try {
       const res = await api.get(`practicas/?competencia=${competenciaId}`);
-      setPracticas(res.data);
+      setPracticas(asArray(res.data));
       if (res.data.length === 0) {
         showInfo('📋 No hay prácticas disponibles para esta competencia');
       }

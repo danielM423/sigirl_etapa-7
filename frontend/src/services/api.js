@@ -1,8 +1,14 @@
 import axios from "axios";
 
+export const asArray = (data) => {
+  if (Array.isArray(data)) return data;
+  if (Array.isArray(data?.results)) return data.results;
+  return [];
+};
+
 // Cliente HTTP central del frontend.
 const api = axios.create({
-  baseURL: "http://127.0.0.1:8000/api/",
+  baseURL: import.meta.env.VITE_API_URL || "/api/",
 });
 
 // Interceptor de salida: agrega automáticamente el token a cada solicitud privada.

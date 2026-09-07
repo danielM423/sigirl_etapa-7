@@ -1,5 +1,6 @@
 import { useEffect, useState, useContext } from "react";
 import { getAsistencias, deleteAsistencia, updateAsistencia } from "../services/asistencia";
+import { asArray } from "../services/api";
 import { toast } from "react-toastify";
 import { UserContext } from "../context/UserContext";
 
@@ -12,7 +13,7 @@ export default function AsistenciaList() {
   const { role } = useContext(UserContext);
 
   useEffect(() => {
-    getAsistencias().then(res => setData(res.data));
+    getAsistencias().then(res => setData(asArray(res.data)));
   }, []);
 
   const handleView = (item) => {

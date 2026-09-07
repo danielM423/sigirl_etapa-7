@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { getPedidoHistorial } from "../services/pedidoHistorial";
+import { asArray } from "../services/api";
 
 export default function PedidoHistorialList() {
   const [data, setData] = useState([]);
@@ -7,7 +8,7 @@ export default function PedidoHistorialList() {
   const [showModal, setShowModal] = useState(false);
 
   useEffect(() => {
-    getPedidoHistorial().then(res => setData(res.data));
+    getPedidoHistorial().then(res => setData(asArray(res.data)));
   }, []);
 
   const handleView = (item) => {

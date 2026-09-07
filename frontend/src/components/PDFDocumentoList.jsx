@@ -1,5 +1,6 @@
 import { useEffect, useState, useContext } from "react";
 import { getPDFDocumentos, deletePDFDocumento, updatePDFDocumento } from "../services/pdfDocumento";
+import { asArray } from "../services/api";
 import { toast } from "react-toastify";
 import { UserContext } from "../context/UserContext";
 
@@ -12,7 +13,7 @@ export default function PDFDocumentoList() {
   const { role } = useContext(UserContext);
 
   useEffect(() => {
-    getPDFDocumentos().then(res => setData(res.data));
+    getPDFDocumentos().then(res => setData(asArray(res.data)));
   }, []);
 
   const handleView = (item) => {
